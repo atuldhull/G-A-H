@@ -1,0 +1,12 @@
+﻿# local / secrets
+.env
+.env.*
+*.key
+# build & tooling
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+# scratch exports (the canonical PDF is PS01-Team-Pack.pdf)
+*.zip
