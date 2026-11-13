@@ -34,6 +34,11 @@ from crocodile.gateway.tavily import (
     parse_tavily_response,
 )
 
+
+class SecurityError(PermissionError):
+    """Raised when an egress security policy or canary check is violated."""
+    pass
+
 # ---------------------------------------------------------------------------
 # Socket Guard via sys.addaudithook
 # ---------------------------------------------------------------------------

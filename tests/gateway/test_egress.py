@@ -3,7 +3,7 @@
 from pathlib import Path
 import pytest
 from crocodile.gateway.budget import BudgetManager
-from crocodile.gateway.egress import EgressClient
+from crocodile.gateway.egress import EgressClient, SecurityError
 from crocodile.gateway.journal import EventJournal
 from crocodile.gateway.local import ConfidentialDeny
 from crocodile.gateway.prices import PriceTable

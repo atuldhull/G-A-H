@@ -17,8 +17,8 @@ def test_concurrency_50_zero_overshoot(tmp_path):
     db_path = tmp_path / "race_state.db"
     pt = PriceTable.from_yaml_file("prices.yaml")
     
-    # Set limit to $0.01
-    limit_usd = 0.01
+    # Set a tight limit of $0.002 so that 50 requests cannot all fit
+    limit_usd = 0.002
     bm = BudgetManager(db_path, pt, limits={"race-user": limit_usd})
 
     success_reservations = []

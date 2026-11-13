@@ -28,15 +28,20 @@ def is_loopback_host(host_or_url: str) -> bool:
     """Check if the provided host or URL resolves strictly to a loopback address."""
     parsed = urlparse(host_or_url)
     hostname = parsed.hostname or host_or_url
-    # Strip port if present
-    if ":" in hostname and not (hostname.startswith("[") and hostname.endswith("]")):
-        hostname = hostname.split(":", 1)[0]
 
-    if hostname.lower() in ("localhost", "127.0.0.1", "::1"):
+    # Handle unparsed strings with port (e.g., "127.0.0.1:11434")
+    if parsed.scheme == "" and ":" in hostname:
+        if hostname.startswith("[") and "]" in hostname:
+            hostname = hostname[1 : hostname.index("]")]
+        elif hostname.count(":") == 1:
+            hostname = hostname.split(":", 1)[0]
+
+    hostname_clean = hostname.strip("[]").lower()
+    if hostname_clean in ("localhost", "127.0.0.1", "::1"):
         return True
 
     try:
-        addr_info = socket.getaddrinfo(hostname, None)
+        addr_info = socket.getaddrinfo(hostname_clean, None)
         for _, _, _, _, sockaddr in addr_info:
             ip = sockaddr[0]
             if ip not in ("127.0.0.1", "::1"):
