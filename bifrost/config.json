@@ -10,14 +10,7 @@
         {
           "name": "gemini-primary",
           "value": "env.GEMINI_API_KEY",
-          "models": [
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-3.5-flash-lite",
-            "gemini-3.5-flash"
-          ],
+          "models": ["*"],
           "weight": 1.0
         }
       ],
@@ -76,7 +69,7 @@
       {
         "id": "vk-atul-public",
         "name": "atul-public",
-        "value": "env.BF_VK_ATUL_PUBLIC",
+        "value": "sk-bf-atul-public",
         "is_active": true,
         "provider_configs": [
           {
@@ -91,14 +84,7 @@
           },
           {
             "provider": "gemini",
-            "allowed_models": [
-              "gemini-2.5-flash",
-              "gemini-2.5-pro",
-              "gemini-2.0-flash",
-              "gemini-1.5-flash",
-              "gemini-3.5-flash-lite",
-              "gemini-3.5-flash"
-            ],
+            "allowed_models": ["*"],
             "weight": 1
           }
         ],
@@ -112,7 +98,7 @@
       {
         "id": "vk-atul-local",
         "name": "atul-local",
-        "value": "env.BF_VK_ATUL_LOCAL",
+        "value": "sk-bf-atul-local",
         "is_active": true,
         "provider_configs": [
           {
@@ -125,7 +111,7 @@
       {
         "id": "vk-bob-public",
         "name": "bob-public",
-        "value": "env.BF_VK_BOB_PUBLIC",
+        "value": "sk-bf-bob-public",
         "is_active": true,
         "provider_configs": [
           {
@@ -144,7 +130,7 @@
       {
         "id": "vk-bench",
         "name": "bench",
-        "value": "env.BF_VK_BENCH",
+        "value": "sk-bf-bench",
         "is_active": true,
         "provider_configs": [
           {
