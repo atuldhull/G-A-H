@@ -1,3 +1,3 @@
-"""Crocodile: a token-efficient terminal coding agent."""
+"""Crocodile: Token-efficient coding agent."""
 
 __version__ = "0.1.0"

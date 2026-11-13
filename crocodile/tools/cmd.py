@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .. import services
-from ..contracts import Action
+from ..agent_types import Action
 from ..engine.gate import gate
 from .base import Result, RunCtx, ToolError
 
@@ -38,8 +38,7 @@ def git(args: dict, ctx: RunCtx) -> Result:
     op = args.get("op")
     if op not in _GIT_READ:
         raise ToolError("op must be status, diff or log")
-    argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=", "--no-pager", *_GIT_READ[op]]
-    r = services.get("cmd").run(argv, ctx.root, timeout=30)
+    r = services.git_read(op, ctx.session)
     g = gate((r.stdout or "") + (r.stderr or ""), r.exit_code, ctx.spill, enabled=ctx.flag("gate"))
     return Result(g.shown or "(empty)", ok=r.exit_code == 0, spill=g.spill, exit=r.exit_code,
                   tokens_avoided=g.avoided)

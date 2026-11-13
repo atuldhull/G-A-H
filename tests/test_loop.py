@@ -3,7 +3,7 @@
 import pytest
 
 from crocodile import services
-from crocodile.contracts import ChatResult, ToolCallReq, Usage
+from crocodile.agent_types import ChatResult, ToolCallReq, Usage
 from crocodile.loop import ALL_FLAGS, Agent
 
 NO_REWIND = ALL_FLAGS - {"rewind"}

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..contracts import Session
+from ..agent_types import Session
 from ..engine.gate import Spill
 from ..engine.readcache import ReadCache
 from ..engine.thrash import Thrash

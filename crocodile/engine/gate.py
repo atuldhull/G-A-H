@@ -26,11 +26,12 @@ CAP_LINES = 256
 
 
 def _secret_scan(text: str) -> str:
+    """Part 3's scanner (crocodile.security.secrets.secret_scan) when present, else a minimal fallback."""
     try:
-        from crocodile.security.secrets import scan  # type: ignore[import-not-found]
-        return scan(text)
-    except ModuleNotFoundError:
+        from crocodile.security.secrets import secret_scan  # type: ignore[import-not-found]
+    except ImportError:
         return _SECRET.sub("[REDACTED]", text)
+    return secret_scan(text, strip_ansi=False)
 
 
 def est_tokens(text: str) -> int:

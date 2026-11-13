@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .. import services
-from ..contracts import Action
+from ..agent_types import Action
 from ..engine.gate import gate
 from .base import Result, RunCtx, ToolError
 
@@ -115,28 +115,31 @@ class TestRunner:
         self.baseline_passed: set[str] = set()
         self.last: TestReport | None = None
         self.runs = 0
+        self._approved: set = set()
 
-    def _consent(self) -> None:
+    def _consent(self, argv: list[str]) -> None:
+        """Consent is per exact argv + exec surface (Part 3 binds the permit to what will run)."""
         surface = exec_surface(self.ctx.root)
-        if self.consent is not None and self.consent == surface:
+        key = (tuple(argv), tuple(sorted(surface.items())))
+        if key in self._approved:
             return
         listing = "\n".join(f"  {k}  {v}" for k, v in surface.items()) or "  (no conftest/config files)"
         d = services.get("approvals").ask(Action(
             kind="test_consent", level="red",
             summary="THIS EXECUTES CODE FROM THE REPO (pytest imports conftest.py and the tests)",
-            argv=[sys.executable, "-m", "pytest", "..."],
-            reasons=["exec surface:\n" + listing]), self.ctx.session)
+            argv=list(argv), reasons=["exec surface:\n" + listing]), self.ctx.session)
         services.get("journal").append(self.ctx.session, "approval",
                                        {"kind": "test_consent", "approved": d.approved})
         if not d.approved:
             raise ToolError("test run not approved by the user; tests cannot run this session")
+        self._approved.add(key)
         self.consent = surface
 
     def run(self, ids: list[str] | None = None, timeout: int = 90) -> TestReport:
-        self._consent()
         targets = list(self.oracle_ids) if ids is None else list(ids)   # [] = whole suite
         argv = [sys.executable, "-m", "pytest", "-q", "-rA", "--tb=short", "--no-header",
-                "-p", "no:cacheprovider", "-o", "console_output_style=classic", *targets]
+                "-p", "no:cacheprovider", *targets]
+        self._consent(argv)
         r = services.get("cmd").run(argv, self.ctx.root, timeout=timeout)
         raw = (r.stdout or "") + ("\n" + r.stderr if r.stderr else "")
         rep = parse(raw, r.exit_code, self.ctx.root)

@@ -12,7 +12,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from .contracts import Action, ChatResult, CmdResult, Decision, Mode, Session, Tier, ToolCallReq, Usage
+from .agent_types import Action, ChatResult, CmdResult, Decision, Mode, Session, Tier, ToolCallReq, Usage
 
 
 class StubEgress:

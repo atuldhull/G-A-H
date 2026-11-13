@@ -157,7 +157,7 @@ def apply_edit(content: str, search: str, replace: str) -> tuple[str, Match]:
 
 def edit_tool(args: dict, ctx) -> Result:
     from .. import services
-    from ..contracts import Action
+    from ..agent_types import Action
     from .base import Result, ToolError, rel, resolve_in_repo
 
     path = str(args.get("path", ""))
@@ -206,7 +206,7 @@ def edit_tool(args: dict, ctx) -> Result:
         or p.stem.endswith("_test")
     level = "red" if is_test else "amber"
     reasons = ["modifies the success criterion (test/conftest)"] if is_test else []
-    d = services.get("approvals").ask(Action(kind="write", summary=f"edit {r}", diff=diff, level=level,
+    d = services.get("approvals").ask(Action(kind="write", summary=f"edit {r}", diff=diff, level=level, paths=[r],
                                              reasons=reasons + notes), ctx.session)
     services.get("journal").append(ctx.session, "approval", {"kind": "write", "path": r,
                                                              "approved": d.approved, "level": level})
@@ -238,7 +238,7 @@ WRITE_MAX_LINES = 200
 def write_tool(args: dict, ctx) -> Result:
     """Whole-file write for small files (weak models handle this far better than SEARCH/REPLACE)."""
     from .. import services
-    from ..contracts import Action
+    from ..agent_types import Action
     from .base import Result, ToolError, resolve_in_repo
 
     path = str(args.get("path", ""))
@@ -265,7 +265,7 @@ def write_tool(args: dict, ctx) -> Result:
     is_test = r in ctx.oracle_files or p.name == "conftest.py" or p.name.startswith("test_") \
         or p.stem.endswith("_test")
     level = "red" if is_test else "amber"
-    d = services.get("approvals").ask(Action(kind="write", summary=f"write {r}", diff=diff, level=level,
+    d = services.get("approvals").ask(Action(kind="write", summary=f"write {r}", diff=diff, level=level, paths=[r],
                                              reasons=["modifies the success criterion (test/conftest)"]
                                              if is_test else []), ctx.session)
     services.get("journal").append(ctx.session, "approval", {"kind": "write", "path": r,

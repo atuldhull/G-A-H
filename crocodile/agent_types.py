@@ -81,6 +81,7 @@ class Action:
     source: str | None = None            # "README.md:40" when repo text suggested it (provenance-lite)
     level: Level = "amber"
     reasons: list[str] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)   # repo-relative files a write touches
 
 
 @dataclass
