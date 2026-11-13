@@ -68,7 +68,8 @@ class StubEgress:
             calls.append(ToolCallReq(id=tc.get("id") or f"call_{len(calls)}", name=fn.get("name", ""),
                                      arguments=args))
         u = data.get("usage") or {}
-        cached = ((u.get("prompt_tokens_details") or {}).get("cached_tokens")) or 0
+        det = u.get("prompt_tokens_details") or {}
+        cached = det.get("cached_tokens") or det.get("cached_read_tokens") or 0   # OpenAI / Bifrost names
         return ChatResult(
             text=msg.get("content") or "",
             tool_calls=calls,
