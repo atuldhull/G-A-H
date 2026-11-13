@@ -74,6 +74,7 @@ def validate_schema(action: Action) -> None:
 
 def bind(action: Action, session: ApprovalSession) -> BoundAction:
     validate_schema(action)
+    session.verify_integrity()
     session.refresh_confidentiality()
     root = session.repo_root.resolve(strict=True)
     cwd = resolve_in_repo(action.cwd, root, mode=session.mode)

@@ -5,7 +5,7 @@ import math
 import os
 import sqlite3
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,12 +92,17 @@ class SecurityStore:
     Missing files are empty evidence; corrupt/unreadable evidence refuses use.
     """
 
-    def __init__(self, path: Path | None = None, *, journals=()):
+    def __init__(self, path: Path | None = None, *, journals=(), integrity=None):
         supplied = Path(path if path is not None else default_state_path()).absolute()
         self.path = supplied.parent.resolve() / supplied.name
         self.journals = tuple(Path(p).resolve() for p in journals)
+        self.integrity = integrity
+        if integrity is not None and integrity.path.resolve() != self.path.resolve():
+            raise ClassificationError("integrity belongs to another state database")
 
     def _exists(self):
+        if self.integrity is not None:
+            self.integrity.verify_state()
         try:
             self.path.lstat()
             return True
@@ -121,6 +126,9 @@ class SecurityStore:
         connection.execute("PRAGMA busy_timeout=5000")
         try:
             with connection:
+                if self.integrity is not None and not write:
+                    connection.execute("BEGIN")
+                    self.integrity.verify_state(connection)
                 yield connection
         finally:
             connection.close()
@@ -304,50 +312,71 @@ class SecurityStore:
         try:
             with self._open(write=True) as db:
                 db.execute("BEGIN IMMEDIATE")
-                self._schema(db)
-                if mode == "public" and kind == "classification_changed":
-                    for row in db.execute(
-                        "SELECT rowid,first_commit,realpath,remote FROM confidential_repos"
-                    ).fetchall():
-                        if (
-                            RepoIdentity(
-                                row["realpath"] or "",
-                                row["first_commit"],
-                                row["remote"],
-                            ).ids
-                            & aliases
-                        ):
-                            db.execute(
-                                "DELETE FROM confidential_repos WHERE rowid=?",
-                                (row["rowid"],),
-                            )
-                elif mode == "confidential":
-                    db.execute(
-                        "INSERT INTO confidential_repos(first_commit,realpath,remote,since) SELECT ?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM confidential_repos WHERE realpath=? AND first_commit IS ? AND remote IS ?)",
-                        (
-                            identity.first_commit,
-                            identity.realpath,
-                            identity.remote,
-                            stamp,
-                            identity.realpath,
-                            identity.first_commit,
-                            identity.remote,
-                        ),
-                    )
-                db.execute(
-                    "INSERT INTO security_classification_events(ts,type,payload) VALUES (?,?,?)",
-                    (stamp, kind, json.dumps(payload, sort_keys=True)),
-                )
-                if canary is not None:
-                    token, path = canary
-                    db.execute(
-                        "INSERT OR IGNORE INTO canaries(token,repo_id,path,created_at) VALUES (?,?,?,?)",
-                        (token, identity.realpath, str(path), stamp),
+                with (
+                    self.integrity.authorized_write(db)
+                    if self.integrity is not None
+                    else nullcontext()
+                ):
+                    self._record_rows(
+                        db,
+                        identity,
+                        mode,
+                        kind,
+                        by,
+                        session,
+                        canary,
+                        aliases,
+                        stamp,
+                        payload,
                     )
         except (OSError, sqlite3.Error) as error:
             raise ClassificationError(
                 "cannot persist confidential classification"
             ) from error
+
+    def _record_rows(
+        self, db, identity, mode, kind, by, session, canary, aliases, stamp, payload
+    ):
+        self._schema(db)
+        if mode == "public" and kind == "classification_changed":
+            for row in db.execute(
+                "SELECT rowid,first_commit,realpath,remote FROM confidential_repos"
+            ).fetchall():
+                if (
+                    RepoIdentity(
+                        row["realpath"] or "",
+                        row["first_commit"],
+                        row["remote"],
+                    ).ids
+                    & aliases
+                ):
+                    db.execute(
+                        "DELETE FROM confidential_repos WHERE rowid=?",
+                        (row["rowid"],),
+                    )
+        elif mode == "confidential":
+            db.execute(
+                "INSERT INTO confidential_repos(first_commit,realpath,remote,since) SELECT ?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM confidential_repos WHERE realpath=? AND first_commit IS ? AND remote IS ?)",
+                (
+                    identity.first_commit,
+                    identity.realpath,
+                    identity.remote,
+                    stamp,
+                    identity.realpath,
+                    identity.first_commit,
+                    identity.remote,
+                ),
+            )
+        db.execute(
+            "INSERT INTO security_classification_events(ts,type,payload) VALUES (?,?,?)",
+            (stamp, kind, json.dumps(payload, sort_keys=True)),
+        )
+        if canary is not None:
+            token, path = canary
+            db.execute(
+                "INSERT OR IGNORE INTO canaries(token,repo_id,path,created_at) VALUES (?,?,?,?)",
+                (token, identity.realpath, str(path), stamp),
+            )
 
     def canaries(self) -> tuple[str, ...]:
         if self.path.is_symlink():

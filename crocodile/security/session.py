@@ -1,5 +1,6 @@
 """Trusted in-memory approval state, pending the Part 2 journal integration."""
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,6 +23,8 @@ class ApprovalSession:
     events: list[dict] = field(default_factory=list)
     user_task: str = ""
     confidentiality: object | None = field(default=None, repr=False)
+    integrity: object | None = field(default=None, repr=False)
+    _aborted: bool = field(default=False, init=False, repr=False)
     provenance: ProvenanceIndex = field(init=False, repr=False)
     _permits: dict[str, str] = field(default_factory=dict, repr=False)
     _consent: str | None = field(default=None, repr=False)
@@ -46,6 +49,90 @@ class ApprovalSession:
             self.events.append(
                 {"event": "test_consent_invalidated", "reason": "edited code"}
             )
+
+    def ensure_active(self):
+        from .integrity import IntegrityViolation
+
+        if self._aborted:
+            raise IntegrityViolation("session aborted after integrity violation")
+
+    def abort_integrity(self, path, expected, found):
+        from .integrity import IntegrityViolation
+
+        if not self._aborted:
+            self._aborted = True
+            self._consent = None
+            self._permits.clear()
+            self._git_disabled = True
+            self.events.append(
+                {
+                    "event": "integrity_violation",
+                    "path": path,
+                    "expected": expected,
+                    "found": found,
+                    "session_aborted": True,
+                }
+            )
+        raise IntegrityViolation(
+            "INTEGRITY VIOLATION: session aborted; inspect state before restarting"
+        )
+
+    def verify_integrity(self):
+        from .integrity import verify_state
+
+        self.ensure_active()
+        if self.integrity is not None:
+            return verify_state(self.integrity, session=self)
+
+    @contextmanager
+    def watch_integrity(self, *, extra=()):
+        from .classification import default_state_path
+        from .integrity import IntegrityViolation, WatchSet
+
+        self.verify_integrity()
+        config_dir = (
+            self.integrity.path.parent
+            if self.integrity is not None
+            else default_state_path().parent
+        )
+        watcher = WatchSet(
+            self.repo_root, config_dir=config_dir, state=self.integrity, extra=extra
+        )
+
+        def snapshot():
+            try:
+                return watcher.snapshot()
+            except (IntegrityViolation, OSError, ValueError):
+                self.abort_integrity(
+                    "watch-set", "readable trusted paths", "invalid or unavailable"
+                )
+
+        baseline = snapshot()
+
+        def check():
+            self.ensure_active()
+            current = snapshot()
+            changed = sorted(
+                k
+                for k in baseline.keys() | current.keys()
+                if baseline.get(k) != current.get(k)
+            )
+            if changed:
+                # Do not leak arbitrary path names/values into journal consumers.
+                from .approvals import escape
+
+                key = changed[0]
+                self.abort_integrity(
+                    escape(key),
+                    baseline.get(key, "missing"),
+                    current.get(key, "missing"),
+                )
+
+        try:
+            yield check
+        finally:
+            if not self._aborted:
+                check()
 
     def refresh_confidentiality(self):
         """Owner hook: attach Detector and recheck before each turn/tool decision."""

@@ -129,6 +129,7 @@ class ShadowUndo:
 
     @contextmanager
     def _locked(self):
+        self.session.verify_integrity()
         path = self.storage / "operation.lock"
         try:
             descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)

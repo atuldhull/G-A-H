@@ -4,6 +4,7 @@ import hashlib
 import os
 import re
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 
 from . import approvals, procs
@@ -235,6 +236,7 @@ class Git:
             )
 
     def _call(self, arguments, *, timeout=120, source=None, mutation=False):
+        self.session.verify_integrity()
         hashes, drivers = self._audit()
         argv = self._options(drivers) + arguments
         action = Action("git", argv=argv, cwd=str(self.root), source=source)
@@ -250,15 +252,23 @@ class Git:
                 approvals.validate_before_execution(
                     action, decision, session=self.session
                 )
+            if check_integrity is not None:
+                check_integrity()
 
-        result = procs.run(
-            argv,
-            self.root,
-            root=self.root,
-            timeout=timeout,
-            before_spawn=revalidate,
-            git_env=True,
+        scope = (
+            self.session.watch_integrity(extra=(self.hooks,))
+            if mutation
+            else nullcontext(None)
         )
+        with scope as check_integrity:
+            result = procs.run(
+                argv,
+                self.root,
+                root=self.root,
+                timeout=timeout,
+                before_spawn=revalidate,
+                git_env=True,
+            )
         if self._snapshot()[0] != hashes:
             self._hashes = None
             self.session.events.append(

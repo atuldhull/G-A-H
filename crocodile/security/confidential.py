@@ -5,10 +5,8 @@ import os
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 
 from .classification import ClassificationError, RepoIdentity, SecurityStore
-from .executables import pin_tools
 from .types import Mode
 
 SKIP = {".git", "node_modules", ".venv"}
@@ -75,14 +73,11 @@ def identity_for(root: Path) -> RepoIdentity:
             )
         return identity
     from .git import Git
+    from .session import ApprovalSession
 
-    context = SimpleNamespace(
-        repo_root=root,
-        mode="confidential",
-        _exe_pins=pin_tools(root),
-        _git_disabled=False,
-        events=[],
-    )
+    # Identity reads happen before a Detector/session is attached. Use the real
+    # trusted session interface so Git's integrity/liveness hook is always present.
+    context = ApprovalSession(root, mode="confidential")
     try:
         with Git(context) as git:
             git._audit()

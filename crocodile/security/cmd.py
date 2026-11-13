@@ -78,14 +78,16 @@ def run(
         latest = approvals.validate_before_execution(action, decision, session=session)
         if latest.digest != bound.digest:
             raise approvals.ApprovalChanged("resolved command changed before spawn")
+        check_integrity()
 
-    result = procs.run(
-        list(bound.argv),
-        Path(bound.cwd),
-        root=session.repo_root,
-        timeout=timeout,
-        before_spawn=revalidate,
-    )
+    with session.watch_integrity() as check_integrity:
+        result = procs.run(
+            list(bound.argv),
+            Path(bound.cwd),
+            root=session.repo_root,
+            timeout=timeout,
+            before_spawn=revalidate,
+        )
     return prepare_command_result(
         result, session=session, ref="command", argv=bound.argv
     )
