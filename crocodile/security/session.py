@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .executables import pin_tools
 from .surfaces import changes_execution
 from .types import Mode
 
@@ -21,11 +22,14 @@ class ApprovalSession:
     _permits: dict[str, str] = field(default_factory=dict, repr=False)
     _consent: str | None = field(default=None, repr=False)
     _edited_code: bool = field(default=False, repr=False)
+    _exe_pins: dict = field(default_factory=dict, init=False, repr=False)
+    _git_disabled: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self):
         self.repo_root = Path(self.repo_root).resolve(strict=True)
         if not self.repo_root.is_dir() or self.mode not in ("public", "confidential"):
             raise ValueError("invalid trusted session context")
+        self._exe_pins = pin_tools(self.repo_root)
 
     def record_edit(self, replacements: list[str]) -> None:
         """Part 1 calls after applying an edit with its exact REPLACE sides."""

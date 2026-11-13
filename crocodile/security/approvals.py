@@ -4,6 +4,7 @@ import os
 import secrets
 import unicodedata
 from dataclasses import replace
+from pathlib import Path
 
 from .binding import BoundAction, bind
 from .policy import decide, risk
@@ -76,7 +77,12 @@ def _preview(
             "interpreter/executable: " + escape(bound.argv[0]),
             "cwd: " + escape(bound.cwd),
         ]
-        if any(
+        executable = Path(bound.argv[0]).stem.lower()
+        if (
+            executable.startswith("python")
+            or executable
+            in ("bash", "sh", "cmd", "powershell", "pwsh", "node", "ruby", "perl")
+        ) and any(
             arg.lower() in ("-c", "/c", "-command", "-encodedcommand")
             for arg in bound.argv[1:]
         ):

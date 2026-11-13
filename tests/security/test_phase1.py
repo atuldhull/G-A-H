@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from crocodile.security import Action, ApprovalSession, Decision, approvals, cmd
+from crocodile.security import Action, ApprovalSession, Decision, approvals, cmd, procs
 from crocodile.security.binding import bind
 from crocodile.security.consent import discover
 from crocodile.security.surfaces import changes_execution
@@ -302,7 +302,7 @@ class Phase1Tests(unittest.TestCase):
         decision = self.allow(self.test)
         (self.root / "conftest.py").write_text("# changed", encoding="utf-8")
         with (
-            patch.object(cmd.subprocess, "run") as spawn,
+            patch.object(procs.subprocess, "Popen") as spawn,
             self.assertRaises(approvals.ApprovalChanged),
         ):
             cmd.run(
@@ -318,7 +318,7 @@ class Phase1Tests(unittest.TestCase):
     def test_denial_prevents_command_execution(self):
         with (
             patch.object(approvals, "_console_answer", return_value="n"),
-            patch.object(cmd.subprocess, "run") as spawn,
+            patch.object(procs, "run") as spawn,
             self.assertRaises(approvals.ApprovalDenied),
         ):
             cmd.run(self.shell.argv, self.root, timeout=1, session=self.session)
@@ -326,12 +326,7 @@ class Phase1Tests(unittest.TestCase):
 
     def test_test_environment_and_resolved_execution(self):
         decision = self.allow(self.test)
-        with (
-            patch.dict(
-                os.environ, {"PYTEST_ADDOPTS": "--bad", "PYTEST_PLUGINS": "bad"}
-            ),
-            patch.object(cmd.subprocess, "run") as spawn,
-        ):
+        with patch.object(procs, "run") as spawn:
             spawn.return_value = Mock(returncode=0, stdout="", stderr="")
             cmd.run(
                 self.test.argv,
@@ -344,10 +339,7 @@ class Phase1Tests(unittest.TestCase):
         self.assertEqual(
             spawn.call_args.args[0][0], str(Path(sys.executable).resolve())
         )
-        env = spawn.call_args.kwargs["env"]
-        self.assertEqual(env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"], "1")
-        self.assertNotIn("PYTEST_ADDOPTS", env)
-        self.assertNotIn("PYTEST_PLUGINS", env)
+        self.assertTrue(callable(spawn.call_args.kwargs["before_spawn"]))
 
     def test_yes_green_never_allows_test_execution(self):
         self.session.yes_green = True
@@ -468,11 +460,11 @@ class Phase1Tests(unittest.TestCase):
     def test_relative_cwd_command_uses_resolved_approved_directory(self):
         with (
             patch.object(approvals, "_console_answer", return_value="y"),
-            patch.object(cmd.subprocess, "run") as spawn,
+            patch.object(procs, "run") as spawn,
         ):
             spawn.return_value = Mock(returncode=0, stdout="", stderr="")
             cmd.run([sys.executable, "-V"], ".", timeout=1)
-        self.assertEqual(spawn.call_args.kwargs["cwd"], str(Path.cwd().resolve()))
+        self.assertEqual(spawn.call_args.args[1], Path.cwd().resolve())
 
 
 if __name__ == "__main__":

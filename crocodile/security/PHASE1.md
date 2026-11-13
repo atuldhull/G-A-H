@@ -1,5 +1,8 @@
 # Part 3 Phase 1: approvals and test consent
 
+Phase 2 supersedes the deferred command, executable, path and Git behavior below;
+see [PHASE2.md](PHASE2.md) for current integration details and verification.
+
 Implemented on the Phase 0 commit `9b6c8f2`. No separate local Phase 1 draft or
 shared `contracts.py` existed. Changes stay in Part 3's security package and tests.
 

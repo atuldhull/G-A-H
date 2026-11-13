@@ -1,11 +1,11 @@
-"""Approval-gated argv execution; full process hardening follows in Phase 2."""
+"""Approval-gated argv execution through the restricted process boundary."""
 
 import math
 import os
-import subprocess
 from pathlib import Path
 
-from . import approvals
+from . import approvals, procs
+from .binding import bind
 from .types import Action, CmdResult, Decision
 
 
@@ -22,7 +22,7 @@ def run(
 
     Obtain approval here or consume a caller's previously issued decision.
     TimeoutExpired and OSError propagate; nonzero exits return normally.
-    Environment isolation, Windows job objects and Git hardening remain Phase 2.
+    The process boundary isolates its environment and cleans up descendants.
     """
     if not isinstance(argv, list) or not argv:
         raise TypeError("argv must be a non-empty list of strings")
@@ -35,6 +35,14 @@ def run(
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout must be a positive finite number")
     args = argv.copy()
+    if Path(args[0]).stem.lower() == "git" or (
+        action is not None and action.kind == "git"
+    ):
+        raise approvals.ApprovalDenied("Git requires security.git.Git fixed templates")
+    if "-m" in args and any(
+        arg == "crocodile" or arg.startswith("crocodile.") for arg in args
+    ):
+        raise approvals.ApprovalDenied("Crocodile cannot invoke itself")
     session = (
         session if session is not None else approvals.ApprovalSession(repo_root=cwd)
     )
@@ -56,25 +64,21 @@ def run(
     decision = (
         decision if decision is not None else approvals.ask(action, session=session)
     )
-    # Build options before the immediate pre-spawn validation.
-    child_env = None
-    if action.kind == "test_consent":
-        child_env = os.environ.copy()
-        child_env.pop("PYTEST_ADDOPTS", None)
-        child_env.pop("PYTEST_PLUGINS", None)
-        child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-    bound = approvals.validate_before_execution(action, decision, session=session)
-    result = subprocess.run(
+    if not decision:
+        raise approvals.ApprovalDenied("command was not approved")
+    bound = bind(action, session)
+    if Path(bound.argv[0]).stem.lower() == "git":
+        raise approvals.ApprovalDenied("Git requires security.git.Git fixed templates")
+
+    def revalidate():
+        latest = approvals.validate_before_execution(action, decision, session=session)
+        if latest.digest != bound.digest:
+            raise approvals.ApprovalChanged("resolved command changed before spawn")
+
+    return procs.run(
         list(bound.argv),
-        cwd=bound.cwd,
+        Path(bound.cwd),
+        root=session.repo_root,
         timeout=timeout,
-        shell=False,
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        env=child_env,
+        before_spawn=revalidate,
     )
-    return CmdResult(list(bound.argv), result.returncode, result.stdout, result.stderr)

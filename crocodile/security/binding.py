@@ -2,16 +2,13 @@
 
 import hashlib
 import json
-import os
 from dataclasses import dataclass
-from fnmatch import fnmatchcase
-from pathlib import Path
 
 from .consent import SKIP, ConfigFile, discover
+from .executables import resolve_pinned
+from .paths import resolve_in_repo
 from .session import ApprovalSession
 from .types import Action
-
-PROTECTED = {".git", ".crocodile", ".vscode", ".idea", ".claude", ".cursor"}
 
 
 @dataclass(frozen=True)
@@ -59,77 +56,15 @@ def validate_schema(action: Action) -> None:
         raise ValueError("execution requires argv without edit fields")
 
 
-def resolve_exe(name: str, root: Path, cwd: Path) -> Path:
-    candidate = Path(name)
-    if not candidate.is_absolute():
-        if candidate.parent != Path("."):
-            raise ValueError("relative executable paths are refused")
-        candidates = []
-        extensions = [""]
-        if os.name == "nt" and not candidate.suffix:
-            extensions = [
-                ext.lower()
-                for ext in os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(
-                    os.pathsep
-                )
-                if ext.startswith(".") and ext[1:].isalnum()
-            ]
-        for entry in os.get_exec_path():
-            path = Path(entry)
-            if (
-                path.is_absolute()
-                and not path.resolve().is_relative_to(root)
-                and not path.resolve().is_relative_to(cwd)
-            ):
-                candidates.extend(path / (name + ext) for ext in extensions)
-        # Do not use shutil.which: Windows may prepend the current directory.
-        resolved = next(
-            (
-                path
-                for path in candidates
-                if path.is_file() and os.access(path, os.X_OK)
-            ),
-            None,
-        )
-        if resolved is None:
-            raise ValueError("executable not found outside repository")
-        candidate = resolved
-    candidate = candidate.resolve(strict=True)
-    if (
-        candidate.is_relative_to(root)
-        or candidate.is_relative_to(cwd)
-        or not candidate.is_file()
-    ):
-        raise ValueError("executable must be a file outside repository and cwd")
-    if candidate.stem.lower() == "crocodile":
-        raise ValueError("Crocodile cannot invoke itself")
-    return candidate
-
-
 def bind(action: Action, session: ApprovalSession) -> BoundAction:
     validate_schema(action)
     root = session.repo_root.resolve(strict=True)
-    cwd = (root / action.cwd).resolve(strict=True)
-    if not cwd.is_relative_to(root) or not cwd.is_dir():
-        raise ValueError("cwd outside repository")
+    cwd = resolve_in_repo(action.cwd, root, mode=session.mode)
+    if not cwd.is_dir():
+        raise ValueError("cwd must be a directory")
     targets = []
     for raw in action.paths:
-        lexical = Path(raw)
-        if any(part.rstrip(" .").lower() in PROTECTED for part in lexical.parts):
-            raise ValueError("protected target path")
-        path = (cwd / raw).resolve()
-        if not path.is_relative_to(root):
-            raise ValueError("target outside repository")
-        relative = path.relative_to(root)
-        parts = [part.lower().rstrip(" .") for part in relative.parts]
-        if (
-            any(p in PROTECTED or p.startswith(".env") for p in parts)
-            or fnmatchcase(path.name.lower(), "*.code-workspace")
-            or path.name.lower() == "mcp.json"
-        ):
-            raise ValueError("protected target path")
-        if path.exists() and (not path.is_file() or path.stat().st_nlink > 1):
-            raise ValueError("target must be a regular, singly-linked file")
+        path = resolve_in_repo(raw, root, cwd=cwd, for_write=True, mode=session.mode)
         targets.append(
             (
                 str(path),
@@ -142,7 +77,7 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
     exe_meta = None
     configs = ()
     if argv:
-        exe = resolve_exe(argv[0], root, cwd)
+        exe = resolve_pinned(argv[0], root, cwd, session._exe_pins)
         if exe.suffix.lower() in (".bat", ".cmd") and any(
             any(c in arg for c in '&|<>^%"\n\r') for arg in argv[1:]
         ):

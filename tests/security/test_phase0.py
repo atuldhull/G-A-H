@@ -102,6 +102,11 @@ class Phase0Tests(unittest.TestCase):
     def test_command_timeout_propagates(self):
         with (
             tempfile.TemporaryDirectory() as directory,
+            patch.object(
+                cmd.procs,
+                "run",
+                side_effect=subprocess.TimeoutExpired([sys.executable], 0.1),
+            ),
             self.assertRaises(subprocess.TimeoutExpired),
         ):
             cmd.run(
