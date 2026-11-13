@@ -41,7 +41,7 @@ All of them live in `crocodile/contracts.py`. Each owner merges a **stub** first
 | `egress.reserve(session, est_tokens) -> Reservation` / `reconcile(res, usage)` | Part 2 | Part 1 (called by `chat` internally) | Always allows |
 | `journal.append(session, event: dict)` / `journal.resume(session) -> State` | Part 2 | Part 1, 3 | Appends JSONL |
 | `approvals.ask(action: Action) -> Decision` (Action = kind write/shell/git/test_consent, argv or diff, source `file:line` or None) | Part 3 | Part 1 tools | Console y/n |
-| `confidential.mode_for(repo_path) -> "public" \| "confidential"` | Part 3 | Part 2 (routing), Part 1 (Tavily tool on/off) | Returns `"public"` |
+| `confidential.mode_for(repo_path) -> Mode` ("public" or "confidential")\| "confidential"` | Part 3 | Part 2 (routing), Part 1 (Tavily tool on/off) | Returns `"public"` |
 | `cmd.run(argv, cwd, *, timeout) -> CmdResult` (argv only, hardened env) | Part 3 | Part 1 (`run_cmd`, `run_tests`) | `subprocess.run(argv, shell=False)` |
 | `crocodile run --repo X --task-file T --json-out R.json` (exit 0 = solved claim; R has tokens, cost, steps, models, fallbacks) | Part 1 | Part 4 | — |
 | Event names in the journal (`model_call`, `tool_started`, `tool_done`, `approval`, `takeover`, `budget_warn`, `budget_stop`) | Part 2 | everyone | — |
