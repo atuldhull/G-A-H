@@ -101,9 +101,18 @@ def parse_routing_info(
     fb_index_hdr = headers_lower.get("x-bifrost-fallback-index")
     fallback_index = int(fb_index_hdr) if fb_index_hdr and fb_index_hdr.isdigit() else None
 
-    # Error classification if fallback occurred
+    # Error classification if request failed OR if fallback occurred
     error_class: ErrorClass | None = None
-    if is_fallback:
+    if status_code >= 400 or ("error" in body and not body.get("choices")):
+        raw_reason = ""
+        if isinstance(body.get("error"), dict):
+            raw_reason = body["error"].get("message", "")
+        elif isinstance(body.get("error"), str):
+            raw_reason = body["error"]
+        error_class = classify_error(status_code if status_code >= 400 else 500, raw_reason)
+        model_used = ""
+        provider_used = ""
+    elif is_fallback:
         raw_reason = headers_lower.get("x-bifrost-fallback-reason") or body_routing.get("fallback_reason")
         error_class = classify_error(status_code if status_code >= 400 else 401, raw_reason)
 

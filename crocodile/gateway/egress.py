@@ -39,6 +39,13 @@ class SecurityError(PermissionError):
     """Raised when an egress security policy or canary check is violated."""
     pass
 
+
+DEFAULT_CHAINS: dict[str, list[str]] = {
+    "cheap": ["anthropic/claude-haiku-5-5", "openai/gpt-5-mini"],
+    "strong": ["anthropic/claude-sonnet-5-5", "anthropic/claude-haiku-5-5"],
+    "local": ["ollama/qwen2.5-coder:7b"],
+}
+
 # ---------------------------------------------------------------------------
 # Socket Guard via sys.addaudithook
 # ---------------------------------------------------------------------------
@@ -307,10 +314,17 @@ class EgressClient:
         mode: Mode = "public",
         tier: str = "default",
         max_tokens: int = 2048,
+        temperature: float | None = None,
         mock_response: dict[str, Any] | None = None,
     ) -> ChatResult:
         """High-level chat invocation with reservation, failover, banner, and reconciliation."""
-        chain = chain or ["anthropic/claude-haiku-5-5"]
+        if chain is None:
+            if mode == "confidential":
+                chain = list(DEFAULT_CHAINS.get("local", ["ollama/qwen2.5-coder:7b"]))
+            elif tier in DEFAULT_CHAINS:
+                chain = list(DEFAULT_CHAINS[tier])
+            else:
+                chain = ["anthropic/claude-haiku-5-5"]
         primary_model = chain[0]
         fb_list = fallbacks if fallbacks is not None else chain[1:]
 
@@ -337,6 +351,8 @@ class EgressClient:
             "messages": messages,
             "max_tokens": effective_max_tokens,
         }
+        if temperature is not None:
+            req_body["temperature"] = temperature
         if fb_list:
             req_body["fallbacks"] = fb_list
         if tools:
@@ -353,6 +369,7 @@ class EgressClient:
                     "fallbacks": fb_list,
                     "vk_alias": vk_alias,
                     "max_tokens": effective_max_tokens,
+                    "temperature": temperature,
                 },
             )
 
@@ -362,14 +379,22 @@ class EgressClient:
             resp_body = mock_response
             resp_headers = {}
         else:
-            status_code, resp_body, resp_headers = self.post_bifrost(
-                body=req_body,
-                reservation_id=res_id,
-                session=session,
-                vk=vk,
-                vk_alias=vk_alias,
-                mode=mode,
-            )
+            try:
+                status_code, resp_body, resp_headers = self.post_bifrost(
+                    body=req_body,
+                    reservation_id=res_id,
+                    session=session,
+                    vk=vk,
+                    vk_alias=vk_alias,
+                    mode=mode,
+                )
+            except (ConfidentialDeny, SecurityError, PermissionError):
+                raise
+            except httpx.RequestError as exc:
+                # Upstream transport error: synthesize failure response
+                status_code = 504 if isinstance(exc, httpx.TimeoutException) else 502
+                resp_body = {"error": str(exc)}
+                resp_headers = {}
 
         # 4. Parse Routing & Failover
         routing = parse_routing_info(resp_headers, resp_body, requested_model=primary_model, status_code=status_code)
@@ -393,9 +418,20 @@ class EgressClient:
         raw_usage = resp_body.get("usage", {})
         prompt_tokens = raw_usage.get("prompt_tokens", 0)
         completion_tokens = raw_usage.get("completion_tokens", 0)
-        p_details = raw_usage.get("prompt_tokens_details", {})
-        cache_read = p_details.get("cached_read_tokens", raw_usage.get("cached_tokens", 0))
-        cache_write = p_details.get("cached_write_tokens", raw_usage.get("cache_write_tokens", 0))
+        p_details = raw_usage.get("prompt_tokens_details") or {}
+        cache_read = (
+            p_details.get("cached_read_tokens")
+            or p_details.get("cached_tokens")
+            or raw_usage.get("cached_read_tokens")
+            or raw_usage.get("cached_tokens")
+            or 0
+        )
+        cache_write = (
+            p_details.get("cached_write_tokens")
+            or raw_usage.get("cache_write_tokens")
+            or raw_usage.get("cached_write_tokens")
+            or 0
+        )
 
         usage = Usage(
             input_tokens=prompt_tokens,

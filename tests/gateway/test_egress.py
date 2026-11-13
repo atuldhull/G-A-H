@@ -113,3 +113,93 @@ def test_chat_pipeline_with_mock_response(test_setup):
     assert result.usage.input_tokens == 50
     assert result.usage.output_tokens == 15
     assert result.cost_usd > 0
+
+
+def test_chat_openai_cached_tokens(test_setup):
+    """Bifrost / OpenAI returns cached tokens under prompt_tokens_details.cached_tokens."""
+    client, bm, j, db_path = test_setup
+    mock_resp = {
+        "model": "anthropic/claude-haiku-5-5",
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "Cached output",
+                    "tool_calls": [],
+                }
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 10,
+            "total_tokens": 110,
+            "prompt_tokens_details": {
+                "cached_tokens": 80,
+            },
+        },
+    }
+
+    result = client.chat(
+        messages=[{"role": "user", "content": "Cache test"}],
+        session="s_cache",
+        principal="user1",
+        chain=["anthropic/claude-haiku-5-5"],
+        mock_response=mock_resp,
+    )
+
+    assert result.usage.input_tokens == 100
+    assert result.usage.cache_read_tokens == 80
+    assert result.usage.output_tokens == 10
+    # Cost with 80 cache read tokens should be strictly less than 100 uncached tokens
+    uncached_100_cost = (100 * 1.0 + 10 * 5.0) / 1_000_000.0
+    assert result.cost_usd < uncached_100_cost
+
+
+def test_chat_temperature_and_default_chains(test_setup):
+    """Temperature parameter is recorded and default tier chains are picked when chain is None."""
+    client, bm, j, db_path = test_setup
+    mock_resp = {
+        "model": "anthropic/claude-haiku-5-5",
+        "choices": [{"message": {"role": "assistant", "content": "ok"}}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+    }
+
+    result = client.chat(
+        messages=[{"role": "user", "content": "temp test"}],
+        session="s_temp",
+        principal="user1",
+        tier="cheap",
+        temperature=0.85,
+        mock_response=mock_resp,
+    )
+
+    assert result.text == "ok"
+    events = j.get_events("s_temp")
+    req_event = [e for e in events if e.get("type") == "model_request"][0]
+    assert req_event["payload"]["temperature"] == 0.85
+    assert req_event["payload"]["chain"] == ["anthropic/claude-haiku-5-5", "openai/gpt-5-mini"]
+
+
+def test_chat_error_response_sets_empty_model_and_error_class(test_setup):
+    """When Bifrost returns an error and no choices, chat sets model_used='' and classifies error."""
+    client, bm, j, db_path = test_setup
+    mock_resp = {
+        "error": {
+            "message": "Rate limit exceeded (429)",
+            "type": "requests",
+        }
+    }
+
+    result = client.chat(
+        messages=[{"role": "user", "content": "failing test"}],
+        session="s_err",
+        principal="user1",
+        chain=["anthropic/claude-haiku-5-5"],
+        mock_response=mock_resp,
+    )
+
+    assert result.model_used == ""
+    assert result.text is None
+    assert result.tool_calls == []
+    assert result.error_class == "rate-limit"
+    assert result.cost_usd == 0.0

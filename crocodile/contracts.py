@@ -158,6 +158,8 @@ class EgressInterface(Protocol):
         *,
         session: str,
         tier: str = "default",
+        temperature: float | None = None,
+        **kwargs: Any,
     ) -> ChatResult:
         ...
 
@@ -210,6 +212,8 @@ class StubEgress:
         *,
         session: str,
         tier: str = "default",
+        temperature: float | None = None,
+        **kwargs: Any,
     ) -> ChatResult:
         return ChatResult(
             text="Stub response: ok",

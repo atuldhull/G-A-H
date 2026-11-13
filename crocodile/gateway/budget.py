@@ -404,13 +404,16 @@ class BudgetManager:
         request_id: str | None = None,
     ) -> float:
         """Reconciles reservation to actual spend once the inference completes."""
-        actual_usd = self.price_table.calculate_cost(
-            model_id=actual_model,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            cache_read_tokens=cache_read_tokens,
-            cache_write_tokens=cache_write_tokens,
-        )
+        if not actual_model or (prompt_tokens == 0 and completion_tokens == 0 and cache_read_tokens == 0 and cache_write_tokens == 0):
+            actual_usd = 0.0
+        else:
+            actual_usd = self.price_table.calculate_cost(
+                model_id=actual_model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cache_read_tokens=cache_read_tokens,
+                cache_write_tokens=cache_write_tokens,
+            )
 
         overshoot_usd = max(0.0, actual_usd - res.usd)
         uncached_in = max(0, prompt_tokens - cache_read_tokens - cache_write_tokens)
