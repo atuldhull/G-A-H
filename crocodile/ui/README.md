@@ -1,5 +1,11 @@
 # Static task quote: Person 4 / Person 1 interface
 
+Milestone 6 adds pure status and final receipt rendering alongside the static
+quote. See [session-interface.md](session-interface.md) for the typed snapshot
+structures, evidence-gated outcomes, journal-field projection, escaping rules,
+and Person 1 / Part 2 integration requirements. No live journal parsing or CLI
+wiring is implemented here.
+
 This milestone supplies reusable static quote data and a literal terminal
 rendering. It does not register `crocodile quote`, modify Person 1's `cli.py`, or
 change `contracts.py`. No agent or gateway implementation is imported. Python
@@ -175,7 +181,7 @@ of this handoff.
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
 $env:PYTHONDONTWRITEBYTECODE = "1"
-python -m pytest -q -p no:cacheprovider crocodile/ui/tests/test_quote.py
+python -m pytest -q -p no:cacheprovider crocodile/ui/tests
 python -m ruff check --no-cache crocodile/ui
 ```
 
