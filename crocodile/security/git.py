@@ -8,7 +8,9 @@ from pathlib import Path
 
 from . import approvals, procs
 from .executables import resolve_pinned
+from .outputs import prepare_command_result
 from .paths import resolve_in_repo
+from .provenance import remote_fields
 from .session import ApprovalSession
 from .types import Action, CmdResult
 
@@ -236,9 +238,9 @@ class Git:
         hashes, drivers = self._audit()
         argv = self._options(drivers) + arguments
         action = Action("git", argv=argv, cwd=str(self.root), source=source)
-        decision = (
-            approvals.ask(action, session=self.session) if mutation or source else None
-        )
+        # Validated fixed read templates remain free even when their operands
+        # originated in repo text; provenance escalates Git mutations only.
+        decision = approvals.ask(action, session=self.session) if mutation else None
         if decision is not None and not decision:
             raise approvals.ApprovalDenied("Git operation was not approved")
 
@@ -312,6 +314,14 @@ class Git:
         ):
             raise GitDenied("invalid Git path arguments")
         mutation = template not in ("status", "diff", "log", "show")
+        # Match caller-supplied refs before revision resolution hides them in SHAs.
+        fields = [(rev, "revision"), (remote, "remote")]
+        if branch is not None:
+            fields.append((branch, "refspec"))
+        fields.extend((path, "path") for path in paths)
+        derived = self.session.provenance.steered_by(fields)
+        if derived:
+            source = derived[0].location
         safe = [
             str(
                 resolve_in_repo(
@@ -406,7 +416,10 @@ class Git:
                 args = ["branch", "-D", "--", branch]
             else:
                 if self.session.mode == "confidential" or source:
-                    raise GitDenied("confidential or steered pushes are denied")
+                    origin = "; suggested by " + source if source else ""
+                    raise GitDenied(
+                        "confidential or steered pushes are denied" + origin
+                    )
                 self._audit()
                 if (
                     not isinstance(remote, str)
@@ -414,6 +427,12 @@ class Git:
                     or f"remote.{remote.lower()}.url" not in self._config
                 ):
                     raise GitDenied("push requires an audited named remote")
+                destination = self._config[f"remote.{remote.lower()}.url"]
+                origins = self.session.provenance.steered_by(remote_fields(destination))
+                if origins:
+                    raise GitDenied(
+                        "steered push denied; suggested by " + origins[0].location
+                    )
                 args = [
                     "push",
                     "--no-verify",
@@ -421,4 +440,7 @@ class Git:
                     remote,
                     self.validate_rev(rev) + ":refs/heads/" + branch,
                 ]
-        return self._call(args, timeout=timeout, source=source, mutation=mutation)
+        result = self._call(args, timeout=timeout, source=source, mutation=mutation)
+        return prepare_command_result(
+            result, session=self.session, ref="git:" + template
+        )

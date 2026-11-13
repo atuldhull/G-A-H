@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 Mode = Literal["public", "confidential"]
-ActionKind = Literal["write", "shell", "git", "test_consent"]
+ActionKind = Literal["write", "shell", "git", "test_consent", "network"]
 RiskLevel = Literal["green", "amber", "red"]
 
 
@@ -23,6 +23,8 @@ class Action:
     cwd: str = "."
     paths: list[str] = field(default_factory=list)
     replacements: list[str] = field(default_factory=list)
+    query: str | None = None
+    url: str | None = None
 
 
 @dataclass(frozen=True)

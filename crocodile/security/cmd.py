@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import approvals, procs
 from .binding import bind
+from .outputs import prepare_command_result
 from .types import Action, CmdResult, Decision
 
 
@@ -65,7 +66,10 @@ def run(
         decision if decision is not None else approvals.ask(action, session=session)
     )
     if not decision:
-        raise approvals.ApprovalDenied("command was not approved")
+        source = (
+            "; suggested by " + decision.steered_by[0] if decision.steered_by else ""
+        )
+        raise approvals.ApprovalDenied("command was not approved" + source)
     bound = bind(action, session)
     if Path(bound.argv[0]).stem.lower() == "git":
         raise approvals.ApprovalDenied("Git requires security.git.Git fixed templates")
@@ -75,10 +79,13 @@ def run(
         if latest.digest != bound.digest:
             raise approvals.ApprovalChanged("resolved command changed before spawn")
 
-    return procs.run(
+    result = procs.run(
         list(bound.argv),
         Path(bound.cwd),
         root=session.repo_root,
         timeout=timeout,
         before_spawn=revalidate,
+    )
+    return prepare_command_result(
+        result, session=session, ref="command", argv=bound.argv
     )

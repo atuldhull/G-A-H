@@ -4,6 +4,7 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 
 from .binding import BoundAction, bind
+from .secrets import secret_scan
 from .session import ApprovalSession
 from .surfaces import changes_execution
 from .types import Action, Decision
@@ -31,14 +32,33 @@ RED_NAMES = {
 
 def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decision:
     args = action.argv or []
+    sources = [secret_scan(source) for source in bound.steered_by]
+    executable = Path(bound.argv[0]).stem.lower() if bound.argv else ""
     network = (
-        any("://" in value for value in args)
+        action.kind == "network"
+        or any("://" in value for value in args)
         or (action.kind == "git" and "push" in args)
         or ("pip" in args and "install" in args)
+        or (executable.startswith("pip") and "install" in args)
+        or executable
+        in (
+            "curl",
+            "wget",
+            "ssh",
+            "scp",
+            "sftp",
+            "ftp",
+            "rsync",
+            "nc",
+            "ncat",
+            "telnet",
+        )
     )
-    if (session.mode == "confidential" or action.source) and network:
+    if (session.mode == "confidential" or bound.steered_by) and network:
         return Decision(
-            "deny", reasons=["network sink denied by confidentiality or provenance"]
+            "deny",
+            reasons=["network sink denied by confidentiality or provenance"],
+            steered_by=sources,
         )
     if session.yes_green and action.kind == "test_consent":
         return Decision(
@@ -60,15 +80,13 @@ def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decisi
         arg in ("push", "--hard", "-fdx", "-D") for arg in args
     )
     if (
-        action.source
+        bound.steered_by
         or red_path
         or irreversible
         or action.kind == "test_consent"
         or (session.mode == "confidential" and action.kind != "write")
     ):
-        return Decision(
-            "ask", "red", steered_by=[action.source] if action.source else []
-        )
+        return Decision("ask", "red", steered_by=sources)
     surface = not action.replacements or any(
         changes_execution(text) for text in action.replacements
     )
@@ -87,11 +105,11 @@ def decide(action: Action, *, session: ApprovalSession | None = None) -> Decisio
         bound = bind(action, session)
         decision = risk(action, bound, session)
     except (OSError, ValueError, TypeError, RuntimeError) as error:
-        return Decision("deny", reasons=[str(error)])
+        return Decision("deny", reasons=[secret_scan(str(error))])
     if (
         decision.verdict != "deny"
         and action.kind == "test_consent"
-        and not action.source
+        and not bound.steered_by
         and session._consent == bound.digest
     ):
         return Decision("allow", reasons=["valid session test consent"])

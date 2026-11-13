@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .binding import BoundAction, bind
 from .policy import decide, risk
+from .secrets import secret_scan
 from .session import ApprovalSession
 from .types import Action, Decision
 
@@ -22,7 +23,10 @@ class ApprovalChanged(ApprovalDenied):
 
 def escape(value: object, cap: int = 4000) -> str:
     """Render controls visibly; cap original characters and show omitted count."""
-    text = str(value)
+    # Preserve controls for the visible escaping renderer. Tool-result scanning
+    # strips ANSI by default; silently stripping it from approval diffs would
+    # hide part of the exact action from the user.
+    text = secret_scan(str(value), strip_ansi=False)
     shown = []
     for char in text[:cap]:
         if not char.isprintable() or unicodedata.category(char).startswith("C"):
@@ -90,8 +94,12 @@ def _preview(
     if action.diff is not None:
         lines.append("diff: " + escape(action.diff))
         lines += ["target: " + escape(path) for path in bound.paths]
-    if action.source:
-        lines.append("suggested by " + escape(action.source))
+    if bound.steered_by:
+        lines.append("suggested by " + escape(bound.steered_by[0]))
+    if action.query is not None:
+        lines.append("query: " + escape(action.query))
+    if action.url is not None:
+        lines.append("url: " + escape(action.url))
     if session.mode == "confidential" and bound.argv:
         lines.append("network is not blocked for child processes")
     for cfg in bound.configs:
@@ -114,12 +122,17 @@ def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
                 session._consent = None
                 session._permits.clear()
             session.events.append(
-                {"event": "approval", "approved": False, "reasons": decision.reasons}
+                {
+                    "event": "approval",
+                    "approved": False,
+                    "reasons": decision.reasons,
+                    "steered_by": decision.steered_by,
+                }
             )
             return decision
         reuse = (
             action.kind == "test_consent"
-            and not action.source
+            and not bound.steered_by
             and session._consent == bound.digest
         )
         if action.kind == "test_consent" and not reuse:
@@ -156,7 +169,7 @@ def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
             raise ApprovalChanged("action changed while confirmation was displayed")
         token = secrets.token_hex(32)
         session._permits[token] = bound.digest
-        if action.kind == "test_consent" and not action.source:
+        if action.kind == "test_consent" and not bound.steered_by:
             session._consent = bound.digest
         session.events.append(
             {
@@ -178,9 +191,9 @@ def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
         session._consent = None
         session._permits.clear()
         session.events.append(
-            {"event": "approval", "approved": False, "reason": str(error)}
+            {"event": "approval", "approved": False, "reason": secret_scan(str(error))}
         )
-        return Decision("deny", reasons=[str(error)])
+        return Decision("deny", reasons=[secret_scan(str(error))])
 
 
 def validate_before_execution(
@@ -201,7 +214,9 @@ def validate_before_execution(
     except (OSError, ValueError, TypeError, RuntimeError, ApprovalChanged) as error:
         session._consent = None
         session._permits.clear()
-        session.events.append({"event": "approval_invalidated", "reason": str(error)})
+        session.events.append(
+            {"event": "approval_invalidated", "reason": secret_scan(str(error))}
+        )
         raise ApprovalChanged(
             "approval inputs changed; fresh approval required"
         ) from error

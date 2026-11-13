@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from .consent import SKIP, ConfigFile, discover
 from .executables import resolve_pinned
 from .paths import resolve_in_repo
+from .provenance import sensitive_fields
 from .session import ApprovalSession
 from .types import Action
 
@@ -20,6 +21,7 @@ class BoundAction:
     cwd: str
     paths: tuple[str, ...]
     configs: tuple[ConfigFile, ...]
+    steered_by: tuple[str, ...] = ()
 
 
 def validate_schema(action: Action) -> None:
@@ -28,9 +30,10 @@ def validate_schema(action: Action) -> None:
         "shell",
         "git",
         "test_consent",
+        "network",
     ):
         raise ValueError("unknown action schema")
-    for value in (action.cwd, action.diff, action.source):
+    for value in (action.cwd, action.diff, action.source, action.query, action.url):
         if value is not None and (not isinstance(value, str) or "\0" in value):
             raise ValueError("invalid string field")
     if not isinstance(action.cwd, str):
@@ -44,7 +47,20 @@ def validate_schema(action: Action) -> None:
             not isinstance(v, str) or "\0" in v for v in values
         ):
             raise ValueError("invalid list field")
-    if action.kind == "write":
+    if action.kind == "network":
+        if (
+            not (action.query or action.url)
+            or action.argv is not None
+            or action.diff is not None
+            or action.paths
+            or action.replacements
+        ):
+            raise ValueError(
+                "network actions require query/url without execution or edit fields"
+            )
+    elif action.query is not None or action.url is not None:
+        raise ValueError("query/url fields are only valid on network actions")
+    elif action.kind == "write":
         if action.diff is None or not action.paths or action.argv is not None:
             raise ValueError("writes require diff and paths, without argv")
     elif (
@@ -63,16 +79,15 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
     if not cwd.is_dir():
         raise ValueError("cwd must be a directory")
     targets = []
+    previous_texts = []
     for raw in action.paths:
         path = resolve_in_repo(raw, root, cwd=cwd, for_write=True, mode=session.mode)
+        raw = path.read_bytes() if path.exists() else None
         targets.append(
-            (
-                str(path),
-                hashlib.sha256(path.read_bytes()).hexdigest()
-                if path.exists()
-                else None,
-            )
+            (str(path), hashlib.sha256(raw).hexdigest() if raw is not None else None)
         )
+        if raw is not None and len(action.paths) == 1:
+            previous_texts.append(raw.decode("utf-8", errors="replace"))
     argv = tuple(action.argv or ())
     exe_meta = None
     configs = ()
@@ -136,6 +151,14 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
                             "test selector lies outside the static config inventory"
                         )
             configs = discover(root, cwd)
+    steered = tuple(
+        source.location
+        for source in session.provenance.steered_by(
+            sensitive_fields(action, previous_texts=previous_texts)
+        )
+    )
+    if action.source and action.source not in steered:
+        steered += (action.source,)
     payload = {
         "kind": action.kind,
         "original_argv": action.argv,
@@ -143,6 +166,9 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
         "diff": action.diff,
         "replacements": action.replacements,
         "source": action.source,
+        "steered_by": steered,
+        "query": action.query,
+        "url": action.url,
         "exe": exe_meta,
         "cwd": str(cwd),
         "paths": targets,
@@ -153,4 +179,6 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
         "configs": [(cfg.path, cfg.sha256) for cfg in configs],
     }
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-    return BoundAction(digest, argv, str(cwd), tuple(p for p, _ in targets), configs)
+    return BoundAction(
+        digest, argv, str(cwd), tuple(p for p, _ in targets), configs, steered
+    )

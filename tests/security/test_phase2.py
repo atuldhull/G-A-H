@@ -30,6 +30,9 @@ class Phase2Tests(unittest.TestCase):
         self.addCleanup(self.cleanup_fixture)
         self.root = Path(self.temp.name).resolve()
         self.session = ApprovalSession(self.root)
+        console = patch.object(approvals, "_console_answer", return_value="n")
+        console.start()
+        self.addCleanup(console.stop)
 
     def cleanup_fixture(self):
         # Windows can briefly retain directory handles after process termination.
