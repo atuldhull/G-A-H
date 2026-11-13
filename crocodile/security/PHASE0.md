@@ -1,5 +1,8 @@
 # Part 3 Phase 0 handoff
 
+Historical Phase 0 baseline. Phase 1 supersedes the approval and command behavior
+below; see [PHASE1.md](PHASE1.md) for current APIs and remaining integration work.
+
 These are integration stubs, not completed security controls. Use trusted public
 fixtures only. `mode_for` always returns `"public"`, including for marker-bearing
 paths; `cmd.run` inherits the environment and does not enforce approvals or policy.

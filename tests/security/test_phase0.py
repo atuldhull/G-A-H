@@ -11,6 +11,12 @@ from crocodile.security import Action, CmdResult, Decision, approvals, cmd, conf
 
 
 class Phase0Tests(unittest.TestCase):
+    def setUp(self):
+        # Phase 1 makes command smoke fixtures pass through console approval.
+        self.console = patch.object(approvals, "_console_answer", return_value="y")
+        self.console.start()
+        self.addCleanup(self.console.stop)
+
     def test_console_confirmation(self):
         for answer, verdict in (
             ("y\n", "allow"),
@@ -21,7 +27,14 @@ class Phase0Tests(unittest.TestCase):
         ):
             with self.subTest(answer=answer):
                 with patch.object(approvals, "_console_answer", return_value=answer):
-                    result = approvals.ask(Action("write", diff="trusted fixture"))
+                    result = approvals.ask(
+                        Action(
+                            "write",
+                            diff="trusted fixture",
+                            paths=["fixture.py"],
+                            replacements=["x = 1"],
+                        )
+                    )
                 self.assertIsInstance(result, Decision)
                 self.assertEqual(result.verdict, verdict)
                 self.assertEqual(bool(result), verdict == "allow")
@@ -29,12 +42,14 @@ class Phase0Tests(unittest.TestCase):
     def test_no_console_denies(self):
         with patch.object(approvals, "_console_answer", side_effect=OSError):
             self.assertEqual(
-                approvals.ask(Action("shell", argv=["fixture"])).verdict, "deny"
+                approvals.ask(Action("shell", argv=[sys.executable])).verdict, "deny"
             )
 
     def test_preview_does_not_render_controls(self):
         with patch.object(approvals, "_console_answer", return_value="n") as reader:
-            approvals.ask(Action("git", argv=["\x1b[2J"], source="README.md:40"))
+            approvals.ask(
+                Action("git", argv=[sys.executable, "\x1b[2J"], source="README.md:40")
+            )
         preview = reader.call_args.args[0]
         self.assertNotIn("\x1b", preview)
         self.assertIn("README.md:40", preview)

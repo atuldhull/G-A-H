@@ -20,6 +20,9 @@ class Action:
     argv: list[str] | None = None
     diff: str | None = None
     source: str | None = None
+    cwd: str = "."
+    paths: list[str] = field(default_factory=list)
+    replacements: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
