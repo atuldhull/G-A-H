@@ -4,6 +4,8 @@ Part 1 must serialize prepare -> validate -> approved edit -> complete. No comma
 side effects or target Git index/history are captured. Types remain Part 3 local.
 """
 
+from __future__ import annotations
+
 import argparse
 import base64
 import hashlib

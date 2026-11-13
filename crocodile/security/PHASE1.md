@@ -1,5 +1,8 @@
 # Part 3 Phase 1: approvals and test consent
 
+Python 3.12, outside-repo virtual environments, and the later trusted bench-session
+API are documented in [BENCH.md](BENCH.md). Ordinary sessions remain console-only.
+
 Phase 2 supersedes the deferred command, executable, path and Git behavior below;
 see [PHASE2.md](PHASE2.md) for current integration details and verification.
 

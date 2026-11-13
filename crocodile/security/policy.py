@@ -60,6 +60,18 @@ def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decisi
             reasons=["network sink denied by confidentiality or provenance"],
             steered_by=sources,
         )
+    if session.bench_auto and (
+        session.mode != "public"
+        or network
+        or action.kind not in ("write", "shell", "test_consent")
+    ):
+        return Decision(
+            "deny",
+            reasons=[
+                "bench auto permits local actions in its public disposable workspace only"
+            ],
+            steered_by=sources,
+        )
     if session.yes_green and action.kind == "test_consent":
         return Decision(
             "deny", reasons=["--yes-green cannot combine with test execution"]
@@ -106,6 +118,13 @@ def decide(action: Action, *, session: ApprovalSession | None = None) -> Decisio
         decision = risk(action, bound, session)
     except (OSError, ValueError, TypeError, RuntimeError) as error:
         return Decision("deny", reasons=[secret_scan(str(error))])
+    if decision.verdict != "deny" and session.bench_auto:
+        return Decision(
+            "allow",
+            decision.level,
+            reasons=["trusted bench auto"],
+            steered_by=decision.steered_by,
+        )
     if (
         decision.verdict != "deny"
         and action.kind == "test_consent"

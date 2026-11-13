@@ -138,7 +138,8 @@ def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
         if action.kind == "test_consent" and not reuse:
             session._consent = None
             session._permits.clear()
-        if not reuse:
+        automatic = session.bench_auto
+        if not reuse and not automatic:
             nonce = f"{secrets.randbelow(100):02d}"
             word = (
                 "tests"
@@ -175,8 +176,23 @@ def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
             {
                 "event": "approval",
                 "approved": True,
-                "by": "consent" if reuse else "console",
+                "by": "bench" if automatic else "consent" if reuse else "console",
                 "token": token,
+                **(
+                    {
+                        "level": decision.level,
+                        "steered_by": decision.steered_by,
+                        "action_digest": bound.digest,
+                        "argv": [secret_scan(value) for value in bound.argv],
+                        "cwd": bound.cwd,
+                        "config_hashes": [
+                            {"path": cfg.path, "sha256": cfg.sha256}
+                            for cfg in bound.configs
+                        ],
+                    }
+                    if automatic
+                    else {}
+                ),
             }
         )
         return replace(decision, verdict="allow", token=token)

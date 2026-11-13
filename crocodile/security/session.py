@@ -1,5 +1,6 @@
 """Trusted in-memory approval state, pending the Part 2 journal integration."""
 
+import tempfile
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +33,10 @@ class ApprovalSession:
     _exe_pins: dict = field(default_factory=dict, init=False, repr=False)
     _git_disabled: bool = field(default=False, init=False, repr=False)
     _output_counter: int = field(default=0, init=False, repr=False)
+    _bench_root: tuple[Path, int, int] | None = field(
+        default=None, init=False, repr=False
+    )
+    _bench_closed: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self):
         self.repo_root = Path(self.repo_root).resolve(strict=True)
@@ -39,6 +44,69 @@ class ApprovalSession:
             raise ValueError("invalid trusted session context")
         self._exe_pins = pin_tools(self.repo_root)
         self.provenance = ProvenanceIndex(self.user_task)
+
+    @classmethod
+    def for_bench(
+        cls,
+        repo_root: Path,
+        *,
+        parent: Path | None = None,
+        user_task: str = "",
+        events: list[dict] | None = None,
+        integrity=None,
+        confidentiality=None,
+    ):
+        """Trusted harness only: activate BEFORE populating an empty scratch repo.
+
+        The harness owns creation, task preparation, grading and cleanup. Its root
+        must be a direct child of the trusted scratch parent (OS temp by default).
+        This does not attest OS isolation or make arbitrary child code safe.
+        """
+        raw = Path(repo_root).absolute()
+        if any(
+            p.is_symlink() or getattr(p, "is_junction", lambda: False)()
+            for p in (raw, *raw.parents)
+        ):
+            raise ValueError("bench workspace must not traverse links")
+        root = raw.resolve(strict=True)
+        scratch = Path(parent if parent is not None else tempfile.gettempdir()).resolve(
+            strict=True
+        )
+        if root.parent != scratch or not root.is_dir() or any(root.iterdir()):
+            raise ValueError(
+                "bench requires an empty direct child of its trusted scratch parent"
+            )
+        session = cls(
+            repo_root=root,
+            user_task=user_task,
+            events=events if events is not None else [],
+            integrity=integrity,
+            confidentiality=confidentiality,
+        )
+        info = root.stat()
+        session._bench_root = (root, info.st_dev, info.st_ino)
+        session.events.append(
+            {
+                "event": "bench_session_started",
+                "repo_root": str(root),
+                "approval_mode": "bench_auto",
+                "os_sandbox": False,
+            }
+        )
+        return session
+
+    @property
+    def bench_auto(self) -> bool:
+        return self._bench_root is not None and not self._bench_closed
+
+    def close_bench(self):
+        """Revoke all bench authority before the harness cleans up its workspace."""
+        if self._bench_root is None:
+            raise ValueError("not a bench session")
+        self._bench_closed = True
+        self._permits.clear()
+        self._consent = None
+        self.events.append({"event": "bench_session_closed"})
 
     def record_edit(self, replacements: list[str]) -> None:
         """Part 1 calls after applying an edit with its exact REPLACE sides."""
@@ -55,6 +123,28 @@ class ApprovalSession:
 
         if self._aborted:
             raise IntegrityViolation("session aborted after integrity violation")
+        if self._bench_closed:
+            raise IntegrityViolation("bench session is closed")
+        if self._bench_root is not None:
+            root, device, inode = self._bench_root
+            try:
+                info = root.stat()
+                valid = (
+                    self.repo_root == root
+                    and root.resolve(strict=True) == root
+                    and not root.is_symlink()
+                    and not getattr(root, "is_junction", lambda: False)()
+                    and root.is_dir()
+                    and (info.st_dev, info.st_ino) == (device, inode)
+                )
+            except OSError:
+                valid = False
+            if not valid:
+                self.abort_integrity(
+                    "bench workspace",
+                    "original disposable root",
+                    "changed or unavailable",
+                )
 
     def abort_integrity(self, path, expected, found):
         from .integrity import IntegrityViolation
