@@ -214,6 +214,19 @@ class BudgetManager:
         finally:
             conn.close()
 
+    def is_warn_threshold_reached(
+        self,
+        principal: str,
+        window: str | None = None,
+        warn_frac: float = DEFAULT_WARN_FRAC,
+    ) -> bool:
+        """Returns True if (spent + held) has reached warn_frac (default 80%) of daily limit."""
+        spent, held = self.get_window_spend(principal, window)
+        limit = self.get_principal_limit(principal)
+        if limit <= 0:
+            return True
+        return (spent + held) >= (warn_frac * limit)
+
     def expire_dead_leases(self, conn: sqlite3.Connection) -> int:
         """Expire held reservations whose owner PID has died."""
         cur = conn.cursor()
