@@ -1,0 +1,116 @@
+"""crocodile CLI (Part 1: `run`). Other parts add their own subcommands to `app`."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import typer
+from rich.console import Console
+
+from . import __version__
+from .loop import ALL_FLAGS, Agent
+
+app = typer.Typer(add_completion=False, no_args_is_help=True, help="Crocodile: snaps up wasted tokens.")
+err = Console(stderr=True, highlight=False)
+
+
+def _flags(spec: str) -> set[str]:
+    spec = spec.strip().lower()
+    if spec in ("all", ""):
+        return set(ALL_FLAGS)
+    if spec in ("none", "off"):
+        return set()
+    out = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if part.startswith("-"):
+            out = (out or set(ALL_FLAGS)) - {part[1:]}
+        elif part in ALL_FLAGS:
+            out.add(part)
+        else:
+            raise typer.BadParameter(f"unknown flag {part}; known: {', '.join(sorted(ALL_FLAGS))}")
+    return out
+
+
+def _printer(quiet: bool):
+    def on_event(kind: str, d: dict) -> None:
+        if quiet:
+            return
+        if kind == "model_call":
+            u = d["usage"]
+            hit = f"{100 * u['cached_tokens'] // max(1, u['prompt_tokens'])}%" if u["prompt_tokens"] else "-"
+            err.print(f"[dim]· {d['model']}  in {u['prompt_tokens']} (cache {hit})  out {u['completion_tokens']}"
+                      f"  -> {', '.join(d['tool_calls']) or 'text'}[/dim]")
+        elif kind == "takeover":
+            err.print(f"[bold yellow]▲ MODEL TAKEOVER → {d['model']} (primary failed: {d.get('error_class')})"
+                      "[/bold yellow]")
+        elif kind == "escalate":
+            err.print(f"[bold magenta]▲ ESCALATE: {d['reason']} → {d['to']}[/bold magenta]")
+        elif kind == "green":
+            err.print(f"[bold green]✔ tests green ({d['stage']})[/bold green]")
+        elif kind == "tool_done" and not d["ok"]:
+            err.print(f"[dim red]  ✗ {d['tool']}[/dim red]")
+    return on_event
+
+
+@app.command()
+def run(
+    task: str | None = typer.Argument(None, help="Task text (or use --task-file)."),
+    repo: Path = typer.Option(Path("."), "--repo", help="Repository root."),
+    task_file: Path | None = typer.Option(None, "--task-file"),
+    test: list[str] = typer.Option([], "--test", help="Oracle test file/id (repeatable). Enables stop-on-green."),
+    full_suite: bool = typer.Option(False, "--full-suite", help="Also run the whole suite (regression check)."),
+    flags: str = typer.Option("all", "--flags", help="all | none | comma list | -flag to drop one."),
+    tier: str = typer.Option("cheap", "--tier", help="Starting model tier: cheap | strong."),
+    steps: int = typer.Option(30, "--steps", help="Step cap."),
+    yes: bool = typer.Option(False, "--yes", help="Auto-approve (bench sandboxes only)."),
+    json_out: Path | None = typer.Option(None, "--json-out", help="Write the receipt as JSON."),
+    quiet: bool = typer.Option(False, "--quiet"),
+):
+    """Run the agent on a task. Exit 0 = solved (tests green), 1 = not solved, 2 = error."""
+    if task_file:
+        task = task_file.read_text(encoding="utf-8")
+    if not task:
+        raise typer.BadParameter("give a task or --task-file")
+    if tier not in ("cheap", "strong"):
+        raise typer.BadParameter("tier must be cheap or strong")
+    agent = Agent(repo, task, oracle=test or None, full_suite=full_suite, flags=_flags(flags), tier=tier,
+                  approve_mode="auto" if yes else "ask", step_cap=steps, on_event=_printer(quiet))
+    if agent.r.stubs and not quiet:
+        err.print(f"[yellow]note: using stubs for {', '.join(agent.r.stubs)} (not for demos)[/yellow]")
+    try:
+        r = agent.run()
+    except Exception as e:   # model/HTTP errors: still write a receipt for the bench
+        agent.r.status = f"ERROR: {type(e).__name__}: {e}"[:300]
+        r = agent.r
+        code = 2
+    else:
+        code = 0 if r.solved else 1
+    u = r.usage
+    err.print(f"[bold]{r.status}[/bold]  steps {r.steps}  tokens in {u.prompt_tokens} (cached {u.cached_tokens})"
+              f" out {u.completion_tokens}  avoided ~{r.tokens_avoided}  {r.wall_s}s")
+    if r.savings and not quiet:
+        total = sum(r.savings.values())
+        items = "  ".join(f"{k} -{v:,}" for k, v in list(r.savings.items())[:5])
+        err.print(f"[green]saved ~{total:,} input tokens (estimated, first-order): {items}[/green]")
+    if r.rewinds or r.checkpoints:
+        err.print(f"[dim]rewinds {r.rewinds}  checkpoints kept {r.checkpoints}[/dim]")
+    if json_out:
+        json_out.write_text(json.dumps(r.to_json(), indent=2), encoding="utf-8")
+    raise typer.Exit(code)
+
+
+@app.command()
+def version():
+    """Print the version."""
+    typer.echo(__version__)
+
+
+def main() -> None:   # pragma: no cover
+    app()
+
+
+if __name__ == "__main__":   # pragma: no cover
+    sys.exit(main())
