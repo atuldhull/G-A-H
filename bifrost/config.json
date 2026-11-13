@@ -75,16 +75,19 @@
           {
             "provider": "anthropic",
             "allowed_models": ["claude-sonnet-5-5", "claude-haiku-5-5"],
+            "allow_all_keys": true,
             "weight": 1
           },
           {
             "provider": "openai",
             "allowed_models": ["gpt-5-mini"],
+            "allow_all_keys": true,
             "weight": 1
           },
           {
             "provider": "gemini",
             "allowed_models": ["*"],
+            "allow_all_keys": true,
             "weight": 1
           }
         ],
@@ -104,6 +107,7 @@
           {
             "provider": "ollama",
             "allowed_models": ["qwen2.5-coder:7b"],
+            "allow_all_keys": true,
             "weight": 1
           }
         ]
@@ -117,6 +121,7 @@
           {
             "provider": "anthropic",
             "allowed_models": ["claude-haiku-5-5"],
+            "allow_all_keys": true,
             "weight": 1
           }
         ],
@@ -136,6 +141,7 @@
           {
             "provider": "anthropic",
             "allowed_models": ["claude-haiku-5-5"],
+            "allow_all_keys": true,
             "weight": 1
           }
         ],

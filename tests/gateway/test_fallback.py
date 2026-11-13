@@ -46,3 +46,15 @@ def test_parse_routing_info_fallback_and_banner():
     assert "anthropic/claude-sonnet-5-5 failed: auth" in banner
     assert "anthropic/claude-haiku-5-5 answered" in banner
     assert "journal seq 42" in banner
+
+
+def test_parse_routing_info_prefixes_bare_model_from_bifrost():
+    """Bifrost headers send bare model name without provider (e.g. gemini-3.5-flash-lite)."""
+    headers = {
+        "x-bifrost-resolved-model": "gemini-3.5-flash-lite",
+        "x-bifrost-provider": "gemini",
+        "x-bifrost-routing-info-is-fallback": "false",
+    }
+    routing = parse_routing_info(headers, requested_model="gemini/gemini-3.5-flash-lite")
+    assert routing.model_used == "gemini/gemini-3.5-flash-lite"
+    assert routing.provider_used == "gemini"

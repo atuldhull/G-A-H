@@ -116,6 +116,23 @@ def parse_routing_info(
         raw_reason = headers_lower.get("x-bifrost-fallback-reason") or body_routing.get("fallback_reason")
         error_class = classify_error(status_code if status_code >= 400 else 401, raw_reason)
 
+    # Ensure model_used and primary_model are provider-prefixed (e.g. 'gemini/gemini-3.5-flash-lite')
+    # Bifrost routing headers return bare model name without provider prefix
+    if not provider_used and "/" in requested_model:
+        provider_used = requested_model.split("/", 1)[0]
+    if not primary_provider and "/" in requested_model:
+        primary_provider = requested_model.split("/", 1)[0]
+
+    if model_used and "/" not in model_used:
+        prefix = provider_used or (requested_model.split("/", 1)[0] if "/" in requested_model else "")
+        if prefix:
+            model_used = f"{prefix}/{model_used}"
+
+    if primary_model and "/" not in primary_model:
+        prefix = primary_provider or (requested_model.split("/", 1)[0] if "/" in requested_model else "")
+        if prefix:
+            primary_model = f"{prefix}/{primary_model}"
+
     return RoutingInfo(
         model_used=model_used,
         provider_used=provider_used,
