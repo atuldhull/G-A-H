@@ -1,4 +1,4 @@
-# Benchmark workspace preparation and independent grading
+# Benchmark preparation, grading, and run planning
 
 This first Person 4 milestone prepares disposable exercise workspaces for the
 future benchmark harness. It copies ordinary files, tests, and empty directories,
@@ -184,7 +184,162 @@ and any suite-specific extra oracle paths. It will consume `result.json`, retain
 test-edit flags and logs, and join the result with agent/run/model IDs and costs
 from Bifrost logs. The grader does not trust the agent's own solved claim.
 
-Task selection, identical prompts and caps, execution through Parts 1-3,
-Bifrost-derived accounting, and benchmark reports remain later milestones. These
-utilities produce no benchmark scores or savings claims and do not change shared
-contracts or other owners' code.
+Execution through Parts 1-3, Bifrost-derived accounting, and benchmark reports
+remain later milestones. These utilities produce no benchmark scores or savings
+claims and do not change shared contracts or other owners' code.
+
+## Deterministic run planning (milestone 3)
+
+The repository does not contain Polyglot or QuixBugs dataset checkouts or a verified
+mapping of their native files to self-contained exercises. The planner therefore
+uses an **explicit JSON task index**, not guessed filenames or directory globbing.
+It discovers and validates declared exercises beneath the supplied local roots.
+Unindexed directories are not treated as tasks. The source dataset version and
+which tasks constitute the intended 34 Polyglot / 20 QuixBugs sets must be verified
+before creating a real benchmark index; a small smoke index is not a full suite.
+
+### Input contract
+
+Provide an index with exactly `schema_version` (integer 1) and `tasks` (a list).
+This is an explicitly **synthetic format example**, not a claim about either real
+dataset's layout or contents:
+
+```json
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "dataset": "polyglot",
+      "id": "example-a",
+      "source": "exercises/example-a",
+      "task_file": "prompts/example-a.txt",
+      "test_command": ["python", "-m", "pytest", "-q"],
+      "test_paths": []
+    },
+    {
+      "dataset": "quixbugs",
+      "id": "example-b",
+      "source": "exercises/example-b",
+      "task_file": "prompts/example-b.txt",
+      "test_command": ["python", "-m", "pytest", "-q"],
+      "test_paths": ["oracle-data"]
+    }
+  ]
+}
+```
+
+Each selected dataset root would contain its declared directories and files. For
+example, the synthetic Polyglot entry above declares:
+
+```text
+POLYGLOT_ROOT/
+  exercises/example-a/   # a nonempty, self-contained exercise, including tests
+  prompts/example-a.txt  # explicitly supplied UTF-8 task text
+```
+
+The example names are arbitrary: the planner uses the index's paths verbatim.
+`source` and `task_file` are relative to that entry's dataset root; optional
+`test_paths` are relative to its exercise source and are passed to the future
+grader as extra oracle paths. Each extra path must exist. Source paths must be
+distinct and nonoverlapping, including across datasets. A native checkout with
+shared implementation or test directories needs a reviewed assembly/adapter step
+to produce independent exercise directories first; this planner does not invent
+that mapping or copy any files.
+
+IDs use lowercase ASCII letters, digits, dots, underscores, or hyphens, starting
+with a letter or digit. Stable task IDs are `dataset/id`, so the same local ID in
+different datasets is allowed. Duplicate canonical IDs, duplicate JSON keys,
+unknown fields, empty prompts, empty exercises, missing paths, links/junctions in
+exercise trees, and overlapping exercise sources fail clearly. Relative paths use
+forward slashes and cannot be absolute, contain `..`, `.` or empty components,
+backslashes, colons, or control characters. Source and extra oracle paths cannot
+enter `.meta/`; prompt paths may explicitly name a file inside metadata, but the
+index author must verify that it contains instructions rather than a solution.
+
+Every task must declare its test command as argv beginning with
+`["python", "-m", "pytest", "-q"]`. Further arguments are preserved, never executed
+or interpreted as a shell command. `--runslow` is rejected. The index author must
+verify suite-specific arguments, including the architecture's `--timeout=5` for
+QuixBugs bitcount; no special filename or task identity is inferred. The planner
+cannot confirm pytest collection or plugin availability without executing tests,
+which is outside this command's scope.
+
+### CLI and selection
+
+From the repository root, with real roots and a reviewed task index supplied:
+
+```powershell
+python -m bench.plan --set both --polyglot "C:\datasets\polyglot" --quixbugs "C:\datasets\quixbugs" --task-index "C:\benchmark-inputs\tasks.json" --limit 3 --runs 2 --dry-run --output "C:\benchmark-plans\smoke.json"
+```
+
+Single-dataset examples require only that selected root:
+
+```powershell
+python -m bench.plan --set polyglot --polyglot "C:\datasets\polyglot" --task-index "C:\benchmark-inputs\tasks.json" --dry-run --output "C:\benchmark-plans\polyglot.json"
+python -m bench.plan --set quixbugs --quixbugs "C:\datasets\quixbugs" --task-index "C:\benchmark-inputs\tasks.json" --dry-run --output "C:\benchmark-plans\quixbugs.json"
+```
+
+`--set` defaults to `both`. Index schema and duplicate IDs are validated globally;
+only selected datasets' filesystem paths are inspected, and each selected dataset
+must have at least one indexed task. Every task in a selected dataset is validated
+**before** applying the limit, so a broken task beyond the limit is not hidden.
+
+Tasks are ordered by canonical task ID (Polyglot first, then QuixBugs, then local
+ID). `--limit N` is a positive **global task limit**, applied after set selection
+and sorting and before expanding runs. It is not a per-dataset quota: a small
+`--set both --limit N` can select only Polyglot tasks. Omit it to select all indexed
+tasks. Values larger than the available count select all tasks.
+
+`--runs N` is a positive repeat count for **both Crocodile and mini-swe-agent**,
+default 2 independent runs each. The all-off twin always has one run per task.
+For T tasks, total planned runs are `T * (2 * N + 1)`. Runs are ordered by task,
+then `crocodile`, `mini-swe-agent`, `all-off-twin`, then one-based run number.
+Run IDs are `dataset/id/variant/run-N`; no model sampling seeds are invented.
+
+This command is **always planning-only**, including when `--dry-run` is omitted.
+The flag explicitly labels a dry run. It prints selected/indexed task counts,
+selected counts per dataset, and run counts per variant, and writes the same
+manifest in either mode. It never invokes agents, prepares workspaces, starts
+pytest, imports exercise code, makes network/model calls, or estimates costs.
+All validation and reads finish before opening the output. The output manifest
+must be a new file outside the selected dataset roots, with an existing parent;
+existing output files and dangling links are not overwritten. Errors exit 2;
+successful planning exits 0.
+
+The importable API is `bench.plan.build_plan(task_index, polyglot=...,
+quixbugs=..., dataset_set="both", limit=None, runs=2)`, followed by
+`bench.plan.write_manifest(plan, output)`.
+
+### Output and future execution
+
+The version 1 manifest contains selected task and run arrays, counts, roots,
+repeat counts, and `execution_enabled: false`. Every planned run records its
+stable task/run IDs, dataset, agent variant, run number, resolved absolute source
+path, test command argv, extra oracle paths, **30 steps**, and **600 seconds**.
+Every variant receives identical task text: the UTF-8 prompt verbatim followed by
+`\n\nTest command: `, a shell-quoted display of the argv, and a final newline. The
+executor must treat argv as arguments and give this frozen text to every agent;
+mini's standard wrapper template is separate. The text's SHA-256 is recorded.
+
+The architecture's model, thinking/effort, Bifrost/cache policy, mini version,
+parallelism 4, and 180-second independent grading timeout are recorded as
+**intended policy**, not proof of configured or available infrastructure. JSON
+keys and ordering are deterministic; there are no timestamps or random IDs.
+Reordering the input tasks or changing only the output path does not change the
+manifest bytes. Absolute paths are local to the machine; task/run IDs are portable.
+Dataset contents must remain stable, and the later harness must pin/revalidate
+dataset revisions; the planner hashes task text, not the entire exercise tree.
+
+Before real runs, verify dataset revisions, the full task mapping and chosen
+QuixBugs subset, prompts without solutions, original tests and extra oracle
+paths, and actual test commands/dependencies. The milestone 2 grader currently
+uses a fixed `python -m pytest -q`; applying task-specific arguments such as
+bitcount's timeout consistently in agent and authoritative grading commands still
+needs a harness adapter. The executor must also enforce the recorded model,
+gateway/cache policy, caps, all-off flags, independent workspace isolation, and
+WSL path translation for mini. None of that infrastructure is asserted ready.
+
+The future harness will prepare a separate workspace for every manifest run,
+dispatch its variant with the frozen prompt and caps, independently grade its
+final tree, and join run IDs with grading artifacts and Bifrost-derived costs.
+This milestone produces plans only, with no benchmark results or cost claims.
