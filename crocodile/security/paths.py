@@ -52,6 +52,7 @@ def resolve_in_repo(
     cwd: Path | None = None,
     for_write: bool = False,
     mode: str = "public",
+    store=None,
 ) -> Path:
     """Resolve aliases and every intermediate link, then enforce containment.
 
@@ -89,6 +90,13 @@ def resolve_in_repo(
                 raise ValueError("path inside confidential subtree")
             if parent == root:
                 break
+        from .classification import ClassificationError
+        from .confidential import guard_public_path
+
+        try:
+            guard_public_path(candidate, root, store=store)
+        except ClassificationError as error:
+            raise ValueError(str(error)) from error
     if (
         for_write
         and candidate.exists()

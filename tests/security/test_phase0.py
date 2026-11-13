@@ -128,8 +128,10 @@ class Phase0Tests(unittest.TestCase):
 
     def test_public_mode_stub(self):
         with tempfile.TemporaryDirectory() as directory:
-            self.assertEqual(confidential.mode_for(directory), "public")
-            self.assertEqual(confidential.mode_for(Path(directory)), "public")
+            self.assertEqual(confidential.mode_for(directory, root=directory), "public")
+            self.assertEqual(
+                confidential.mode_for(Path(directory), root=directory), "public"
+            )
 
 
 if __name__ == "__main__":

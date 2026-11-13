@@ -21,6 +21,7 @@ class ApprovalSession:
     yes_green: bool = False
     events: list[dict] = field(default_factory=list)
     user_task: str = ""
+    confidentiality: object | None = field(default=None, repr=False)
     provenance: ProvenanceIndex = field(init=False, repr=False)
     _permits: dict[str, str] = field(default_factory=dict, repr=False)
     _consent: str | None = field(default=None, repr=False)
@@ -45,3 +46,17 @@ class ApprovalSession:
             self.events.append(
                 {"event": "test_consent_invalidated", "reason": "edited code"}
             )
+
+    def refresh_confidentiality(self):
+        """Owner hook: attach Detector and recheck before each turn/tool decision."""
+        if self.confidentiality is None:
+            return
+        result = self.confidentiality.detect(self.repo_root, root=self.repo_root)
+        if result.mode == "confidential" and self.mode != "confidential":
+            self.mode = "confidential"
+            self._consent = None
+            self._permits.clear()
+            self.events.append({"event": "mode_changed", "mode": "confidential"})
+        self.events.extend(
+            {"event": "confidential_alert", "message": alert} for alert in result.alerts
+        )

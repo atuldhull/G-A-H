@@ -74,6 +74,7 @@ def validate_schema(action: Action) -> None:
 
 def bind(action: Action, session: ApprovalSession) -> BoundAction:
     validate_schema(action)
+    session.refresh_confidentiality()
     root = session.repo_root.resolve(strict=True)
     cwd = resolve_in_repo(action.cwd, root, mode=session.mode)
     if not cwd.is_dir():
@@ -82,6 +83,8 @@ def bind(action: Action, session: ApprovalSession) -> BoundAction:
     previous_texts = []
     for raw in action.paths:
         path = resolve_in_repo(raw, root, cwd=cwd, for_write=True, mode=session.mode)
+        if session.confidentiality is not None:
+            session.confidentiality.guard(path, root=root, mode=session.mode)
         raw = path.read_bytes() if path.exists() else None
         targets.append(
             (str(path), hashlib.sha256(raw).hexdigest() if raw is not None else None)
