@@ -1,4 +1,4 @@
-# Benchmark preparation, grading, and run planning
+# Benchmark preparation, grading, planning, and offline reporting
 
 This first Person 4 milestone prepares disposable exercise workspaces for the
 future benchmark harness. It copies ordinary files, tests, and empty directories,
@@ -184,9 +184,10 @@ and any suite-specific extra oracle paths. It will consume `result.json`, retain
 test-edit flags and logs, and join the result with agent/run/model IDs and costs
 from Bifrost logs. The grader does not trust the agent's own solved claim.
 
-Execution through Parts 1-3, Bifrost-derived accounting, and benchmark reports
-remain later milestones. These utilities produce no benchmark scores or savings
-claims and do not change shared contracts or other owners' code.
+Execution through Parts 1-3 and the Bifrost export/accounting adapter remain later
+integration work. Offline reporting is implemented below, with no real measured
+results supplied. These utilities do not change shared contracts or other owners'
+code.
 
 ## Deterministic run planning (milestone 3)
 
@@ -343,3 +344,21 @@ The future harness will prepare a separate workspace for every manifest run,
 dispatch its variant with the frozen prompt and caps, independently grade its
 final tree, and join run IDs with grading artifacts and Bifrost-derived costs.
 This milestone produces plans only, with no benchmark results or cost claims.
+
+## Offline benchmark reporting (milestone 4)
+
+`python -m bench.report` validates a complete run plan, JSONL results, a normalized
+Bifrost session export, and a `prices.yaml` snapshot, then calculates pass rates,
+paired task differences and W/L/T counts, CPST including unsolved costs, and
+geometric cost ratios on jointly solved paired runs. Intervals use 10,000
+whole-task bootstrap resamples with a recorded statistical seed. Missing or
+invalid pairs and unverifiable costs are rejected; insufficient comparisons are
+explicitly inconclusive, never silently converted to zero.
+
+See [report-format.md](report-format.md) for the exact input schemas, CLI, cost
+verification, repeated-run definitions, and limitations. The checked-in
+[report.md](report.md) and [report.json](report.json) are **incomplete status
+artifacts**, with no benchmark measurements. Synthetic evidence exists only in
+tests and cannot be published through the report writer. Runtime execution and a
+trusted gateway export adapter still need integration before a real scorecard can
+replace these status files.

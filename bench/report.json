@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "status": "incomplete",
+  "data_kind": null,
+  "reason": "No verified benchmark run results, Bifrost session export, or prices.yaml snapshot have been supplied.",
+  "metadata": {
+    "model": null,
+    "datasets": [],
+    "task_count": null,
+    "run_count": null,
+    "runs_per_task": null,
+    "dates": [],
+    "gateway_version": null
+  },
+  "bootstrap": {"resamples": 10000, "seed": null, "unit": "tasks"},
+  "cost_verification": {"status": "unverified", "input_sha256": null},
+  "datasets": null,
+  "overall": null,
+  "public_claims": "None. Missing measurements are not measured zeros. Synthetic test calculations are not benchmark results."
+}
