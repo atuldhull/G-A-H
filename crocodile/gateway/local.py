@@ -26,15 +26,13 @@ class ConfidentialDeny(Exception):
 
 def is_loopback_host(host_or_url: str) -> bool:
     """Check if the provided host or URL resolves strictly to a loopback address."""
-    parsed = urlparse(host_or_url)
-    hostname = parsed.hostname or host_or_url
-
-    # Handle unparsed strings with port (e.g., "127.0.0.1:11434")
-    if parsed.scheme == "" and ":" in hostname:
-        if hostname.startswith("[") and "]" in hostname:
-            hostname = hostname[1 : hostname.index("]")]
-        elif hostname.count(":") == 1:
-            hostname = hostname.split(":", 1)[0]
+    raw = host_or_url.strip()
+    if "://" not in raw:
+        raw = "http://" + raw
+    parsed = urlparse(raw)
+    hostname = parsed.hostname
+    if not hostname:
+        return False
 
     hostname_clean = hostname.strip("[]").lower()
     if hostname_clean in ("localhost", "127.0.0.1", "::1"):
