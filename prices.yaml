@@ -1,0 +1,21 @@
+anthropic/claude-haiku-5-5:
+  tiers:
+    - {upto: 100000, in: 0.10, cache_write_5m: 0.125, cache_write_1h: 0.20, cache_read: 0.01, out: 0.50}
+    - {upto: null,   in: 0.50, cache_write_5m: 0.625, cache_write_1h: 1.00, cache_read: 0.05, out: 2.50}
+  max_out: 64000
+anthropic/claude-sonnet-5-5:
+  tiers:
+    - {upto: null, in: 2.00, cache_write_5m: 2.50, cache_write_1h: 4.00, cache_read: 0.10, out: 10.00}
+  max_out: 64000
+anthropic/claude-opus-5-5:
+  tiers:
+    - {upto: null, in: 4.00, cache_write_5m: 5.00, cache_write_1h: 8.00, cache_read: 0.20, out: 20.00}
+  max_out: 64000
+openai/gpt-5-mini:
+  tiers:
+    - {upto: null, in: 0.25, cache_write_5m: 0.25, cache_write_1h: 0.25, cache_read: 0.025, out: 2.00}
+  max_out: 16384
+ollama/*:
+  tiers:
+    - {upto: null, in: 0.0, cache_write_5m: 0.0, cache_write_1h: 0.0, cache_read: 0.0, out: 0.0}
+  max_out: 32768
