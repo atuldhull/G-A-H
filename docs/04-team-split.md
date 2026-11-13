@@ -6,7 +6,7 @@ Pick a part, write your name in the table, and read only your part's sections an
 
 | Part | Area | Owner |
 |---|---|---|
-| **Part 1** | Agent loop + token/accuracy engine | _ |
+| **Part 1** | Agent loop + token/accuracy engine | Atul |
 | **Part 2** | Gateway: Bifrost, failover, budget, local routing, Tavily | _ |
 | **Part 3** | Security + approvals + confidential detection | _ |
 | **Part 4** | Benchmark, red-team, UX, submission | _ |
