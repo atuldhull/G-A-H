@@ -434,7 +434,9 @@ class Agent:
                     self._add({"role": "tool", "tool_call_id": c.id, "content": "ok"},
                               {"turn": step, "tool": "finish"})
                     continue
-                self._event("tool_started", tool=c.name, call_id=c.id)
+                self._event("tool_started", tool=c.name, call_id=c.id,
+                            args={k: (v if len(str(v)) <= 300 else str(v)[:300] + "...")
+                                  for k, v in c.arguments.items()})
                 self.ctx.thrash.record_call(c.name, c.arguments)
                 out = dispatch(c.name, c.arguments, self.ctx)
                 if c.name in ("edit", "write") and out.ok:

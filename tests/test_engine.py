@@ -119,7 +119,7 @@ def test_whitespace_match_no_double_indent():
 def test_thrash_idle_after_first_edit():
     t = Thrash()
     t.record_turn(False, False)          # exploring before any edit is fine
-    for _ in range(4):
+    for _ in range(3):
         t.record_turn(False, True)
     assert t.check() is None
     t.record_turn(False, True)

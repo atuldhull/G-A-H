@@ -152,7 +152,8 @@ class TestRunner:
         head = rep.summary or f"exit {rep.exit_code}"
         if rep.timed_out:
             head += " (TIMED OUT)"
-        summary = head if not rep.failed else f"{rep.failure_text}\n{head}"
+        # never a bare summary on failure: no parsed details -> head+tail+must-keep view instead
+        summary = head if not rep.failed else (f"{rep.failure_text}\n{head}" if rep.failure_text else None)
         if rep.exit_code not in (0, 1) and not rep.failed:
             summary = None   # collection/usage error: fall back to head+tail+must-keep
         g = gate(rep.raw, rep.exit_code, self.ctx.spill, enabled=self.ctx.flag("gate"), summary=summary)

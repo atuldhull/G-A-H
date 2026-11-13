@@ -15,7 +15,7 @@ def _session(tmp_path, **kw):
 def test_gateway_egress_maps_result_and_budget(tmp_path, monkeypatch):
     pytest.importorskip("crocodile.gateway.egress")
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
-    from crocodile.adapters import GatewayEgress
+    from crocodile.adapters import GatewayEgress  # noqa: I001  (gateway is first-party once merged)
     from crocodile.gateway.budget import Denied
 
     eg = GatewayEgress()

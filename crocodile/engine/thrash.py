@@ -47,8 +47,8 @@ class Thrash:
             hit = "same edit proposed twice"
         elif len(self.calls) >= 3 and len(set(self.calls[-3:])) == 1:
             hit = "same call repeated 3 times"
-        elif self.idle >= 5:
-            hit = "5 turns without an edit"
+        elif self.idle >= 4:
+            hit = "4 turns without an edit"
         if not hit:
             return None
         self.reason = hit
