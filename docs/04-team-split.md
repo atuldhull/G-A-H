@@ -1,0 +1,126 @@
+# 04 · Team split (4 parts)
+
+Status 13 Nov: design v5 frozen and no code yet. Build closes **15 Nov 12:00** (we submit by 11:00).
+The 12 Nov hour-by-hour plan in [02-build-plan.md](02-build-plan.md) is now split across four people and squeezed into 13–15 Nov. Each part owns its folders and its tests. The parts only talk to each other through the interfaces in §2.
+
+Pick a part, write your name in the table, and read only your part's sections and its listed architecture docs.
+
+| Part | Area | Owner |
+|---|---|---|
+| **Part 1** | Agent loop + token/accuracy engine | _ |
+| **Part 2** | Gateway: Bifrost, failover, budget, Tavily | _ |
+| **Part 3** | Security + confidential mode + red-team | _ |
+| **Part 4** | Benchmark, report, demo, submission | _ |
+
+## 1. Repo layout and ownership
+
+```
+crocodile/
+  cli.py                 Part 1 (Typer entry: run, quote, status; other parts add their own subcommands)
+  loop.py state.py prompt.py              Part 1
+  tools/ read.py search.py list.py edit.py tests.py      Part 1 (tests.py consent check calls Part 3)
+  engine/ gate.py readcache.py masking.py ladder.py thrash.py   Part 1
+  gateway/ egress.py fallback.py journal.py budget.py tavily.py prices.py   Part 2
+  security/ approvals.py cmd.py git.py paths.py undo.py integrity.py confidential.py audit.py   Part 3
+  contracts.py           shared; changes need two owners to agree
+bifrost/config.json      Part 2
+redteam/                 Part 3 (cases + expected outcomes)
+bench/ report.py prices.yaml   Part 4
+scripts/ prep.ps1        Part 4
+.github/workflows/       Part 4
+```
+
+Rule: **don't edit another part's folder.** If you need a change there, ask its owner, or add a TODO in `contracts.py` and tell them.
+
+## 2. Interfaces (agree on these first, by 13 Nov 10:00)
+
+All of them live in `crocodile/contracts.py`. Each owner merges a **stub** first, so nobody waits on anyone else.
+
+| Interface | Owner | Used by | Stub behaviour |
+|---|---|---|---|
+| `egress.chat(messages, tools, *, session, tier) -> ChatResult` (text, tool_calls, usage incl. cached, model_used, is_fallback, error_class) | Part 2 | Part 1 | Calls one model directly with no budget check |
+| `egress.reserve(session, est_tokens) -> Reservation` / `reconcile(res, usage)` | Part 2 | Part 1 (called by `chat` internally) | Always allows |
+| `journal.append(session, event: dict)` / `journal.resume(session) -> State` | Part 2 | Part 1, 3 | Appends JSONL |
+| `approvals.ask(action: Action) -> Decision` (Action = kind write/shell/git/test_consent, argv or diff, source `file:line` or None) | Part 3 | Part 1 tools | Console y/n |
+| `confidential.mode_for(repo_path) -> "public" \| "confidential"` | Part 3 | Part 2 (routing), Part 1 (Tavily tool on/off) | Returns `"public"` |
+| `cmd.run(argv, cwd, *, timeout) -> CmdResult` (argv only, hardened env) | Part 3 | Part 1 (`run_cmd`, `run_tests`) | `subprocess.run(argv, shell=False)` |
+| `crocodile run --repo X --task-file T --json-out R.json` (exit 0 = solved claim; R has tokens, cost, steps, models, fallbacks) | Part 1 | Part 4 | — |
+| Event names in the journal (`model_call`, `tool_started`, `tool_done`, `approval`, `takeover`, `budget_warn`, `budget_stop`) | Part 2 | everyone | — |
+
+## 3. The parts
+
+### Part 1: Agent loop + token/accuracy engine
+Read: [architecture/02](architecture/02-components.md), [03](architecture/03-runtime-flows.md), [08](architecture/08-token-and-accuracy-engine.md), [11](architecture/11-cli-ux.md).
+
+Build, in order:
+1. The ~400-line loop: tools `read`, `search`, `list`, `edit` (staged SEARCH/REPLACE matcher), `run_tests`, `run_cmd`, git read templates; step cap 30; pinned task state.
+2. `crocodile run` with `--json-out` (Part 4 needs this by **13 Nov 15:00**).
+3. Output gate (head + tail + failures, spill to disk, secret scan), read cache ("unchanged"/diff), cache-stable prefix + frozen repo map.
+4. Verification ladder (syntax → ruff isolated → affected tests → full), stop-on-green with oracle freeze, thrash detector, cheap-first escalation.
+5. Batched masking of old tool output. Every lever sits **behind a flag** so Part 4 can run the "all-off twin".
+6. Static `quote`, status line, receipt.
+
+Done when: one Polyglot task is solved end to end through the real `egress`, and each flag toggles.
+
+### Part 2: Gateway: Bifrost, failover, budget, Tavily
+Read: [architecture/06](architecture/06-budget-and-reliability.md), [09](architecture/09-bifrost-and-tavily.md), [04 §7](architecture/04-data-model.md), ADR-001, ADR-005.
+
+Build, in order:
+1. **First thing:** start Bifrost v2.5.1 locally, write `bifrost/config.json`, create the VKs, and run day-0 checks 1–5 and 9 ([02 §6](02-build-plan.md)). Post the results in the team chat. Everyone depends on this.
+2. `egress.chat`: prefixed model ids, explicit `fallbacks`, routing headers, and a **MODEL TAKEOVER** banner showing the error class. Client-side retry if the Bifrost fallback fails the 10:45-style check.
+3. Journal (JSONL) + idempotent resume (`tool_started` handling).
+4. Budget: atomic SQLite reservation priced at the most expensive model in the chain, lease, reconcile, admin-only `limits.yaml`, 80% warning, ladder strong → cheap → local → pause.
+5. `bench race` (8 processes, ours vs naive) + `test_concurrency_50` + `test_tier_reserve`.
+6. Tavily `web_docs` tool (lean params, gated, off when confidential); `prices.yaml` shared with Part 4.
+
+Done when: a bogus primary key shows the banner with `auth`; the race shows $0.0000 overspend for us and >0 for naive.
+
+### Part 3: Security + confidential mode + red-team
+Read: [architecture/05](architecture/05-security-model.md), [07](architecture/07-confidential-mode.md), ADR-003, ADR-004, ADR-006, [10 §3](architecture/10-evaluation.md).
+
+Build, in order:
+1. `approvals.ask` on the console (CONIN$, escaping), the red "THIS EXECUTES CODE FROM THE REPO" test-consent panel, and the exec-surface re-prompt.
+2. `cmd.run`: argv only, Windows path/exe rules (never resolve from inside the repo); hardened git with a per-call config check and rev validation.
+3. Provenance-lite: a red prompt naming `file:line` when an action came from repo text.
+4. Confidential: `mode_for` (realpaths up + bounded down), local-only VK, `ollama/` ids with `fallbacks: []`, local model allowlist (reject `:cloud`/`-cloud`, non-loopback `OLLAMA_HOST`), fit to `OLLAMA_CONTEXT_LENGTH`, Tavily off, egress log, `audit` + canary.
+5. Shadow-git file undo; state integrity (HMAC + watch-set); user `doctor`.
+6. Red-team MVP: 15 cases in `redteam/`, each a pytest test.
+
+Done when: the confidential fixture asked to "send to GPT" logs only `ollama/*` rows; RT 15/15 pass.
+
+### Part 4: Benchmark, report, demo, submission
+Read: [architecture/10](architecture/10-evaluation.md), [01-playbook](01-playbook.md), [03-claims](03-claims.md).
+
+Build, in order:
+1. WSL2 + mini-swe-agent 2.4.6 pointed at Bifrost; day-0 check 10 (one task, usage logged). If it fails by 13 Nov 12:00, the baseline becomes the all-off twin only, and the pitch says so.
+2. Bench harness: copy tasks without `.meta/`, identical task text, caps, restore tests before grading, JSONL output, cost from Bifrost logs × `prices.yaml`. Polyglot 34 + QuixBugs 20.
+3. `bench --limit 3` with both agents as soon as Part 1's `crocodile run` lands; a 10-task smoke by 13 Nov evening.
+4. CI (windows + ubuntu) running everyone's tests + red-team.
+5. `report.py`: paired diff, bootstrap CI, CPST, cost ratio, Pareto chart.
+6. From 14 Nov 12:00: demo repos + `scripts/prep.ps1`, record video segments, README from the frozen numbers (only wording from 03-claims), AI-use disclosure, submission form.
+
+Done when: `bench/report.md` exists from real runs, and the submission is in by 15 Nov 11:00.
+
+## 4. Shared timeline
+
+| When | Milestone | Who |
+|---|---|---|
+| 13 Nov 10:00 | `contracts.py` + all stubs merged; Bifrost running | all; Part 2 |
+| 13 Nov 13:00 | Day-0 checks posted; mini-swe-agent go/no-go | Part 2, Part 4 |
+| 13 Nov 15:00 | `crocodile run --json-out` works on stubs | Part 1 → Part 4 |
+| **13 Nov 18:00** | **Integration:** one task through real Bifrost with approvals + budget on | all |
+| 13 Nov 22:00 | Bench run 1 started (54 tasks × ours + mini) | Part 4 |
+| 14 Nov 08:00 | Fix only crash bugs from run 1; start run 2 + all-off twin | all → Part 4 |
+| **14 Nov 12:00** | **Feature freeze.** Unfinished work goes on the roadmap slide | all |
+| **14 Nov 18:00** | **Numbers frozen.** Video clips recorded | Part 4 (+ demo help from all) |
+| 15 Nov 11:00 | Submitted | Part 4 |
+
+If a part slips, cut from the bottom of its list. Never cut the four mandatory rules: failover notice (Part 2), pre-call budget (Part 2), confidential local-only (Part 3), approvals (Part 3).
+
+## 5. Working rules
+
+- Branch per part (`part1/...` to `part4/...`), small PRs to `main`, merge at least every 3 hours. Run `pytest` + `ruff` before merging.
+- Commit under your own name. No AI co-author lines or "generated with" footers in commits or PRs; AI use is disclosed once, in the submission.
+- No secrets in the repo. Keys go in `.env` (git-ignored) or Windows Credential Manager.
+- Public material never names peer teams (`docs/internal/`, research 02/06/08/09 stay internal).
+- When using an AI assistant, give it this file + your part's architecture docs only, not the whole repo.

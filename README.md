@@ -14,6 +14,7 @@ Its budget, privacy and approval rules are enforced by deterministic code outsid
 |---|---|---|
 | 1 | [docs/00-team-brief.md](docs/00-team-brief.md) | 5-minute brief: problem, pitch, P0 slice, timeline, rules, risks |
 | 2 | [docs/02-build-plan.md](docs/02-build-plan.md) | 12–15 Nov plan, P0/P1/P2, cut list, go/no-go, day-0 checklist |
+| 2b | [docs/04-team-split.md](docs/04-team-split.md) | **4-part team split**: ownership, interfaces, shared timeline |
 | 3 | [docs/architecture/README.md](docs/architecture/README.md) | Architecture index (single source of truth) + system context |
 | 4 | [docs/architecture/](docs/architecture/) 01–11 | Overview, components, flows, data model, security, budget, confidential, token/accuracy engine, Bifrost/Tavily, evaluation, CLI |
 | 5 | [docs/architecture/adr/](docs/architecture/adr/) | ADR-001 … ADR-010 |

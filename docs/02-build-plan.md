@@ -57,7 +57,7 @@ Shift the whole day if the start is late; the go/no-go decisions keep their orde
 | 14 Nov eve (18–23) | **18:00 numbers frozen.** Record every video segment (the backup = the video). README from frozen numbers; description, problem, tech, AI-use text; fresh-clone test | Clips recorded; README draft |
 | **15 Nov** | 07:00–09:30 video edit + captions. 09:30–10:30 README polish, secret scan, make the submission repo public. 10:30–11:00 submit. 11:00–12:00 buffer | Submitted ≤ 11:00 |
 
-If teammates join: #2 owns bench + report from 12 Nov 15:00; #3 owns R3/R4 + RT tests; #4 owns README/video/submission from 14 Nov. The builder keeps loop, budget and levers.
+Team of 4: see [04-team-split.md](04-team-split.md) for parts, interfaces and the 13–15 Nov timeline.
 
 ## 5. Go/no-go checkpoints
 
