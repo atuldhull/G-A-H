@@ -19,3 +19,11 @@ ollama/*:
   tiers:
     - {upto: null, in: 0.0, cache_write_5m: 0.0, cache_write_1h: 0.0, cache_read: 0.0, out: 0.0}
   max_out: 32768
+gemini/*:
+  tiers:
+    - {upto: null, in: 0.10, cache_write_5m: 0.10, cache_write_1h: 0.10, cache_read: 0.025, out: 0.40}
+  max_out: 64000
+google/*:
+  tiers:
+    - {upto: null, in: 0.10, cache_write_5m: 0.10, cache_write_1h: 0.10, cache_read: 0.025, out: 0.40}
+  max_out: 64000
