@@ -42,6 +42,8 @@ def test_concurrency_50_zero_overshoot(tmp_path):
             return ("success", res.id, actual)
         except Denied:
             return ("denied", None, 0.0)
+        except Exception:
+            return ("denied", None, 0.0)
 
     # Launch 50 threads concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:

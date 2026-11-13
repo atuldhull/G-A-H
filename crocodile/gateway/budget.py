@@ -82,9 +82,9 @@ def init_database(db_path: str | Path) -> sqlite3.Connection:
     """Initialize state.db with SQLite WAL mode and busy_timeout=5000."""
     db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path), timeout=5.0)
+    conn = sqlite3.connect(str(db_path), timeout=15.0)
     conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA busy_timeout=5000;")
+    conn.execute("PRAGMA busy_timeout=15000;")
     conn.execute("PRAGMA foreign_keys=ON;")
 
     with conn:
@@ -150,6 +150,16 @@ def is_pid_alive(pid: int) -> bool:
     """Check if process with given PID is still running on Windows / POSIX."""
     if pid <= 0:
         return False
+    if pid == os.getpid():
+        return True
+    if os.name == "nt":
+        import ctypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        handle = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if handle:
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        return False
     try:
         os.kill(pid, 0)
         return True
@@ -174,9 +184,9 @@ class BudgetManager:
         init_database(self.db_path)
 
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.db_path), timeout=5.0)
+        conn = sqlite3.connect(str(self.db_path), timeout=15.0)
         conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA busy_timeout=15000;")
         return conn
 
     def get_principal_limit(self, principal: str) -> float:
@@ -354,6 +364,13 @@ class BudgetManager:
                 owner_pid=os.getpid(),
                 heartbeat=now,
             )
+        except sqlite3.OperationalError as oe:
+            try:
+                conn.execute("ROLLBACK;")
+            except Exception:
+                pass
+            # ADR-005: OperationalError on BEGIN IMMEDIATE -> Denied (fail closed)
+            raise Denied(remaining=0.0, needed=worst_cost if "worst_cost" in locals() else 0.0, reason=f"ledger_locked: {oe}")
         except Exception:
             try:
                 conn.execute("ROLLBACK;")
