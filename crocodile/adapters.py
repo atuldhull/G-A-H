@@ -69,6 +69,8 @@ class GatewayEgress:
             journal=EventJournal(db),
             price_table=prices,
         )
+        import inspect
+        self._takes_temperature = "temperature" in inspect.signature(self.client.chat).parameters
 
     @staticmethod
     def _vk(alias: str) -> str:
@@ -88,11 +90,12 @@ class GatewayEgress:
         rung = "local" if confidential else tier
         chain = chain_for(rung)
         alias = "local" if confidential else "public"
+        extra = {"temperature": temperature} if self._takes_temperature else {}
         try:
             r = self.client.chat(messages, tools or None, session=session.id, principal=session.user,
                                  chain=chain, fallbacks=[] if confidential else chain[1:],
                                  vk=self._vk(alias), vk_alias=alias, mode=session.mode, tier=rung,
-                                 max_tokens=max_tokens)
+                                 max_tokens=max_tokens, **extra)
         except Denied as e:
             raise BudgetStop(f"{e.reason}: needs ${e.needed:.4f}, ${e.remaining:.4f} left",
                              remaining_usd=e.remaining) from e

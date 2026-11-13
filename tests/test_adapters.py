@@ -64,3 +64,22 @@ def test_security_bridge_auto_mode_is_bench_only(tmp_path):
     argv = [sys.executable, "-c", "print(1)"]
     assert b.ask(Action(kind="shell", summary="run", argv=argv), s).approved
     assert b.run(argv, tmp_path, timeout=30).exit_code == 0
+
+
+def test_gateway_egress_passes_temperature(tmp_path, monkeypatch):
+    pytest.importorskip("crocodile.gateway.egress")
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
+    from crocodile.adapters import GatewayEgress
+
+    eg = GatewayEgress()
+    if not eg._takes_temperature:
+        pytest.skip("gateway without temperature support")
+    seen = {}
+
+    def post(**kw):
+        seen.update(kw["body"])
+        return 200, {"model": "anthropic/claude-haiku-5-5", "choices": [{"message": {"content": "ok"}}],
+                     "usage": {"prompt_tokens": 10, "completion_tokens": 1}}, {}
+    monkeypatch.setattr(eg.client, "post_bifrost", post)
+    eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap", temperature=0.7)
+    assert seen.get("temperature") == 0.7
