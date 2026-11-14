@@ -212,7 +212,7 @@ class Git:
             key = key.lower()
             allowed = (key.startswith("core.") and key[5:] in CORE) or bool(
                 re.fullmatch(
-                    r"remote\..+\.(?:url|fetch)|branch\..+\.(?:remote|merge|rebase)|user\.(?:name|email)",
+                    r"remote\..+\.(?:url|fetch)|branch\..+\.(?:remote|merge|rebase|vscode-.+)|user\.(?:name|email)",
                     key,
                 )
             )
