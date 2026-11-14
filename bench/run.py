@@ -402,19 +402,14 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
                 from crocodile.security.integrity import StateIntegrity
                 from crocodile.security.confidential import Detector, SecurityStore
                 from crocodile.runtime_security import state_path
-                try:
-                    _state = StateIntegrity(state_path())
-                    _state.verify_state()
-                    _detector = Detector(SecurityStore(_state.path, integrity=_state))
-                except Exception:
-                    _state = None
-                    _detector = None
+
+                _state = StateIntegrity(state_path())
+                _state.verify_state()
+                _detector = Detector(SecurityStore(_state.path, integrity=_state))
 
                 def factory(*args, **kwargs):
-                    if _state is not None:
-                        kwargs.setdefault("integrity", _state)
-                    if _detector is not None:
-                        kwargs.setdefault("confidentiality", _detector)
+                    kwargs.setdefault("integrity", _state)
+                    kwargs.setdefault("confidentiality", _detector)
                     return ApprovalSession.for_bench(*args, **kwargs)
             try:
                 fatal = _attempt(row, run, oracles[run["task_id"]], artifacts, scratch,
