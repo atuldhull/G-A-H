@@ -1,0 +1,50 @@
+name: Person 4 checks
+
+on:
+  push:
+    branches: [person-4]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: person-4-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Python 3.12 / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install test and lint tools
+        id: dependencies
+        run: python -m pip install pytest==9.1.1 ruff==0.17.5
+
+      - name: Ruff on Person 4 Python files
+        # Explicit initial correctness baseline; no implicit style-rule expansion.
+        run: python -m ruff check --isolated --target-version py312 --select E4,E7,E9,F --no-cache bench crocodile/ui
+
+      - name: Run synthetic bench and UI tests (show skip reasons)
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: python -m pytest -q -ra -p no:cacheprovider bench/tests crocodile/ui/tests
