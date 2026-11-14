@@ -143,6 +143,12 @@
             "allowed_models": ["claude-haiku-5-5"],
             "allow_all_keys": true,
             "weight": 1
+          },
+          {
+            "provider": "gemini",
+            "allowed_models": ["gemini-3.5-flash-lite", "gemini-3.5-flash"],
+            "allow_all_keys": true,
+            "weight": 1
           }
         ],
         "budgets": [
