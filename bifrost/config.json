@@ -69,7 +69,7 @@
       {
         "id": "vk-atul-public",
         "name": "atul-public",
-        "value": "sk-bf-atul-public",
+        "value": "env.BF_VK_ATUL_PUBLIC",
         "is_active": true,
         "provider_configs": [
           {
@@ -101,7 +101,7 @@
       {
         "id": "vk-atul-local",
         "name": "atul-local",
-        "value": "sk-bf-atul-local",
+        "value": "env.BF_VK_ATUL_LOCAL",
         "is_active": true,
         "provider_configs": [
           {
@@ -115,7 +115,7 @@
       {
         "id": "vk-bob-public",
         "name": "bob-public",
-        "value": "sk-bf-bob-public",
+        "value": "env.BF_VK_BOB_PUBLIC",
         "is_active": true,
         "provider_configs": [
           {
@@ -135,7 +135,7 @@
       {
         "id": "vk-bench",
         "name": "bench",
-        "value": "sk-bf-bench",
+        "value": "env.BF_VK_BENCH",
         "is_active": true,
         "provider_configs": [
           {
