@@ -42,9 +42,33 @@ DEFAULT_CHAINS: dict[str, list[str]] = {
 }
 
 
+def user_settings() -> dict:
+    """%APPDATA%/crocodile/config.yaml written by `crocodile init` (user settings, no secrets)."""
+    try:
+        import yaml
+
+        from .security.classification import default_state_path
+        p = default_state_path().parent / "config.yaml"
+        data = yaml.safe_load(p.read_text(encoding="utf-8")) if p.is_file() else None
+        return data if isinstance(data, dict) else {}
+    except (ImportError, OSError, ValueError):
+        return {}
+
+
 def chain_for(tier: str) -> list[str]:
+    """Env CROCODILE_CHAIN_<TIER> > config.yaml models.<tier>.chain > built-in default."""
     env = os.environ.get(f"CROCODILE_CHAIN_{tier.upper()}", "")
-    return [m.strip() for m in env.split(",") if m.strip()] or list(DEFAULT_CHAINS[tier])
+    chain = [m.strip() for m in env.split(",") if m.strip()]
+    if not chain:
+        cfg = (user_settings().get("models") or {}).get(tier) or {}
+        chain = [str(m) for m in cfg.get("chain") or []]
+    return chain or list(DEFAULT_CHAINS[tier])
+
+
+def bifrost_url() -> str:
+    """Env CROCODILE_BIFROST_URL > config.yaml bifrost_url > http://127.0.0.1:8080."""
+    return os.environ.get("CROCODILE_BIFROST_URL") or str(user_settings().get("bifrost_url")
+                                                          or "http://127.0.0.1:8080")
 
 
 def limits_path() -> Path:
@@ -86,7 +110,7 @@ class GatewayEgress:
         db = _state_db()
         prices = PriceTable.from_yaml_file(os.environ.get("CROCODILE_PRICES", PROJECT_ROOT / "prices.yaml"))
         self.client = EgressClient(
-            bifrost_base_url=os.environ.get("CROCODILE_BIFROST_URL", "http://127.0.0.1:8080"),
+            bifrost_base_url=bifrost_url(),
             budget_manager=BudgetManager(db, prices, limits=load_limits()),
             journal=EventJournal(db),
             price_table=prices,

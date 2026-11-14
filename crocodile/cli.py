@@ -209,7 +209,8 @@ def init(
         finally:
             con.close()             # always release: Windows cannot rename an open file
         if sealed:
-            typer.echo(f"Already enrolled: {path} (sealed). Nothing changed.")
+            typer.echo(f"Already enrolled: {path} (sealed).")
+            _write_default_settings(path.parent)
             raise typer.Exit(0)
         if not fresh:
             typer.echo(f"Refusing: {path} exists but is not sealed (untrusted state). "
@@ -237,6 +238,46 @@ def init(
     finally:
         db.close()
     typer.echo(f"Enrolled and sealed: {path}")
+    _write_default_settings(path.parent)
+
+
+def _write_default_settings(folder: Path) -> None:
+    """User settings next to the state DB (doctor reads them). Never overwrites; no secrets."""
+    import yaml
+
+    from .adapters import PROJECT_ROOT, bifrost_url, chain_for
+
+    local = chain_for("local")
+    ctx = int(os.environ.get("OLLAMA_CONTEXT_LENGTH") or 32768)
+    files = {
+        "config.yaml": {
+            "bifrost_url": bifrost_url(),
+            "models": {"cheap": {"chain": chain_for("cheap")}, "strong": {"chain": chain_for("strong")},
+                       "local": {"chain": local, "ctx_window": max(32768, ctx)}},
+            "confidential": {"local_model_allowlist": [m.split("/", 1)[1] for m in local if m.startswith("ollama/")],
+                             "ollama_host": "http://127.0.0.1:11434"},
+        },
+        "policy.yaml": {"version": 1},
+    }
+    for name, data in files.items():
+        target = folder / name
+        if target.exists():
+            typer.echo(f"Kept existing {target}")
+            continue
+        target.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        typer.echo(f"Wrote {target}")
+    prices = folder / "prices.yaml"
+    if prices.exists():
+        typer.echo(f"Kept existing {prices}")
+    else:
+        table = yaml.safe_load((PROJECT_ROOT / "prices.yaml").read_text(encoding="utf-8")) or {}
+        for tier in ("cheap", "strong", "local"):          # doctor checks exact chain models:
+            for model in chain_for(tier):                    # expand "provider/*" wildcards for them
+                wildcard = model.split("/", 1)[0] + "/*"
+                if model not in table and wildcard in table:
+                    table[model] = table[wildcard]
+        prices.write_text(yaml.safe_dump(table, sort_keys=False), encoding="utf-8")
+        typer.echo(f"Wrote {prices}")
 
 
 @app.command()
