@@ -11,3 +11,4 @@ __pycache__/
 # scratch exports (the canonical PDF is PS01-Team-Pack.pdf)
 *.zip
 *.egg-info/
+scratch/
