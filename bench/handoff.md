@@ -6,6 +6,11 @@ The actual 34 Polyglot + 20 QuixBugs sources, exact task text and oracle mapping
 are absent; see the precise [dataset input checklist](dataset-inputs.md).
 No real task index, benchmark result or cost claim accompanies this handoff.
 
+Follow-up: dataset inputs have since been verified outside the checkout. The
+current [Gemini/18080 policy and blocked readiness](gemini-readiness.md) supersede
+the initial installation/model observations below. Regenerate manifests under
+that policy; retain this handoff's fixed shard assignments and 2+2+1 ordering.
+
 ## Fixed protocol and ownership
 
 Sort the full 54-task index lexically by `dataset/id`, then take these contiguous

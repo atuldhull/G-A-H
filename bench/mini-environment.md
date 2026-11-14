@@ -5,6 +5,10 @@ Prepared on 2026-11-14 from `person-4` runtime revision
 credential provisioning, gateway start/configuration change, or database access
 was performed. This is environment and offline routing evidence, not live parity.
 
+Policy follow-up: [gemini-readiness.md](gemini-readiness.md) records the approved
+Gemini/18080 configuration and the latest blocked Windows/WSL checks after main's
+`4feb2db` allowlist update. The installed-environment evidence below is retained.
+
 ## Installed environment
 
 | Item | Observed value |
@@ -45,9 +49,11 @@ to this file, a command line, a committed `.env`, or evidence output.
 
 **This settings file does not change the model.** `bench.mini.Settings` selects
 the interpreter/endpoint; the executable model is frozen separately in
-`configs/mini-2.4.6.json` and `bench.plan.EVALUATION_POLICY`. Both still pin Haiku.
-The runner refuses a different policy. No working Gemini benchmark config is
-claimed or enabled while the gateway checks below remain unresolved.
+`configs/mini-2.4.6.json` and `bench.plan.EVALUATION_POLICY`. Both now declare
+Gemini Flash-Lite and provider-default thinking. The planner also records the
+required shared logical bench VK identity; live credential binding is unverified.
+The runner refuses a different policy. This is static configuration, not proof
+of a working Gemini gateway or live benchmark readiness.
 
 The installed mini source passes `self.config.model_name` to
 `litellm.completion`. An offline call to the installed LiteLLM
@@ -58,7 +64,7 @@ The installed mini source passes `self.config.model_name` to
 | mini model argument | `openai/gemini/gemini-3.5-flash-lite` |
 | LiteLLM transport provider | `openai` (OpenAI-compatible Bifrost endpoint) |
 | Model sent toward Bifrost | `gemini/gemini-3.5-flash-lite` |
-| Documented API base | `http://127.0.0.1:8080/v1` |
+| Current documented API base | `http://127.0.0.1:18080/v1` |
 
 The helper ran with socket connection/DNS functions blocked and the local model
 cost map selected: zero network attempts occurred. This verifies prefix handling,
@@ -66,10 +72,10 @@ cost map selected: zero network attempts occurred. This verifies prefix handling
 No `completion` call was made.
 
 Sanitized inspection of the repository's `bifrost/config.json` found a Gemini
-provider with a wildcard model list, not an explicit declaration of this model.
-Its active `bench` VK allows only `anthropic/claude-haiku-5-5`; it does not allow
-Gemini. This is a checked-in template, not a verified live configuration. No local
-listeners were found on documented ports 8080 or 18080 at inspection time.
+provider with a wildcard model list. Main's `4feb2db` update now explicitly allows
+Gemini Flash-Lite and Flash on its active `bench` VK. This is a checked-in template,
+not a verified live configuration. The latest Windows/WSL checks could not connect
+to port 18080, and no Windows listener was found.
 The endpoint is therefore configured but **live connectivity, binary v2.5.1,
 Gemini model availability, and bench VK binding are unverified**. Gateway-owner
 review/configuration is required; no Part 2 file was changed here.
@@ -80,8 +86,8 @@ Crocodile's current defaults remain Haiku/public VK, model fallback/escalation,
 and temperature 0.0 or 0.7. Mini requests no sampling parameters, uses
 `set_cache_control: default_end`, and requests no Bifrost fallbacks; its upstream
 retry helper can still retry model queries. Crocodile marks prompt-cache blocks
-differently. The current Haiku adaptive/medium assumption is not a verified Gemini
-thinking policy and must not be transferred automatically. Thirty steps and a
+differently. The approved Gemini thinking policy now leaves provider defaults
+unset in outbound kwargs; effective parity is unverified. Thirty steps and a
 600-second policy are configured, but native Crocodile uses cooperative checks
 and mini's watchdog does not contain escaped descendants. Live parity is pending.
 
@@ -90,10 +96,10 @@ Before a separately authorized single-request session-header probe:
 1. Have the gateway owner confirm the running version, exact served Gemini ID,
    endpoint, bench VK's non-secret identity/model allowance/shared cap, and
    WSL-to-gateway reachability. Supply an authorized logging snapshot location.
-2. Agree Gemini thinking/cache/retry/sampling/fallback policy with the agent and
-   gateway owners. Then update the Person 4 model profile and frozen plan policy
-   together, test them, and generate new manifests/full-plan identities. Existing
-   Haiku plans must not be relabeled as Gemini runs.
+2. Apply the approved Gemini endpoint/model profile through owner-supported native
+   bench VK/sampling interfaces, and verify cache/thinking/retry parity. Person 4
+   profiles and plan policy are updated; regenerate manifests/full-plan identities.
+   Existing Haiku plans must not be relabeled as Gemini runs.
 3. Provision the bench credential through the WSL environment used by `wsl --exec`;
    a variable set only in a login-shell profile is not necessarily available there.
    Keep all values out of output/configuration. Do not substitute the public VK.

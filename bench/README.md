@@ -5,10 +5,15 @@ to the merged Agent and independent grader, with durable resume evidence. Mini
 and authoritative cost attribution remain explicitly incomplete. No live
 benchmark results are supplied. Its opt-in CLI is `python -m bench.run --help`.
 
+The current [approved Gemini policy and readiness record](gemini-readiness.md)
+declares Flash-Lite, port 18080, the shared bench VK identity, provider-default
+thinking and no measured-model fallbacks. Live service/credential/log attribution
+and native policy binding remain blocked; the three-task smoke is not ready.
+
 The [read-only cost evidence adapter](bifrost-export.md) supports a limited,
 review-gated subset of the conversation-supplied Bifrost logs mapping. Positive
-cache writes, retries/fallbacks and tiered pricing remain incomplete; the default
-Haiku price entry is therefore not yet supported for comparable live evidence.
+cache writes, retries/fallbacks and tiered pricing remain incomplete, including
+the historical Haiku profile's multiple-tier price entry.
 
 The [separate mini-swe-agent 2.4.6 adapter](mini.md) now implements the planned
 mini slots through WSL2 with fake-process validation, independent grading and

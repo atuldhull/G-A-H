@@ -20,8 +20,12 @@ SHARD_RANGES = ((1, 14), (15, 28), (29, 41), (42, 54))
 SHARDS = ("1/4", "2/4", "3/4", "4/4")
 FULL_COUNTS = {"polyglot": 34, "quixbugs": 20}
 EVALUATION_POLICY = {
-    "model": "anthropic/claude-haiku-5-5", "thinking": "adaptive", "effort": "medium",
+    "model": "gemini/gemini-3.5-flash-lite",
+    "thinking": "provider-default", "effort": "provider-default",
     "gateway": "Bifrost", "semantic_cache": False, "prompt_caching": True,
+    "gateway_url": "http://127.0.0.1:18080",
+    "virtual_key_id": "vk-bench", "virtual_key_name": "bench",
+    "measured_model_fallbacks": [], "measured_escalation": False,
     "mini_swe_agent_version": "2.4.6", "parallel_runs": 4,
     "grading_timeout_seconds": 180,
 }
