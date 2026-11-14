@@ -88,6 +88,8 @@ def receipt(agent) -> Any:
             oracle=", ".join(tr.oracle_ids)[:200],
             consent_granted=False if "_no_test_consent" in agent.s.flags else (True if ran else None),
         )
+    else:   # no oracle at all: say "tests not run" honestly instead of a bare STOPPED
+        evidence = TestOutcome(source="controller", verified=False, tests_run=False)
     return SessionReceipt(outcome=outcome, session=snapshot(agent), test_outcome=evidence, reason=r.status)
 
 
