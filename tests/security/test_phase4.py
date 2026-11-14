@@ -56,7 +56,9 @@ def row(session="private-session", request="r1", **changes):
 
 
 def log(request="r1", **changes):
-    value = {"request_id": request, "provider": "ollama", "model": "qwen2.5-coder:7b"}
+    value = {"request_id": request, "provider": "ollama", "model": "qwen2.5-coder:7b",
+        "session": "private-session", "payload_sha256": "a" * 64, "payload_bytes": 20,
+        "model_requested": "ollama/qwen2.5-coder:7b", "fallbacks": [], "vk_alias": "local"}
     value.update(changes)
     return value
 

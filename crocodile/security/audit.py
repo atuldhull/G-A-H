@@ -181,6 +181,27 @@ def audit_records(
             failures.append(
                 label + ": Bifrost evidence names a non-local provider/model"
             )
+        version = row.get("evidence_version", 1)
+        if type(version) is not int or version not in (1, 2):
+            failures.append(label + ": invalid egress evidence version")
+        # Old exports cannot silently select a weaker audit by omitting or
+        # downgrading evidence_version. Correlation requirements apply to all.
+        if len(correlated) > 1 or (not correlated and gateway_logs is not None):
+            failures.append(label + ": sent request requires exactly one gateway record")
+        if correlated:
+            for log in correlated:
+                required = ("session", "payload_sha256", "payload_bytes", "model_requested", "fallbacks", "vk_alias")
+                for field in required:
+                    expected = fallbacks if field == "fallbacks" else row.get(field)
+                    if field not in log:
+                        missing.append(label + ": gateway field unavailable: " + field)
+                    elif log[field] != expected or type(log[field]) is not type(expected):
+                        failures.append(label + ": gateway correlation mismatch: " + field)
+                expected_model = str(row.get("model_actual", "")).removeprefix("ollama/")
+                if str(log.get("model", "")).removeprefix("ollama/") != expected_model:
+                    failures.append(label + ": gateway actual model mismatch")
+                if row.get("gateway_request_id") and log.get("gateway_request_id") != row["gateway_request_id"]:
+                    failures.append(label + ": gateway request ID mismatch")
     status = "FAIL" if failures else "INCOMPLETE" if missing else "PASS"
     return AuditReport(
         status, len(rows), confidential, tuple(blocked), tuple(failures), tuple(missing)
@@ -305,14 +326,9 @@ def main(argv=None):
     logs = None
     if args.gateway_log is not None:
         try:
-            text = args.gateway_log.read_text(encoding="utf-8")
-            try:
-                logs = json.loads(text)
-            except json.JSONDecodeError:
-                logs = [json.loads(line) for line in text.splitlines() if line.strip()]
-            if not isinstance(logs, list):
-                raise TypeError("gateway export must contain normalized records")
-        except (OSError, ValueError, TypeError):
+            from crocodile.gateway.records import read_gateway_records
+            logs = read_gateway_records(args.gateway_log)
+        except (OSError, ValueError, TypeError, KeyError):
             print(
                 "RESULT: INCOMPLETE\nMISSING: cannot read normalized gateway log export"
             )

@@ -1,6 +1,8 @@
 {
   "client_config": {
     "enable_logging": true,
+    "disable_content_logging": true,
+    "logging_headers": ["x-request-id", "x-bf-session-id", "x-crocodile-request-id", "x-crocodile-payload-sha256"],
     "enforce_auth_on_inference": true,
     "allow_direct_keys": false
   },

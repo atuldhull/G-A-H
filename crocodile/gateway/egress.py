@@ -15,17 +15,21 @@ import json
 import socket
 import sys
 import time
-from dataclasses import dataclass
+import uuid
+from collections.abc import Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import httpx
 
-from crocodile.contracts import ChatResult, ErrorClass, Mode, ToolCall, Usage
-from crocodile.gateway.budget import BudgetManager, Denied
-from crocodile.gateway.fallback import RoutingInfo, parse_routing_info, render_takeover_banner
+from crocodile.contracts import ChatResult, Mode, ToolCall, Usage
+from crocodile.gateway.budget import BudgetManager
+from crocodile.gateway.fallback import parse_routing_info, render_takeover_banner
 from crocodile.gateway.journal import EventJournal
 from crocodile.gateway.local import ConfidentialDeny, check_local_model, sanitize_local_request_body
+from crocodile.gateway.network_policy import DestinationDenied, NetworkPolicy, local_host
 from crocodile.gateway.prices import PriceTable
 from crocodile.gateway.tavily import (
     TavilyDeny,
@@ -37,6 +41,7 @@ from crocodile.gateway.tavily import (
 
 class SecurityError(PermissionError):
     """Raised when an egress security policy or canary check is violated."""
+
     pass
 
 
@@ -51,8 +56,10 @@ DEFAULT_CHAINS: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 
 _SOCKET_GUARD_INSTALLED = False
+_PUBLIC_SERVICES_ENABLED = True
+_SOCKET_PAIRS = ContextVar("crocodile_socket_pairs", default=None)
 _ALLOWED_DESTINATIONS = {
-    ("127.0.0.1", 8080),   # Bifrost Gateway
+    ("127.0.0.1", 8080),  # Bifrost Gateway
     ("127.0.0.1", 11434),  # Ollama Probe
     ("::1", 8080),
     ("::1", 11434),
@@ -60,40 +67,51 @@ _ALLOWED_DESTINATIONS = {
 
 
 def install_socket_guard(allow_tavily: bool = True) -> None:
-    """Installs sys.addaudithook to permit network connections strictly to approved endpoints."""
-    global _SOCKET_GUARD_INSTALLED
+    """Install once. Public services require an explicit public request scope.
+
+    Legacy allow_tavily never authorizes arbitrary HTTPS connections.
+    """
+    global _SOCKET_GUARD_INSTALLED, _PUBLIC_SERVICES_ENABLED
+    if not allow_tavily:
+        _PUBLIC_SERVICES_ENABLED = False
     if _SOCKET_GUARD_INSTALLED:
         return
 
-    def audit_hook(event: str, args: tuple[Any, ...]) -> None:
-        if event == "socket.connect":
-            sock = args[0]
-            address = args[1]
-            if isinstance(address, tuple) and len(address) >= 2:
-                host, port = address[0], address[1]
-                # Check loopback destinations
-                if (host, port) in _ALLOWED_DESTINATIONS or host in ("127.0.0.1", "localhost", "::1"):
-                    return
-                # Allow api.tavily.com:443 in public mode
-                if allow_tavily and port == 443:
-                    # In Python socket.connect, host might be the resolved IP
-                    return
-                # Reject any other outbound connection
-                raise PermissionError(
-                    f"Egress socket guard blocked unauthorized connection to {host}:{port}"
-                )
+    sys.addaudithook(_socket_audit)
+    _SOCKET_GUARD_INSTALLED = True
 
+
+def _socket_audit(event, args):
+    if event not in ("socket.connect", "socket.sendto", "socket.sendmsg"):
+        return
+    address = args[1]
+    pairs = _SOCKET_PAIRS.get()
+    pairs = _ALLOWED_DESTINATIONS if pairs is None else pairs
+    if not isinstance(address, tuple) or len(address) < 2 or (address[0], address[1]) not in pairs:
+        raise DestinationDenied("socket guard refused an unapproved host-and-port pair")
+
+
+@contextmanager
+def network_scope(policy, origin, *, mode, service):
+    # Validation precedes DNS and every transport attempt, including retries.
+    scheme, host, port = policy.validate(origin, mode=mode, service=service)
+    if service == "public" and not _PUBLIC_SERVICES_ENABLED:
+        raise DestinationDenied("public services disabled by socket guard")
+    addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    pairs = {(item[4][0], item[4][1]) for item in addresses}
+    if not pairs or (mode == "confidential" and any(not local_host(h) for h, _ in pairs)):
+        raise DestinationDenied("destination did not resolve to approved local addresses")
+    token = _SOCKET_PAIRS.set(frozenset(pairs))
     try:
-        sys.addaudithook(audit_hook)
-        _SOCKET_GUARD_INSTALLED = True
-    except RuntimeError:
-        # Hook already installed or unsupported
-        pass
+        yield
+    finally:
+        _SOCKET_PAIRS.reset(token)
 
 
 # ---------------------------------------------------------------------------
 # Egress Table Logging
 # ---------------------------------------------------------------------------
+
 
 def init_egress_table(conn) -> None:
     """Initializes the egress audit table."""
@@ -120,6 +138,10 @@ def init_egress_table(conn) -> None:
             );
             """
         )
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(egress)")}
+        for name, declaration in (("evidence_version", "INT DEFAULT 1"), ("gateway_request_id", "TEXT")):
+            if name not in columns:
+                conn.execute(f"ALTER TABLE egress ADD COLUMN {name} {declaration}")
 
 
 def log_egress(
@@ -138,9 +160,11 @@ def log_egress(
     canary_hits: int,
     verdict: str,
     block_reason: str | None = None,
+    gateway_request_id: str | None = None,
 ) -> None:
     """Logs outgoing network attempt to state.db egress table."""
     import sqlite3
+
     conn = sqlite3.connect(str(db_path), timeout=5.0)
     try:
         init_egress_table(conn)
@@ -150,13 +174,27 @@ def log_egress(
                 INSERT INTO egress (
                     ts, session, request_id, dest, vk_alias, mode,
                     model_requested, fallbacks, model_actual, provider_actual,
-                    payload_sha256, payload_bytes, canary_hits, verdict, block_reason
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    payload_sha256, payload_bytes, canary_hits, verdict, block_reason,
+                    evidence_version, gateway_request_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2, ?)
                 """,
                 (
-                    time.time(), session, request_id, dest, vk_alias, mode,
-                    model_requested, json.dumps(fallbacks), model_actual, provider_actual,
-                    payload_sha256, payload_bytes, canary_hits, verdict, block_reason,
+                    time.time(),
+                    session,
+                    request_id,
+                    dest,
+                    vk_alias,
+                    mode,
+                    model_requested,
+                    json.dumps(fallbacks),
+                    model_actual,
+                    provider_actual,
+                    payload_sha256,
+                    payload_bytes,
+                    canary_hits,
+                    verdict,
+                    block_reason,
+                    gateway_request_id,
                 ),
             )
     finally:
@@ -166,6 +204,7 @@ def log_egress(
 # ---------------------------------------------------------------------------
 # Gateway Egress Service
 # ---------------------------------------------------------------------------
+
 
 class EgressClient:
     """Unified egress client for Bifrost and Tavily with safety enforcement."""
@@ -177,13 +216,17 @@ class EgressClient:
         journal: EventJournal | None = None,
         price_table: PriceTable | None = None,
         canaries: list[str] | None = None,
+        network_policy: NetworkPolicy | None = None,
     ) -> None:
         self.bifrost_base_url = bifrost_base_url.rstrip("/")
         self.budget_manager = budget_manager
         self.journal = journal
         self.price_table = price_table or (budget_manager.price_table if budget_manager else None)
         self.canaries: list[str] = canaries or []
-        self._http_client = httpx.Client(timeout=120.0)
+        self.network_policy = network_policy or NetworkPolicy()
+        install_socket_guard()
+        # No proxy environment, redirects or hidden retries may change the peer.
+        self._http_client = httpx.Client(timeout=120.0, trust_env=False, follow_redirects=False)
 
     def scan_for_canaries(self, text: str) -> int:
         """Count canary tokens in payload to prevent confidential exfiltration."""
@@ -192,6 +235,20 @@ class EgressClient:
             if c in text:
                 hits += 1
         return hits
+
+    def probe(self, origin, path, *, method="GET", body=None, headers=None, service="gateway"):
+        """Fixed local diagnostic adapter; no task text or credential output."""
+        with network_scope(self.network_policy, origin, mode="confidential", service=service):
+            response = self._http_client.request(
+                method, origin.rstrip("/") + path, json=body, headers=headers or {}, timeout=3.0
+            )
+        if len(response.content) > 4 * 1024 * 1024:
+            raise ValueError("diagnostic response too large")
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+        return response.status_code, data
 
     def post_bifrost(
         self,
@@ -204,7 +261,7 @@ class EgressClient:
     ) -> tuple[int, dict[str, Any], Mapping[str, str]]:
         """Sends an inference request to Bifrost, strictly requiring a held reservation."""
         db_path = self.budget_manager.db_path if self.budget_manager else Path("state.db")
-        req_id = f"req_{int(time.time()*1000)}"
+        req_id = "req_" + uuid.uuid4().hex
 
         # 1. Structural rule: Check reservation is held
         if not reservation_id:
@@ -221,6 +278,7 @@ class EgressClient:
 
         # 3. Confidential mode enforcement (ADR-006)
         if mode == "confidential":
+            self.network_policy.validate(self.bifrost_base_url, mode=mode, service="gateway")
             if vk_alias != "local":
                 raise ConfidentialDeny(
                     f"Confidential egress violation: vk_alias is '{vk_alias}', must be 'local'"
@@ -229,19 +287,29 @@ class EgressClient:
             body = sanitize_local_request_body(body)
             fallbacks = []
 
-        payload_bytes = json.dumps(body).encode("utf-8")
+        payload_bytes = json.dumps(body, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode(
+            "utf-8"
+        )
         payload_sha = hashlib.sha256(payload_bytes).hexdigest()
 
         # 4. Canary check for public mode
         canary_hits = self.scan_for_canaries(payload_bytes.decode("utf-8", errors="ignore"))
         if mode == "public" and canary_hits > 0:
             log_egress(
-                db_path=db_path, session=session, request_id=req_id,
-                dest=self.bifrost_base_url, vk_alias=vk_alias, mode=mode,
-                model_requested=model_requested, fallbacks=fallbacks,
-                model_actual="", provider_actual="",
-                payload_sha256=payload_sha, payload_bytes=len(payload_bytes),
-                canary_hits=canary_hits, verdict="blocked",
+                db_path=db_path,
+                session=session,
+                request_id=req_id,
+                dest=self.bifrost_base_url,
+                vk_alias=vk_alias,
+                mode=mode,
+                model_requested=model_requested,
+                fallbacks=fallbacks,
+                model_actual="",
+                provider_actual="",
+                payload_sha256=payload_sha,
+                payload_bytes=len(payload_bytes),
+                canary_hits=canary_hits,
+                verdict="blocked",
                 block_reason="canary_token_detected_in_public_payload",
             )
             raise SecurityError(f"Egress blocked: {canary_hits} canary token(s) detected in outbound payload")
@@ -250,53 +318,91 @@ class EgressClient:
             "Content-Type": "application/json",
             "x-bf-vk": vk,
             "x-bf-session-id": session,
+            "x-bf-request-id": req_id,
+            "x-crocodile-request-id": req_id,
+            "x-crocodile-payload-sha256": payload_sha,
+            "x-request-id": req_id,
+            "x-bf-lh-crocodile-request-id": req_id,
+            "x-bf-lh-crocodile-session": session,
+            "x-bf-lh-crocodile-payload-sha256": payload_sha,
+            "x-bf-lh-crocodile-payload-bytes": str(len(payload_bytes)),
+            "x-bf-lh-crocodile-vk-alias": vk_alias,
+            "x-bf-lh-crocodile-model-requested": model_requested,
+            "x-bf-lh-crocodile-fallbacks": json.dumps(fallbacks, separators=(",", ":")),
         }
 
         endpoint = f"{self.bifrost_base_url}/v1/chat/completions"
-
+        if self.budget_manager is None:
+            raise PermissionError("inference requires the protected budget manager")
+        self.budget_manager.verify_hold(reservation_id)
+        logged = False
         try:
-            resp = self._http_client.post(endpoint, json=body, headers=headers)
+            with network_scope(self.network_policy, self.bifrost_base_url, mode=mode, service="gateway"):
+                resp = self._http_client.post(endpoint, content=payload_bytes, headers=headers)
             status_code = resp.status_code
             resp_headers = resp.headers
             resp_body = resp.json() if resp.status_code < 500 else {"error": resp.text}
 
-            # Parse routing info
-            routing = parse_routing_info(resp_headers, resp_body, requested_model=model_requested, status_code=status_code)
-
             # In confidential mode, verify answered provider is ollama
-            if mode == "confidential" and routing.provider_used and routing.provider_used != "ollama":
-                log_egress(
-                    db_path=db_path, session=session, request_id=req_id,
-                    dest=self.bifrost_base_url, vk_alias=vk_alias, mode=mode,
-                    model_requested=model_requested, fallbacks=fallbacks,
-                    model_actual=routing.model_used, provider_actual=routing.provider_used,
-                    payload_sha256=payload_sha, payload_bytes=len(payload_bytes),
-                    canary_hits=canary_hits, verdict="blocked",
-                    block_reason="confidential_non_ollama_provider_answered",
-                )
-                raise ConfidentialDeny(
-                    f"Confidential breach: provider '{routing.provider_used}' answered for confidential session!"
-                )
+            # Routing parsers may infer a provider from the requested model for
+            # UI compatibility. That inference is never actual-provider evidence.
+            metadata = {k.lower(): v for k, v in resp_headers.items()}
+            route = resp_body.get("extra_fields", {}).get("routing_info", {})
+            provider = (
+                metadata.get("x-bifrost-provider")
+                or metadata.get("x-bifrost-routing-info-provider")
+                or route.get("provider", "")
+            )
+            actual_model = (
+                metadata.get("x-bifrost-resolved-model")
+                or metadata.get("x-bifrost-routing-info-model")
+                or route.get("model")
+                or resp_body.get("model", "")
+            )
+            if actual_model and "/" not in actual_model and provider:
+                actual_model = provider + "/" + actual_model
 
             log_egress(
-                db_path=db_path, session=session, request_id=req_id,
-                dest=self.bifrost_base_url, vk_alias=vk_alias, mode=mode,
-                model_requested=model_requested, fallbacks=fallbacks,
-                model_actual=routing.model_used, provider_actual=routing.provider_used,
-                payload_sha256=payload_sha, payload_bytes=len(payload_bytes),
-                canary_hits=canary_hits, verdict="sent",
+                db_path=db_path,
+                session=session,
+                request_id=req_id,
+                dest=self.bifrost_base_url,
+                vk_alias=vk_alias,
+                mode=mode,
+                model_requested=model_requested,
+                fallbacks=fallbacks,
+                model_actual=actual_model,
+                provider_actual=provider,
+                payload_sha256=payload_sha,
+                payload_bytes=len(payload_bytes),
+                canary_hits=canary_hits,
+                verdict="sent",
+                gateway_request_id=metadata.get("x-bifrost-request-id") or metadata.get("x-request-id"),
             )
-            return status_code, resp_body, resp_headers
+            logged = True
+            if mode == "confidential" and status_code < 400 and provider != "ollama":
+                raise ConfidentialDeny("confidential response has missing or non-Ollama provider evidence")
+            return status_code, resp_body, {**resp_headers, "x-crocodile-request-id": req_id}
 
         except Exception as e:
+            if logged:
+                raise
             log_egress(
-                db_path=db_path, session=session, request_id=req_id,
-                dest=self.bifrost_base_url, vk_alias=vk_alias, mode=mode,
-                model_requested=model_requested, fallbacks=fallbacks,
-                model_actual="", provider_actual="",
-                payload_sha256=payload_sha, payload_bytes=len(payload_bytes),
-                canary_hits=canary_hits, verdict="blocked",
-                block_reason=str(e),
+                db_path=db_path,
+                session=session,
+                request_id=req_id,
+                dest=self.bifrost_base_url,
+                vk_alias=vk_alias,
+                mode=mode,
+                model_requested=model_requested,
+                fallbacks=fallbacks,
+                model_actual="",
+                provider_actual="",
+                payload_sha256=payload_sha,
+                payload_bytes=len(payload_bytes),
+                canary_hits=canary_hits,
+                verdict="blocked" if isinstance(e, DestinationDenied) else "sent",
+                block_reason=type(e).__name__,
             )
             raise
 
@@ -318,6 +424,8 @@ class EgressClient:
         mock_response: dict[str, Any] | None = None,
     ) -> ChatResult:
         """High-level chat invocation with reservation, failover, banner, and reconciliation."""
+        if self.budget_manager is None:
+            raise PermissionError("inference requires the protected budget manager")
         if chain is None:
             if mode == "confidential":
                 chain = list(DEFAULT_CHAINS.get("local", ["ollama/qwen2.5-coder:7b"]))
@@ -327,6 +435,13 @@ class EgressClient:
                 chain = ["anthropic/claude-haiku-5-5"]
         primary_model = chain[0]
         fb_list = fallbacks if fallbacks is not None else chain[1:]
+        if mode == "confidential":
+            self.network_policy.validate(self.bifrost_base_url, mode=mode, service="gateway")
+            for model in chain:
+                check_local_model(model)
+            if any(not model.startswith("ollama/") for model in fb_list):
+                raise ConfidentialDeny("confidential fallback chain must be local")
+            fb_list = []
 
         # 1. Pre-call Atomic Reservation (ADR-005)
         res = None
@@ -397,7 +512,9 @@ class EgressClient:
                 resp_headers = {}
 
         # 4. Parse Routing & Failover
-        routing = parse_routing_info(resp_headers, resp_body, requested_model=primary_model, status_code=status_code)
+        routing = parse_routing_info(
+            resp_headers, resp_body, requested_model=primary_model, status_code=status_code
+        )
 
         # Render TAKEOVER banner if failover occurred
         if routing.is_fallback:
@@ -451,6 +568,7 @@ class EgressClient:
                 completion_tokens=completion_tokens,
                 cache_read_tokens=cache_read,
                 cache_write_tokens=cache_write,
+                request_id=resp_headers.get("x-crocodile-request-id"),
             )
 
         # Extract output text and tool calls
@@ -511,7 +629,8 @@ class EgressClient:
         url, headers, payload = build_tavily_request(
             query=query, api_key=api_key, domains=domains, canaries=self.canaries
         )
-        resp = self._http_client.post(url, json=payload, headers=headers)
+        with network_scope(self.network_policy, "https://api.tavily.com:443", mode=mode, service="public"):
+            resp = self._http_client.post(url, json=payload, headers=headers)
         if resp.status_code != 200:
             raise RuntimeError(f"Tavily API error ({resp.status_code}): {resp.text}")
 

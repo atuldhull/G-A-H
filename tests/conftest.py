@@ -26,6 +26,9 @@ def app_security(request, tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
     monkeypatch.setattr(approvals, "_console_answer", confirm)
     state = enroll(path)
+    from crocodile.security.integrity import HMACKeys
+
+    monkeypatch.setattr(HMACKeys, "_vault", lambda self: state.keys._backend)
     # Reuse a fixture connection, never a verification result. Each check opens
     # a fresh read transaction and hashes the real rows, including tampered rows.
     reader = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)

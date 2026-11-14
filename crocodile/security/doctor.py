@@ -27,7 +27,7 @@ class Diagnostic:
     detail: str
 
     def __post_init__(self):
-        if self.status not in ("OK", "WARN", "FAIL"):
+        if self.status not in ("OK", "WARN", "FAIL", "INCOMPLETE"):
             raise ValueError("invalid diagnostic status")
 
 
@@ -52,7 +52,7 @@ class DoctorReport:
 
     @property
     def passed(self):
-        return not any(c.status == "FAIL" for c in self.checks)
+        return not any(c.status in ("FAIL", "INCOMPLETE") for c in self.checks)
 
     def render(self):
         return "\n".join(
@@ -181,6 +181,10 @@ def diagnose(
     checks = []
 
     def check(name, operation, success):
+        status = evidence.get("probe_status", {}).get(name)
+        if status in ("FAIL", "INCOMPLETE"):
+            checks.append(Diagnostic(name, status, "live probe failed" if status == "FAIL" else "live probe could not run or required independent evidence is unavailable"))
+            return
         try:
             operation()
             checks.append(Diagnostic(name, "OK", success))
@@ -313,6 +317,16 @@ def diagnose(
         gateway,
         "owner probe: inference auth on; local VK rejects cloud without provider calls",
     )
+    for name, field in (("gateway reachability", "reachable"), ("gateway authentication", "inference_auth")):
+        def gateway_field(field=field):
+            if evidence.get("gateway", {}).get(field) is not True:
+                raise ValueError("gateway evidence missing")
+        check(name, gateway_field, "live local gateway evidence verified")
+
+    def ollama_available():
+        if not isinstance(evidence.get("ollama_tags", {}).get("models"), list):
+            raise ValueError("Ollama unavailable")
+    check("Ollama availability", ollama_available, "local Ollama tags endpoint responded")
 
     def socket_guard():
         if evidence.get("socket_guard_active") is not True:
@@ -365,9 +379,20 @@ def main(argv=None) -> int:
         session = ApprovalSession(
             root, integrity=StateIntegrity(settings / "state.db")
         )
-        report = diagnose(session=session, config=documents[0], prices=documents[2])
+        from crocodile.gateway.diagnostics import collect_evidence
+
+        from .integrity import HMACKeys
+
+        try:
+            key = HMACKeys()._vault().get_password("crocodile", "vk-local")
+        except Exception:
+            key = None
+        evidence = collect_evidence(documents[0], local_key=key,
+            gateway_log=os.environ.get("CROCODILE_GATEWAY_LOG"),
+            limits_path=os.environ.get("CROCODILE_LIMITS", str(Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "crocodile/limits.yaml")), repo=root)
+        report = diagnose(session=session, config=documents[0], prices=documents[2], evidence=evidence)
         print(report.render())
-        # Part 1 must supply Part 2's live probes: absent probes intentionally fail.
+        # Failed or unavailable live evidence never produces a healthy exit.
         return 0 if report.passed else 1
     except Exception as error:  # noqa: BLE001 - no raw exception text/credentials in CLI output
         print(

@@ -13,7 +13,7 @@ import os
 import sqlite3
 import time
 from collections.abc import Callable
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -183,8 +183,17 @@ class BudgetManager:
         self.price_table = price_table
         self.limits: dict[str, float] = limits or {}  # principal -> daily_usd
         self.integrity_verifier = integrity_verifier
-        self.state_integrity = state_integrity
-        init_database(self.db_path)
+        from crocodile.security.integrity import StateIntegrity
+
+        self.state_integrity = state_integrity or StateIntegrity(self.db_path)
+        if self.state_integrity.path.resolve() != self.db_path.resolve():
+            raise ValueError("budget integrity belongs to another database")
+        if self.db_path.exists():
+            self.state_integrity.verify_state()
+        else:
+            # Schema bootstrap only. Trusted init must create the other owner
+            # tables and enroll a key/seal before the first protected write.
+            init_database(self.db_path).close()
 
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=15.0)
@@ -194,20 +203,30 @@ class BudgetManager:
 
     @contextmanager
     def _transaction(self, conn):
-        """Optional owner hook: verify/reseal under the same existing writer lock."""
+        """Verify and reseal under the same writer lock as every protected write."""
         try:
             conn.execute("BEGIN IMMEDIATE")
-            guard = (
-                self.state_integrity.authorized_write(conn)
-                if self.state_integrity is not None
-                else nullcontext()
-            )
-            with guard:
+            with self.state_integrity.authorized_write(conn):
                 yield conn
             conn.commit()
         except BaseException:
             conn.rollback()
             raise
+
+    def verify_hold(self, reservation_id):
+        """Admission reads verified state; a nonempty ID is insufficient."""
+        from crocodile.security.integrity import IntegrityViolation
+
+        connection = self._get_connection()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            self.state_integrity.verify_state(connection)
+            row = connection.execute("SELECT status FROM ledger WHERE id=?", (reservation_id,)).fetchone()
+            if row is None or row[0] != "held":
+                raise IntegrityViolation("inference requires a verified held reservation")
+        finally:
+            connection.rollback()
+            connection.close()
 
     def get_principal_limit(self, principal: str) -> float:
         """Get the daily limit for a principal; defaults to 5.00 if unconfigured."""
@@ -248,6 +267,10 @@ class BudgetManager:
         return (spent + held) >= (warn_frac * limit)
 
     def expire_dead_leases(self, conn: sqlite3.Connection) -> int:
+        with self._transaction(conn):
+            return self._expire_dead_leases(conn)
+
+    def _expire_dead_leases(self, conn: sqlite3.Connection) -> int:
         """Expire held reservations whose owner PID has died."""
         cur = conn.cursor()
         cur.execute("SELECT id, owner_pid, heartbeat FROM ledger WHERE status = 'held'")
@@ -327,7 +350,7 @@ class BudgetManager:
                         f"Clock skew detected: current window {window} is behind ledger window {latest_window}"
                     )
 
-                self.expire_dead_leases(conn)
+                self._expire_dead_leases(conn)
 
                 limit = self.get_principal_limit(principal)
                 cur.execute(
