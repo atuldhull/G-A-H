@@ -24,6 +24,33 @@ class DeadlineExceeded(TimeoutError):
     """Cooperative event/return deadline, NOT a hard cancellation boundary."""
 
 
+class BenchInitializationError(ValueError):
+    """Safe setup diagnostic; halt dispatch after writing its terminal record."""
+
+    def __init__(self, cause_type):
+        self.cause_type = cause_type
+        super().__init__("Bench security initialization failed")
+
+
+def _default_session_factory(*args, **kwargs):
+    # Same fail-closed verification merged through main, inside the attempt's
+    # protected lifecycle so an initialization error cannot leave only a start row.
+    try:
+        from crocodile.security import ApprovalSession
+        from crocodile.security.integrity import StateIntegrity
+        from crocodile.security.confidential import Detector, SecurityStore
+        from crocodile.runtime_security import state_path
+
+        state = StateIntegrity(state_path())
+        state.verify_state()
+        detector = Detector(SecurityStore(state.path, integrity=state))
+        kwargs.setdefault("integrity", state)
+        kwargs.setdefault("confidentiality", detector)
+        return ApprovalSession.for_bench(*args, **kwargs)
+    except Exception as error:
+        raise BenchInitializationError(type(error).__name__) from None
+
+
 def _invalid_constant(value):
     raise ValueError(f"Non-finite JSON value: {value}")
 
@@ -137,6 +164,7 @@ def _base(run, plan_id, model, attempt_id, artifacts):
         "cost_attribution": {"status": "incomplete", "authoritative_cost_usd": None,
                              "receipt_cost_usd": None, "receipt_comparison": "pending-log-attribution"},
         "comparison_ready": False, "artifact_directory": str(artifacts), "workspace_path": None,
+        "canonical_config_id": None, "config_attestation_sha256": None,
         "evidence": {"receipt": None, "security_events": None, "original": None,
                      "final": None, "grading_result": None},
     }
@@ -248,7 +276,10 @@ def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_facto
                         row["agent_duration_seconds"] = max(0, clock() - agent_started)
             except BaseException as error:
                 failed(error, "agent-or-session")
-                if not isinstance(error, Exception):
+                if isinstance(error, BenchInitializationError):
+                    row["error"].update(phase="security-initialization", cause_type=error.cause_type)
+                    fatal = error
+                elif not isinstance(error, Exception):
                     fatal = error
             finally:
                 if agent is not None:
@@ -280,7 +311,8 @@ def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_facto
                             failed(RuntimeError(), "grading")
                     except Exception as error:
                         failed(error, "grading")
-            row["status"] = "interrupted" if fatal else "incomplete" if row["error"] else "completed"
+            row["status"] = ("interrupted" if fatal is not None and not isinstance(fatal, Exception)
+                             else "incomplete" if row["error"] else "completed")
     row["finished_at"] = _utc()
     row["duration_seconds"] = max(0, clock() - started)
     row["solved"] = (row["status"] == "completed" and not row["timed_out"]
@@ -290,7 +322,7 @@ def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_facto
 
 def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=None,
              scratch_parent=None, security_options=None, retry_incomplete=False, clock=time.monotonic,
-             mini_adapter=None, variants=None):
+             mini_adapter=None, variants=None, canonical_config=None, canonical_data_root=None):
     """Execute in plan order; mini is blocked unless its separate adapter is supplied.
 
     A completed attempt (including a graded failure) is never repeated. Failed,
@@ -307,6 +339,20 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
         raise ValueError("Unknown or empty variant selection")
     if (agent_factory is None) != (session_factory is None):
         raise ValueError("Inject both factories together, or neither")
+    if (canonical_config is None) != (canonical_data_root is None):
+        raise ValueError("Canonical config and data root must be supplied together")
+    attestation = None
+    attestation_hash = None
+    canonical_bytes = None
+    mini_identity = mini_adapter.identity() if mini_adapter is not None else None
+    if canonical_config is not None:
+        from bench.attest import attest_plan, encoded
+        attestation = attest_plan(canonical_config, canonical_data_root, plan_path, oracles,
+                                 mini_identity=mini_identity)
+        if not attestation["execution_authorized"] or not attestation["canonical_comparability_ready"]:
+            raise ValueError("Canonical comparability is blocked; no work dispatched")
+        canonical_bytes = Path(canonical_config).read_bytes()
+        attestation_hash = hashlib.sha256(encoded(attestation)).hexdigest()
     options = dict(security_options or {})
     if options.keys() - {"integrity", "confidentiality"}:
         raise ValueError("Only integrity/confidentiality security options may be supplied")
@@ -322,6 +368,25 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
     with lock.open("x", encoding="utf-8") as stream:
         stream.write(str(os.getpid()))
     try:
+        binding = destination / "config-attestation.json"
+        config_snapshot = destination / "canonical-config.json"
+        if attestation is None and (binding.exists() or config_snapshot.exists()):
+            raise ValueError("Resume requires the original canonical configuration")
+        if attestation is not None:
+            if not binding.exists() and any((destination / name).exists()
+                                           for name in ("events.jsonl", "results.jsonl")):
+                raise ValueError("Cannot attach canonical provenance retroactively")
+            if binding.exists() and _decode(binding.read_text(encoding="utf-8")) != attestation:
+                raise ValueError("Output belongs to a different immutable config attestation")
+            if config_snapshot.exists() and config_snapshot.read_bytes() != canonical_bytes:
+                raise ValueError("Output belongs to a different immutable canonical config")
+            if not config_snapshot.exists():
+                with config_snapshot.open("xb") as stream:
+                    stream.write(canonical_bytes)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            if not binding.exists():
+                _save(binding, attestation)
         snapshot = destination / "plan.json"
         if snapshot.exists() and snapshot.read_bytes() != raw:
             raise ValueError("Output belongs to a different immutable plan snapshot")
@@ -338,7 +403,7 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
             _save(oracle_snapshot, oracle_data)
         if mini_adapter is not None:
             mini_snapshot = destination / "mini-settings.json"
-            identity = mini_adapter.identity()
+            identity = mini_identity
             if mini_snapshot.exists() and _decode(mini_snapshot.read_text(encoding="utf-8")) != identity:
                 raise ValueError("Output belongs to a different immutable mini configuration")
             if not mini_snapshot.exists():
@@ -351,6 +416,8 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
         latest = {}
         for row in rows:
             if (row["plan_id"] != plan_id or row["run_id"] not in runs
+                    or row.get("canonical_config_id") != (attestation["canonical_config_id"] if attestation else None)
+                    or row.get("config_attestation_sha256") != attestation_hash
                     or row["attempt_id"] in attempts
                     or row["status"] not in {"completed", "blocked", "incomplete", "interrupted"}):
                 raise ValueError("Conflicting result journal identity")
@@ -362,7 +429,9 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
                 completed.add(row["run_id"])
         pending = {}
         for event in events:
-            if event["plan_id"] != plan_id or event["run_id"] not in runs:
+            if (event["plan_id"] != plan_id or event["run_id"] not in runs
+                    or event.get("canonical_config_id") != (attestation["canonical_config_id"] if attestation else None)
+                    or event.get("config_attestation_sha256") != attestation_hash):
                 raise ValueError("Conflicting lifecycle journal identity")
             pending[event["attempt_id"]] = event
         for attempt_id, event in pending.items():
@@ -392,25 +461,15 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
             artifacts = artifacts_root / attempt_id
             artifacts.mkdir()
             row = _base(run, plan_id, plan["evaluation_policy"]["model"], attempt_id, artifacts)
+            if attestation is not None:
+                row.update(canonical_config_id=attestation["canonical_config_id"],
+                           config_attestation_sha256=attestation_hash)
             row["prior_attempt_ids"] = [past["attempt_id"] for past in rows if past["run_id"] == run["run_id"]]
             row["oracle_targets"] = list(oracles[run["task_id"]])
             _append(events_path, {"event": "attempt_started", **row})
             factory = session_factory
             if factory is None and run["agent_variant"] != "mini-swe-agent":
-                # Lazy import, inside the attempt so import failure gets evidence.
-                from crocodile.security import ApprovalSession
-                from crocodile.security.integrity import StateIntegrity
-                from crocodile.security.confidential import Detector, SecurityStore
-                from crocodile.runtime_security import state_path
-
-                _state = StateIntegrity(state_path())
-                _state.verify_state()
-                _detector = Detector(SecurityStore(_state.path, integrity=_state))
-
-                def factory(*args, **kwargs):
-                    kwargs.setdefault("integrity", _state)
-                    kwargs.setdefault("confidentiality", _detector)
-                    return ApprovalSession.for_bench(*args, **kwargs)
+                factory = _default_session_factory
             try:
                 fatal = _attempt(row, run, oracles[run["task_id"]], artifacts, scratch,
                                  agent_factory, factory, options, events_path, clock, used_sessions, mini_adapter)
@@ -437,6 +496,8 @@ def main(argv: Sequence[str] | None = None):
     parser.add_argument("--execute", action="store_true", help="Explicitly opt into live agent execution")
     parser.add_argument("--retry-incomplete", action="store_true")
     parser.add_argument("--mini-settings", type=Path, help="Opt into the separate WSL2 mini adapter")
+    parser.add_argument("--canonical-config", type=Path, help="Bind and enforce the canonical preflight gate")
+    parser.add_argument("--canonical-data-root", type=Path, help="Verified assembled inputs for canonical binding")
     args = parser.parse_args(argv)
     if not args.execute:
         parser.error("Execution requires --execute; use bench.plan --dry-run for planning only")
@@ -446,7 +507,8 @@ def main(argv: Sequence[str] | None = None):
             from bench.mini import MiniAdapter, Settings
             mini_adapter = MiniAdapter(Settings(**_decode(args.mini_settings.read_text(encoding="utf-8"))))
         rows = run_plan(args.plan, args.output, oracles=_decode(args.oracles.read_text(encoding="utf-8")),
-                        retry_incomplete=args.retry_incomplete, mini_adapter=mini_adapter)
+                        retry_incomplete=args.retry_incomplete, mini_adapter=mini_adapter,
+                        canonical_config=args.canonical_config, canonical_data_root=args.canonical_data_root)
     except (OSError, ValueError) as error:
         parser.exit(2, f"Runner failed ({type(error).__name__}); inspect durable evidence.\n")
     print(f"Recorded {len(rows)} attempts; authoritative cost and live fairness remain unverified.")

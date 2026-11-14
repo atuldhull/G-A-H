@@ -2,7 +2,8 @@
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+import sys
 from uuid import uuid4
 
 import pytest
@@ -367,3 +368,42 @@ def test_population_keeps_root_identity_and_excludes_nested_metadata(harness, tm
     with pytest.raises(FileExistsError):
         populate_workspace(harness.source, target)
     assert (target / "solution.py").read_bytes() == before
+
+
+def test_default_integrity_failure_is_durable_and_stops_the_queue(harness, monkeypatch, tmp_path):
+    calls = []
+
+    class State:
+        def __init__(self, path):
+            self.path = path
+
+        def verify_state(self):
+            calls.append("verify")
+            raise RuntimeError("SYNTHETIC-PRIVATE-DIAGNOSTIC-MUST-NOT-BE-RECORDED")
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Integrity failure must stop before bench session/model construction")
+
+    modules = {
+        "crocodile": {},
+        "crocodile.security": {"ApprovalSession": SimpleNamespace(for_bench=forbidden)},
+        "crocodile.security.integrity": {"StateIntegrity": State},
+        "crocodile.security.confidential": {"Detector": forbidden, "SecurityStore": forbidden},
+        "crocodile.runtime_security": {"state_path": lambda: tmp_path / "never-opened.db"},
+    }
+    for name, attributes in modules.items():
+        module = ModuleType(name)
+        module.__path__ = []
+        module.__dict__.update(attributes)
+        monkeypatch.setitem(sys.modules, name, module)
+    with pytest.raises(runner.BenchInitializationError):
+        runner.run_plan(harness.path, harness.output, oracles=harness.options["oracles"], scratch_parent=tmp_path)
+    rows = runner._rows(harness.output / "results.jsonl")
+    assert calls == ["verify"] and len(rows) == 1
+    assert rows[0]["status"] == "incomplete" and not rows[0]["solved"]
+    assert rows[0]["error"] == {"type": "BenchInitializationError", "phase": "security-initialization",
+                                "cause_type": "RuntimeError"}
+    assert rows[0]["session_id"] is None and rows[0]["evidence"]["original"] is None
+    assert "SYNTHETIC-PRIVATE-DIAGNOSTIC" not in (harness.output / "results.jsonl").read_text()
+    assert not (harness.output / ".runner.lock").exists()
+    assert not (tmp_path / "never-opened.db").exists()

@@ -16,6 +16,17 @@ run_plan(plan_path, output, *, oracles,
 ```
 
 Returns all terminal attempt records, including earlier attempts on resume.
+
+The API also accepts paired `canonical_config` / `canonical_data_root` arguments;
+CLI flags are `--canonical-config` / `--canonical-data-root`. See
+[smoke-readiness.md](smoke-readiness.md) for pre-dispatch canonical binding, immutable
+attestation snapshots and the currently blocked 15-slot smoke. Calls without these
+flags remain explicitly unattested, with null canonical ID/hash fields. A blocked
+canonical gate cannot dispatch even when `--execute` is supplied.
+The standalone `bench.mini` CLI remains a legacy unattested entry point; canonical
+smoke/full-grid commands use `bench.run` with its mini adapter and both canonical
+flags. The effective mini identity is frozen inside the attestation as well as
+the existing `mini-settings.json` snapshot.
 Inject **both** factories for synthetic validation. `agent_factory` accepts the
 merged Agent constructor; `session_factory` accepts `ApprovalSession.for_bench`'s
 arguments. Omitting both lazily loads those real APIs. Importing `bench.run` does

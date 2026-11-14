@@ -70,12 +70,13 @@ def _key_free(value):
             _key_free(child)
 
 
-def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()):
+def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=(), audit_current=False):
     """Validate static consistency; v1 can never authorize runs or pooled claims.
 
     Optional data_root is the assembled builder output, not a native checkout.
     Optional manifests must contain one full plan and all four shard plans.
-    No exercise imports, pytest, mini, gateway, credential or SQLite access occurs.
+    audit_current reports source drift without accepting it. No exercise imports,
+    pytest, mini, gateway, credential or SQLite access occurs.
     """
     try:
         _need(isinstance(config, dict) and set(config) == TOP_FIELDS, "Invalid canonical config fields")
@@ -151,11 +152,16 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
                "crocodile/adapters.py", "prices.yaml"} <= sources.keys(), "Missing required runtime pins")
         _need(config["evidence"]["canonical_native_prices_sha256"] == sources["prices.yaml"],
               "Canonical price snapshot differs")
+        drift = []
         for relative, digest in sources.items():
             path = root / _relative(relative, "runtime source")
             _need(root in path.resolve().parents, "Runtime source escapes repository")
-            _need(_sha(path.read_bytes().replace(b"\r\n", b"\n")) == digest, "Runtime source snapshot differs")
-        result = {"revision": config["revision"], "config_id": config_id(config), "static_valid": True,
+            actual = _sha(path.read_bytes().replace(b"\r\n", b"\n"))
+            if actual != digest:
+                drift.append({"path": relative, "frozen_sha256": digest, "current_sha256": actual})
+        _need(audit_current or not drift, "Runtime source snapshot differs")
+        result = {"revision": config["revision"], "config_id": config_id(config), "static_valid": not drift,
+                  "contract_valid": True, "runtime_matches_snapshot": not drift, "runtime_drift": drift,
                   "runtime_git_commit": config["provenance"]["runtime_git_commit"],
                   "validator_sha256_lf": _sha(Path(__file__).read_bytes().replace(b"\r\n", b"\n")),
                   "dataset_validated": False, "manifests_validated": 0,
@@ -205,13 +211,16 @@ def main(argv=None):
     parser.add_argument("--data-root", type=Path)
     parser.add_argument("--plans", type=Path, nargs="*")
     parser.add_argument("--require-comparable", action="store_true")
+    parser.add_argument("--audit-current", action="store_true",
+                        help="Report runtime drift as invalid evidence; never waive the frozen snapshot")
     args = parser.parse_args(argv)
     try:
-        result = validate_config(_json(args.config), data_root=args.data_root, manifests=args.plans or ())
+        result = validate_config(_json(args.config), data_root=args.data_root, manifests=args.plans or (),
+                                 audit_current=args.audit_current)
     except (OSError, ValueError) as error:
         parser.exit(2, f"Canonical validation failed: {error}\n")
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
-    return 1 if args.require_comparable else 0  # v1 is permanently gated, not an execution switch.
+    return 1 if args.require_comparable else 0 if result["static_valid"] else 2
 
 
 if __name__ == "__main__":

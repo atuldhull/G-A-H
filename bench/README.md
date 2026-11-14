@@ -6,6 +6,10 @@ validate against dry-run manifests with `python -m bench.canonical`. V1 remains
 blocked for paid execution and comparable pooling; static validation is not a
 live-readiness claim.
 
+[Current smoke readiness](smoke-readiness.md) lists the prioritized owner blockers,
+merged integrity changes, exact prompt-byte/attestation fixes and the prepared
+three-task/15-slot plan. Historical v1 is never edited to bless a newer runtime.
+
 The [in-process runner](runner.md) now connects planned Crocodile/all-off attempts
 to the merged Agent and independent grader, with durable resume evidence. Mini
 and authoritative cost attribution remain explicitly incomplete. No live

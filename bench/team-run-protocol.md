@@ -5,6 +5,10 @@ The single shared experiment definition is
 `gemini-54-v1`. It freezes the 54 IDs in order, prompt/source hashes, dataset
 commits, exact task/oracle JSON hashes, full-plan identity, profiles, grading,
 evidence and pooling rules. **It does not authorize paid runs or comparability.**
+
+Follow-up: [smoke-readiness.md](smoke-readiness.md) records main's integrity fix
+integration and Person 4 prompt/attestation fixes. V1 stays immutable; use
+`--audit-current` to see current source drift rather than rewrite its history.
 The frozen runtime Git commit is `6bffe7c9745daca958bb3b410699cbee40ba0b25`;
 82 runtime-file hashes allow checking that the config-publication commit changed
 only review/validation material. Record the exact publication commit from

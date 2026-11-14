@@ -14,7 +14,13 @@ from bench.plan import build_plan, write_manifest
 
 @pytest.fixture
 def snapshot():
-    return canonical._json(canonical.DEFAULT_CONFIG)
+    # Synthetic configs pin the current test checkout; the published v1 file is
+    # kept immutable and separately tested for visible historical source drift.
+    config = canonical._json(canonical.DEFAULT_CONFIG)
+    for name in config["provenance"]["runtime_files_sha256_lf"]:
+        raw = (canonical.REPO_ROOT / name).read_bytes().replace(b"\r\n", b"\n")
+        config["provenance"]["runtime_files_sha256_lf"][name] = hashlib.sha256(raw).hexdigest()
+    return config
 
 
 @pytest.fixture
@@ -55,11 +61,16 @@ def inputs(tmp_path, snapshot):
     return snapshot, data, manifests, canary
 
 
-def test_published_config_is_static_valid_but_cannot_authorize_pooling(snapshot, capsys):
-    report = canonical.validate_config(snapshot)
-    assert report["static_valid"] and not report["cross_shard_comparable"]
+def test_published_config_stays_immutable_and_reports_current_drift(capsys):
+    published = canonical._json(canonical.DEFAULT_CONFIG)
+    assert canonical.config_id(published) == "07e9ded30d149ddff5bd3bdccc58e9f691a87b4143072321c84a3c075f6728fe"
+    with pytest.raises(ValueError, match="source snapshot differs"):
+        canonical.validate_config(published)
+    report = canonical.validate_config(published, audit_current=True)
+    assert report["contract_valid"] and not report["static_valid"] and report["runtime_drift"]
+    assert not report["runtime_matches_snapshot"] and not report["cross_shard_comparable"]
     assert report["paid_runs_authorized"] is False
-    assert canonical.main(["--require-comparable"]) == 1
+    assert canonical.main(["--audit-current", "--require-comparable"]) == 1
     assert json.loads(capsys.readouterr().out)["cross_shard_comparable"] is False
 
 
