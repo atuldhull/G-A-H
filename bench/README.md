@@ -10,6 +10,11 @@ review-gated subset of the conversation-supplied Bifrost logs mapping. Positive
 cache writes, retries/fallbacks and tiered pricing remain incomplete; the default
 Haiku price entry is therefore not yet supported for comparable live evidence.
 
+The [separate mini-swe-agent 2.4.6 adapter](mini.md) now implements the planned
+mini slots through WSL2 with fake-process validation, independent grading and
+resume. It is opt-in; verified live networking, header attribution, common gateway
+fairness and complete hard-timeout containment remain outstanding.
+
 This first Person 4 milestone prepares disposable exercise workspaces for the
 future benchmark harness. It copies ordinary files, tests, and empty directories,
 excluding every directory named `.meta` at every depth. The evaluation design

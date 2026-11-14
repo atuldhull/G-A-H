@@ -15,7 +15,7 @@ import time
 from uuid import uuid4
 
 from bench.grade import grade_exercise
-from bench.plan import SHARD_RANGES, TEST_PREFIX, _object, _relative
+from bench.plan import EVALUATION_POLICY, SHARD_RANGES, TEST_PREFIX, _object, _relative
 from bench.prepare import populate_workspace, prepare_workspace
 from bench.report import _plan
 
@@ -171,7 +171,7 @@ def _receipt(agent, returned, row, artifacts):
 
 
 def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_factory,
-             security_options, events_path, clock, used_sessions):
+             security_options, events_path, clock, used_sessions, mini_adapter=None):
     started = clock()
     agent = returned = sec = None
     agent_started = None
@@ -185,6 +185,8 @@ def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_facto
             row["timed_out"] = True
 
     if run["agent_variant"] == "mini-swe-agent":
+        if mini_adapter is not None:
+            return mini_adapter.attempt(row, run, artifacts, events_path, clock, used_sessions)
         row.update(status="blocked", error={"type": "MissingMiniRunner", "phase": "dispatch"})
         row["step_cap_enforcement"] = "not-executed"
     else:
@@ -287,8 +289,9 @@ def _attempt(row, run, targets, artifacts, scratch, agent_factory, session_facto
 
 
 def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=None,
-             scratch_parent=None, security_options=None, retry_incomplete=False, clock=time.monotonic):
-    """Execute supported planned attempts sequentially; mini gets blocked rows.
+             scratch_parent=None, security_options=None, retry_incomplete=False, clock=time.monotonic,
+             mini_adapter=None, variants=None):
+    """Execute in plan order; mini is blocked unless its separate adapter is supplied.
 
     A completed attempt (including a graded failure) is never repeated. Failed,
     interrupted and blocked attempts require explicit retry_incomplete=True.
@@ -298,6 +301,10 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
     raw = Path(plan_path).read_bytes()
     plan = _decode(raw.decode("utf-8"))
     _validate(plan, oracles)
+    if mini_adapter is not None and plan["evaluation_policy"] != EVALUATION_POLICY:
+        raise ValueError("Mini adapter requires the frozen model/thinking/cache evaluation policy")
+    if variants is not None and (not variants or set(variants) - {"crocodile", "mini-swe-agent", "all-off-twin"}):
+        raise ValueError("Unknown or empty variant selection")
     if (agent_factory is None) != (session_factory is None):
         raise ValueError("Inject both factories together, or neither")
     options = dict(security_options or {})
@@ -329,6 +336,13 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
             raise ValueError("Output belongs to a different immutable oracle mapping")
         if not oracle_snapshot.exists():
             _save(oracle_snapshot, oracle_data)
+        if mini_adapter is not None:
+            mini_snapshot = destination / "mini-settings.json"
+            identity = mini_adapter.identity()
+            if mini_snapshot.exists() and _decode(mini_snapshot.read_text(encoding="utf-8")) != identity:
+                raise ValueError("Output belongs to a different immutable mini configuration")
+            if not mini_snapshot.exists():
+                _save(mini_snapshot, identity)
         plan_id = hashlib.sha256(raw).hexdigest()
         results_path, events_path = destination / "results.jsonl", destination / "events.jsonl"
         rows, events = _rows(results_path), _rows(events_path)
@@ -370,12 +384,15 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
         artifacts_root = destination / "attempts"
         artifacts_root.mkdir(exist_ok=True)
         for run in plan["runs"]:
+            if variants is not None and run["agent_variant"] not in variants:
+                continue
             if run["run_id"] in completed or (run["run_id"] in latest and not retry_incomplete):
                 continue
             attempt_id = uuid4().hex
             artifacts = artifacts_root / attempt_id
             artifacts.mkdir()
             row = _base(run, plan_id, plan["evaluation_policy"]["model"], attempt_id, artifacts)
+            row["prior_attempt_ids"] = [past["attempt_id"] for past in rows if past["run_id"] == run["run_id"]]
             row["oracle_targets"] = list(oracles[run["task_id"]])
             _append(events_path, {"event": "attempt_started", **row})
             factory = session_factory
@@ -386,7 +403,7 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
                     return ApprovalSession.for_bench(*args, **kwargs)
             try:
                 fatal = _attempt(row, run, oracles[run["task_id"]], artifacts, scratch,
-                                 agent_factory, factory, options, events_path, clock, used_sessions)
+                                 agent_factory, factory, options, events_path, clock, used_sessions, mini_adapter)
             except BaseException as error:
                 # Includes temp creation/cleanup failures outside the session block.
                 row.update(status="interrupted" if not isinstance(error, Exception) else "incomplete",
@@ -409,16 +426,22 @@ def main(argv: Sequence[str] | None = None):
     parser.add_argument("--oracles", type=Path, required=True, help="JSON task-ID to pytest-target-list mapping")
     parser.add_argument("--execute", action="store_true", help="Explicitly opt into live agent execution")
     parser.add_argument("--retry-incomplete", action="store_true")
+    parser.add_argument("--mini-settings", type=Path, help="Opt into the separate WSL2 mini adapter")
     args = parser.parse_args(argv)
     if not args.execute:
         parser.error("Execution requires --execute; use bench.plan --dry-run for planning only")
     try:
+        mini_adapter = None
+        if args.mini_settings is not None:
+            from bench.mini import MiniAdapter, Settings
+            mini_adapter = MiniAdapter(Settings(**_decode(args.mini_settings.read_text(encoding="utf-8"))))
         rows = run_plan(args.plan, args.output, oracles=_decode(args.oracles.read_text(encoding="utf-8")),
-                        retry_incomplete=args.retry_incomplete)
+                        retry_incomplete=args.retry_incomplete, mini_adapter=mini_adapter)
     except (OSError, ValueError) as error:
         parser.exit(2, f"Runner failed ({type(error).__name__}); inspect durable evidence.\n")
-    print(f"Recorded {len(rows)} attempts; mini integration and authoritative cost attribution remain incomplete.")
-    return 0 if all(row["status"] == "completed" for row in rows) else 1
+    print(f"Recorded {len(rows)} attempts; authoritative cost and live fairness remain unverified.")
+    latest = {row["run_id"]: row for row in rows}
+    return 0 if latest and all(row["status"] == "completed" for row in latest.values()) else 1
 
 
 if __name__ == "__main__":

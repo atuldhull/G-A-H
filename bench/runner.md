@@ -11,7 +11,8 @@ dependencies remain those declared by the merged application.
 ```python
 run_plan(plan_path, output, *, oracles,
          agent_factory=None, session_factory=None, scratch_parent=None,
-         security_options=None, retry_incomplete=False, clock=time.monotonic)
+         security_options=None, retry_incomplete=False, clock=time.monotonic,
+         mini_adapter=None, variants=None)
 ```
 
 Returns all terminal attempt records, including earlier attempts on resume.
@@ -46,7 +47,8 @@ command other than exactly `python -m pytest -q`: custom arguments require an
 agent/grader adapter, not a silently changed authoritative command.
 
 The plan must retain 2 Crocodile + 2 mini + 1 all-off runs in its sorted
-task/variant/repeat order. Each mini entry produces an explicit `blocked` /
+task/variant/repeat order. Without the optional [WSL mini adapter](mini.md), each
+mini entry produces an explicit `blocked` /
 `MissingMiniRunner` record at its planned position, without invoking Agent or
 creating an approval session. The supported runs continue in order. This is
 incomplete 3-of-5 execution support, never substitution or full-suite completion.
@@ -163,7 +165,8 @@ successful non-retry sessions with explicit zero cache writes and flat prices.
 It is not automatically wired into this runner and does not resolve the default
 Haiku tiering, cache-write TTL, retry, or physical session-completeness gaps.
 
-Mini still needs its separate pinned 2.4.6 environment, WSL path/process adapter,
+The [mini milestone](mini.md) now supplies the WSL path/process adapter and strict
+cost/report join. Live mini still needs its separate pinned 2.4.6 environment,
 identical task/model/test/cap/cache settings, session headers, receipt/usage capture
 and independent grading. Preserve its two planned slots. The runner also does not
 configure the bench VK, disable owner-default escalation/fallback/sampling, or
