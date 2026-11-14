@@ -308,7 +308,7 @@ existing output files and dangling links are not overwritten. Errors exit 2;
 successful planning exits 0.
 
 The importable API is `bench.plan.build_plan(task_index, polyglot=...,
-quixbugs=..., dataset_set="both", limit=None, runs=2)`, followed by
+quixbugs=..., dataset_set="both", limit=None, runs=2, shard=None)`, followed by
 `bench.plan.write_manifest(plan, output)`.
 
 ### Output and future execution
@@ -344,6 +344,77 @@ The future harness will prepare a separate workspace for every manifest run,
 dispatch its variant with the frozen prompt and caps, independently grade its
 final tree, and join run IDs with grading artifacts and Bifrost-derived costs.
 This milestone produces plans only, with no benchmark results or cost claims.
+
+### Fixed four-way task sharding
+
+`--shard k/4` accepts exactly `1/4`, `2/4`, `3/4`, or `4/4`. It requires
+`--set both` and a fully validated index containing exactly **34 Polyglot and
+20 QuixBugs tasks** before any limit. Smaller/larger indexes, a wrong 34/20 mix,
+and single-dataset selection are rejected. There is no development-only bypass.
+Unsharded planning still supports small synthetic/smoke indexes.
+
+Use the same reviewed task index, dataset revisions and repeat settings on every
+machine. Canonical `dataset/id` sorting is unchanged. Apply the following slices
+to that full order, before expanding variants/repeats:
+
+| Shard | One-based full-plan positions | Tasks | Default runs (2/2/1) |
+|---|---|---|---|
+| 1/4 | 1–14 | 14 | 70 |
+| 2/4 | 15–28 | 14 | 70 |
+| 3/4 | 29–41 | 13 | 65 |
+| 4/4 | 42–54 | 13 | 65 |
+
+Every variant and repeat for a task stays on its shard; task IDs and run IDs do
+not change. With 34 sorted Polyglot tasks first, shard 1 and shard 2 each contain
+14 Polyglot tasks, shard 3 has 6 Polyglot + 7 QuixBugs, and shard 4 has 13 QuixBugs.
+
+Shard 1 planning example (replace local paths with reviewed inputs; the output's
+parent must exist and the output file must be new):
+
+```powershell
+python -m bench.plan --set both --polyglot "C:\datasets\polyglot" --quixbugs "C:\datasets\quixbugs" --task-index "C:\benchmark-inputs\tasks.json" --shard 1/4 --runs 2 --dry-run --output "C:\benchmark-plans\shard-1-of-4.json"
+```
+
+`--limit N` is applied **after sharding**, choosing the first N tasks within that
+slice. For example, `--shard 2/4 --limit 2` chooses full-plan positions 15 and 16,
+not positions 1 and 2 or a repartitioned small plan. All 54 tasks, including ones
+outside the shard/limit, must validate. A limit larger than the shard size keeps
+the complete slice. A truncated slice is explicitly printed as a partial shard,
+not a complete comparable benchmark. Omit `--limit` for the full assigned shard.
+`--runs` retains its existing meaning; any value other than 2 is printed as a
+nonstandard repeat policy. Comparable official runs require the default 2/2/1.
+
+The additive version 1 manifest records:
+
+- `full_plan`: full task count, dataset counts, sorted task IDs, identity version
+  1 and `id` (a lowercase SHA-256 digest shared across the four shards).
+- `shard`: number, `of: 4`, inclusive full-plan range and count before limit;
+  null when unsharded. `selection.shard` preserves the literal `k/4` input.
+- Every task and expanded run: `shard_number`, `full_plan_position` (one-based),
+  and `full_plan_id`. Unsharded records have a null shard number. Positions and
+  identity are assigned before any slice/limit; `indexed_task_count` stays 54.
+
+Identity hashes canonical JSON (`sort_keys=True`, ASCII escaping, compact
+separators) containing `identity_version: 1`, all sorted task definitions
+(task ID, dataset, relative source/prompt paths, task-text SHA-256, argv and extra
+oracle paths), agent order, repeat counts, 30-step/600-second caps, and the full
+`evaluation_policy` (model, thinking/effort, gateway/cache, mini version,
+parallelism and grading timeout). It excludes
+absolute machine paths, index order/location, shard, limit, and output location.
+Reordering input or relocating identical datasets preserves the identity;
+changing a prompt, task definition or repeat count changes it even if that task
+is outside the selected shard. The full identity includes no timestamp or seed.
+
+Matching identities detect mismatched declarative plans; they do **not** certify
+the real 54-task membership, dataset revisions or exercise contents. No canonical
+real task index is checked into this repository. Verify the selected QuixBugs
+subset and Polyglot list with the team and compare the same full-plan identity
+before execution. Source code contents remain unhashed. Preserve dataset revision
+evidence separately. Merging shard results into the full 270-run report remains
+future harness work; do not publish one shard as full-suite coverage.
+
+See [integration.md](integration.md) for merged API signatures and remaining
+runner gaps. This milestone adds planning only and makes no agent/model calls.
 
 ## Offline benchmark reporting (milestone 4)
 
