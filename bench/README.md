@@ -1,5 +1,11 @@
 # Benchmark preparation, grading, planning, and offline reporting
 
+The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
+and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and
+validate against dry-run manifests with `python -m bench.canonical`. V1 remains
+blocked for paid execution and comparable pooling; static validation is not a
+live-readiness claim.
+
 The [in-process runner](runner.md) now connects planned Crocodile/all-off attempts
 to the merged Agent and independent grader, with durable resume evidence. Mini
 and authoritative cost attribution remain explicitly incomplete. No live
