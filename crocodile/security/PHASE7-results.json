@@ -1,0 +1,193 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-11-13T18:04:13.219009+00:00",
+  "python": "3.14.0",
+  "part3_baseline": "2f3e2c4a0af10caea5fa8bd2205891a2aa057ccb",
+  "snapshots": {
+    "person-1": "8db7d42cbc73c20d77fb6408550574516f452b7f",
+    "person-2": "68bb978c1a7c0f7260755439732ce7b27a30b571",
+    "person-4": "300910a69f6e965871e2c974ad1aa16cc2d230bc"
+  },
+  "part3_verification": {
+    "status": "PASS",
+    "pytest_passed": 170,
+    "subtests_passed": 154,
+    "seconds": 434.99,
+    "ruff": "PASS",
+    "compileall": "PASS"
+  },
+  "selected_owner_tests": {
+    "status": "PASS",
+    "passed": 61,
+    "seconds": 34.71
+  },
+  "cli": {
+    "help": {
+      "returncode": 0,
+      "no_such_command": false
+    },
+    "version": {
+      "returncode": 0,
+      "no_such_command": false
+    },
+    "run_help": {
+      "returncode": 0,
+      "no_such_command": false
+    },
+    "quote": {
+      "returncode": 2,
+      "no_such_command": true
+    },
+    "audit": {
+      "returncode": 2,
+      "no_such_command": true
+    },
+    "undo": {
+      "returncode": 2,
+      "no_such_command": true
+    },
+    "doctor": {
+      "returncode": 2,
+      "no_such_command": true
+    },
+    "redteam": {
+      "returncode": 2,
+      "no_such_command": true
+    },
+    "run_zero_steps": {
+      "returncode": 1,
+      "no_such_command": false
+    }
+  },
+  "zero_step_receipt": {
+    "status": "STOPPED: step cap 0",
+    "solved": false,
+    "steps": 0,
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "cached_tokens": 0
+    },
+    "test_runs": 0,
+    "models": [],
+    "stubs": []
+  },
+  "component_evidence": {
+    "readme": {
+      "verdict": "deny",
+      "level": "red",
+      "steered_by": [
+        "README.md:40"
+      ],
+      "fake_console": true
+    },
+    "readme_preview_excerpt": [
+      "RED approval",
+      "suggested by README.md:40",
+      "Type run 64 to approve: "
+    ],
+    "unapproved_normal_bridge": {
+      "approved": false,
+      "exit_code": 126,
+      "canary_exists": false
+    },
+    "confidential_local_route": {
+      "mocked_http": true,
+      "captured_calls": [
+        {
+          "url": "http://127.0.0.1:8080/v1/chat/completions",
+          "model": "ollama/qwen2.5-coder:7b",
+          "fallbacks": [],
+          "key_is_synthetic_local": true
+        }
+      ],
+      "audit_status": "PASS",
+      "audit": "RESULT: PASS\nrows checked: 1; confidential sent: 1; blocked attempts: 0",
+      "sent_tavily_rows": 0
+    },
+    "state_tamper": {
+      "status": "PASS",
+      "tests": [
+        "test_real_child_tampering_aborts_and_discards_result",
+        "test_real_child_ledger_tamper_aborts",
+        "test_tool_decision_latches_abort_and_revokes_permits"
+      ],
+      "scope": "Part 3 native disposable child/session fixtures; not an integrated CLI claim"
+    }
+  },
+  "standalone_handlers": {
+    "audit_module": {
+      "returncode": 0,
+      "output": "RESULT: PASS\nrows checked: 1; confidential sent: 1; blocked attempts: 0\n"
+    },
+    "audit_all_module": {
+      "returncode": 0,
+      "output": "RESULT: PASS\nrows checked: 1; confidential sent: 1; blocked attempts: 0\n"
+    },
+    "audit_missing_gateway": {
+      "returncode": 2,
+      "output": "RESULT: INCOMPLETE\nrows checked: 1; confidential sent: 1; blocked attempts: 0\nMISSING: row 1: no matching Bifrost request log\n"
+    },
+    "undo_help_module": {
+      "returncode": 0,
+      "output": "usage: python.exe -m crocodile.security.undo [-h] [--repo REPO] [--list]\n                                             [steps]\n\nUndo Crocodile file edits\n\npositional arguments:\n  steps\n\noptions:\n  -h, --help   show this help message and exit\n  --repo REPO\n  --list\n"
+    },
+    "doctor_help_module": {
+      "returncode": 0,
+      "output": "usage: python.exe -m crocodile.security.doctor [-h] [--repo REPO]\n                                               [--config-dir CONFIG_DIR]\n\nCrocodile user doctor; no admin credentials\n\noptions:\n  -h, --help            show this help message and exit\n  --repo REPO\n  --config-dir CONFIG_DIR\n"
+    }
+  },
+  "integration_findings": {
+    "bridge_missing_hooks": {
+      "integrity_attached": false,
+      "detector_attached": false,
+      "user_task_supplied": false
+    },
+    "bridge_auto_bypass": {
+      "approved": true,
+      "exit_code": 0,
+      "canary_exists": true,
+      "console_called": false
+    },
+    "reserve_stales_hmac": {
+      "verification_callback_supplied": true,
+      "hmac_invalid_after_reserve": true
+    },
+    "remote_gateway_accepted": {
+      "mocked_http": true,
+      "captured_calls": [
+        {
+          "url": "http://192.0.2.1:8080/v1/chat/completions",
+          "model": "ollama/qwen2.5-coder:7b",
+          "fallbacks": [],
+          "key_is_synthetic_local": true
+        }
+      ],
+      "audit_status": "FAIL",
+      "audit": "RESULT: FAIL\nrows checked: 1; confidential sent: 1; blocked attempts: 0\nFAIL: row 1: confidential destination is not local Bifrost",
+      "sent_tavily_rows": 0
+    },
+    "public_socket_guard": {
+      "arbitrary_non_tavily_443_accepted": true,
+      "actual_connections": 0
+    },
+    "journal_envelope": "Part 1 session_start vs agreed session_started; owner normalization pending",
+    "state_path": "Part 1 LOCALAPPDATA vs Part 3 APPDATA; owner alignment pending"
+  },
+  "live_check": {
+    "observed_local_time": "2026-11-13T23:10:38.9940770+05:30",
+    "gateway_or_ollama_listeners": [],
+    "installed_crocodile_or_crock_on_path": false,
+    "default_state_db_present": false,
+    "live_confidential_egress": "UNVERIFIED",
+    "live_provider_calls_in_this_verification": 0,
+    "real_credentials_used": false
+  },
+  "integrated_release_status": "BLOCKED",
+  "feature_freeze": {
+    "declared": false,
+    "source": "explicit user reply",
+    "clips_recorded": [],
+    "recording_status": "PENDING_FEATURE_FREEZE_AND_OWNER_INTEGRATION"
+  }
+}
