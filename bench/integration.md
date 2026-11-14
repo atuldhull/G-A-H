@@ -119,6 +119,11 @@ hard deadlines, gateway fairness, authoritative cost export and mini remain open
 `populate_workspace(source, existing_empty_destination)` now preserves the pinned
 root, while `prepare_workspace` retains its original new-destination contract.
 
+Follow-up: the [mini adapter](mini.md) now implements the separate WSL process
+path and report-evidence join. Its live configuration/attribution and complete
+process-tree deadline guarantees still need verification; the original findings
+below are retained as the source-inspection history.
+
 1. **In-place preparation:** `prepare_workspace` currently rejects an existing
    destination, while `for_bench` requires an existing empty pinned root. Add a
    separately tested in-place preparation mode/adapter under `bench/` before

@@ -1,0 +1,21 @@
+{
+  "upstream_commit": "a83fcae82d2a08f0ee0c688f9d137b3566c097f8",
+  "mini_version": "2.4.6",
+  "default_template_git_blob": "8b72f71f8092ae805ec43221dbeaeefc2340cd3e",
+  "agent": {
+    "step_limit": 30,
+    "wall_time_limit_seconds": 600,
+    "cost_limit": 0
+  },
+  "model": {
+    "model_name": "openai/anthropic/claude-haiku-5-5",
+    "cost_tracking": "ignore_errors",
+    "set_cache_control": "default_end",
+    "model_kwargs": {
+      "drop_params": true,
+      "extra_body": {"fallbacks": []}
+    }
+  },
+  "thinking_policy": {"thinking": "adaptive", "effort": "medium", "source": "agreed provider defaults; live parity unverified"},
+  "semantic_cache": false
+}
