@@ -14,6 +14,7 @@ def test_classify_error():
     assert classify_error(504, "gateway timed out") == "timeout"
     assert classify_error(503, "service unavailable") == "transient"
     assert classify_error(400, "bad request") == "caller-fault"
+    assert classify_error(403, "model_blocked: model not allowed for virtual key") == "caller-fault"
 
 
 def test_parse_routing_info_success():

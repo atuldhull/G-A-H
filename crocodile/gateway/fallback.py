@@ -33,7 +33,9 @@ def classify_error(status_code: int | None, error_body_or_msg: str | None) -> Er
     """Classifies an upstream failure into Bifrost's error classes."""
     msg = (error_body_or_msg or "").lower()
 
-    if status_code == 401 or "auth" in msg or "key" in msg or "unauthorized" in msg:
+    if status_code in (400, 403) or "model_blocked" in msg or "not allowed" in msg or "forbidden" in msg or "bad request" in msg or "caller" in msg:
+        return "caller-fault"
+    if status_code == 401 or "auth" in msg or "unauthorized" in msg or "invalid_key" in msg or "key rejected" in msg:
         return "auth"
     if status_code == 429 or "rate" in msg or "too many requests" in msg:
         return "rate-limit"
