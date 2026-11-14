@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -75,6 +76,8 @@ def run(
     yes: bool = typer.Option(False, "--yes", help="Auto-approve (bench sandboxes only)."),
     json_out: Path | None = typer.Option(None, "--json-out", help="Write the receipt as JSON."),
     quiet: bool = typer.Option(False, "--quiet"),
+    user: str = typer.Option(os.environ.get("USERNAME") or os.environ.get("USER") or "default", "--user",
+                             help="Budget principal (per-user daily limit)."),
 ):
     """Run the agent on a task. Exit 0 = solved (tests green), 1 = not solved, 2 = error."""
     if task_file:
@@ -85,7 +88,8 @@ def run(
         raise typer.BadParameter("tier must be cheap or strong")
     holder: dict = {}
     agent = Agent(repo, task, oracle=test or None, full_suite=full_suite, flags=_flags(flags), tier=tier,
-                  approve_mode="auto" if yes else "ask", step_cap=steps, on_event=_printer(quiet, holder))
+                  approve_mode="auto" if yes else "ask", step_cap=steps, on_event=_printer(quiet, holder),
+                  user=user)
     holder["agent"] = agent
     if agent.r.stubs and not quiet:
         err.print(f"[yellow]note: using stubs for {', '.join(agent.r.stubs)} (not for demos)[/yellow]")

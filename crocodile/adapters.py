@@ -47,6 +47,25 @@ def chain_for(tier: str) -> list[str]:
     return [m.strip() for m in env.split(",") if m.strip()] or list(DEFAULT_CHAINS[tier])
 
 
+def limits_path() -> Path:
+    """Admin-owned per-user daily limits (architecture 06). CROCODILE_LIMITS overrides for demos/tests."""
+    env = os.environ.get("CROCODILE_LIMITS")
+    if env:
+        return Path(env)
+    return Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "crocodile" / "limits.yaml"
+
+
+def load_limits() -> dict[str, float]:
+    """{principal: daily_usd}. Missing file -> {} (Part 2 then applies its default limit)."""
+    import yaml
+    p = limits_path()
+    if not p.is_file():
+        return {}
+    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    users = data.get("users", data) if isinstance(data, dict) else {}
+    return {str(k): float(v) for k, v in users.items()}
+
+
 def _state_db() -> Path:
     base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
     return Path(base) / "crocodile" / "state.db"
@@ -65,7 +84,7 @@ class GatewayEgress:
         prices = PriceTable.from_yaml_file(os.environ.get("CROCODILE_PRICES", PROJECT_ROOT / "prices.yaml"))
         self.client = EgressClient(
             bifrost_base_url=os.environ.get("CROCODILE_BIFROST_URL", "http://127.0.0.1:8080"),
-            budget_manager=BudgetManager(db, prices),
+            budget_manager=BudgetManager(db, prices, limits=load_limits()),
             journal=EventJournal(db),
             price_table=prices,
         )

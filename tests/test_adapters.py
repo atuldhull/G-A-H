@@ -113,3 +113,13 @@ def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch):
     finally:
         sec.close_bench()
         services.reset()
+
+
+def test_admin_limits_file_loaded(tmp_path, monkeypatch):
+    from crocodile.adapters import load_limits
+    f = tmp_path / "limits.yaml"
+    f.write_text("users:\n  bob: 0.05\n  atul: 2\n", encoding="utf-8")
+    monkeypatch.setenv("CROCODILE_LIMITS", str(f))
+    assert load_limits() == {"bob": 0.05, "atul": 2.0}
+    monkeypatch.setenv("CROCODILE_LIMITS", str(tmp_path / "missing.yaml"))
+    assert load_limits() == {}
