@@ -182,6 +182,64 @@ def quote(
 
 
 @app.command()
+def init(
+    fresh: bool = typer.Option(False, "--fresh",
+                               help="Rename an existing UNSEALED state DB aside (never deleted) and enroll anew."),
+):
+    """One-time trusted enrollment: create the shared state DB and seal it (HMAC key in Credential Manager).
+
+    Refuses an already sealed DB (no re-enrollment, no repair) and never adopts an existing
+    unsealed DB unless --fresh moves it aside first.
+    """
+    import sqlite3
+    import time
+
+    from .gateway.budget import init_database
+    from .runtime_security import state_path
+    from .security.classification import SecurityStore
+    from .security.integrity import IntegrityViolation, StateIntegrity
+
+    path = state_path()
+    if path.exists():
+        con = sqlite3.connect(path)
+        try:
+            sealed = con.execute("SELECT 1 FROM meta WHERE k='hmac'").fetchone() is not None
+        except sqlite3.Error:
+            sealed = False
+        finally:
+            con.close()             # always release: Windows cannot rename an open file
+        if sealed:
+            typer.echo(f"Already enrolled: {path} (sealed). Nothing changed.")
+            raise typer.Exit(0)
+        if not fresh:
+            typer.echo(f"Refusing: {path} exists but is not sealed (untrusted state). "
+                       "Re-run with --fresh to move it aside and enroll a new one.", err=True)
+            raise typer.Exit(1)
+        backup = path.with_name(f"{path.name}.unsealed-{time.strftime('%Y%m%d-%H%M%S')}")
+        for suffix in ("", "-wal", "-shm"):
+            p = Path(str(path) + suffix)
+            if p.exists():
+                p.rename(Path(str(backup) + suffix))
+        typer.echo(f"Moved unsealed DB aside: {backup}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    db = init_database(path)                               # Part 2 schema (ledger, meta, calib)
+    try:
+        SecurityStore._schema(db)                          # Part 3 classification/canary tables
+        db.execute("CREATE TABLE IF NOT EXISTS grants(session TEXT, argv_json TEXT)")
+        db.commit()
+        db.execute("BEGIN IMMEDIATE")                      # serialized one-time seal
+        StateIntegrity(path).initialize(db)                # creates the HMAC key in Credential Manager
+        db.commit()
+    except IntegrityViolation as e:
+        db.rollback()
+        typer.echo(f"Refusing: {e}", err=True)
+        raise typer.Exit(1) from None
+    finally:
+        db.close()
+    typer.echo(f"Enrolled and sealed: {path}")
+
+
+@app.command()
 def version():
     """Print the version."""
     typer.echo(__version__)

@@ -176,3 +176,32 @@ def test_admin_limits_file_loaded(tmp_path, monkeypatch):
     assert load_limits() == {"bob": 0.05, "atul": 2.0}
     monkeypatch.setenv("CROCODILE_LIMITS", str(tmp_path / "missing.yaml"))
     assert load_limits() == {}
+
+
+def test_init_enrolls_once_and_refuses_untrusted(tmp_path, monkeypatch):
+    """crocodile init: refuses an unsealed existing DB, --fresh moves it aside, then seals once."""
+    pytest.importorskip("crocodile.security.integrity")
+    from typer.testing import CliRunner
+
+    from crocodile.cli import app
+    from crocodile.security import integrity as integ
+
+    class Vault:
+        value = None
+
+        def get_password(self, *_):
+            return self.value
+
+        def set_password(self, _s, _n, v):
+            self.value = v
+    vault, real = Vault(), integ.HMACKeys
+    monkeypatch.setattr(integ, "HMACKeys", lambda backend=None: real(backend=vault))  # never the real vault
+    db = tmp_path / "state.db"
+    monkeypatch.setenv("CROCODILE_STATE_DB", str(db))
+    db.write_bytes(b"")                                   # untrusted, unsealed file
+    runner = CliRunner()
+    assert runner.invoke(app, ["init"]).exit_code == 1    # refuses to adopt it
+    r = runner.invoke(app, ["init", "--fresh"])
+    assert r.exit_code == 0 and "Enrolled and sealed" in r.output
+    assert any(p.name.startswith("state.db.unsealed-") for p in tmp_path.iterdir())
+    assert "Already enrolled" in runner.invoke(app, ["init"]).output
