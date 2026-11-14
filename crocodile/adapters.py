@@ -141,6 +141,7 @@ class SecurityBridge:
         self.sessions: dict[str, Any] = {}
         self.permits: dict[tuple[str, ...], tuple[Any, Any, Any]] = {}   # argv -> (p3 session, action, decision)
         self.auto_argv: set[tuple[str, ...]] = set()
+        self.consented: dict[tuple[str, ...], tuple[Any, Any]] = {}   # test argv -> (p3 session, action)
         self.plain = _stubs.StubCmd()
 
     def _p3(self, s: Session):
@@ -172,6 +173,8 @@ class SecurityBridge:
         ok = d.verdict == "allow"
         if ok and action.argv:
             self.permits[tuple(action.argv)] = (p3s, a, d)
+            if action.kind == "test_consent":
+                self.consented[tuple(action.argv)] = (p3s, a)
         return Decision(ok, "; ".join(d.reasons) if d.reasons else d.verdict)
 
     # commands ------------------------------------------------------------------
@@ -179,6 +182,14 @@ class SecurityBridge:
         key = tuple(argv)
         if key in self.auto_argv and key not in self.permits:
             return self.plain.run(argv, cwd, timeout=timeout)
+        if key not in self.permits and key in self.consented:
+            # Part 3 permits are single-use. Re-ask for the same test command: Part 3 reuses the
+            # session's test consent silently when nothing changed (else it prompts again).
+            p3s, a = self.consented[key]
+            d = self.approvals.ask(a, session=p3s)
+            if d.verdict != "allow":
+                return CmdResult(list(argv), 126, "", "test consent no longer valid: " + "; ".join(d.reasons))
+            self.permits[key] = (p3s, a, d)
         p3s, a, d = self.permits.pop(key, (None, None, None))   # permits are single-use
         try:
             r = self.cmd.run(list(argv), cwd, timeout=float(timeout), session=p3s, action=a, decision=d)
