@@ -211,7 +211,9 @@ def test_interactive_runs_oracle_once_after_fix(repo):
     services.reset()
     services.override("egress", FakeEgress([[("edit", {"path": "calc.py", "edits": [
         {"search": "return a - b", "replace": "return a + b"}]})]]))
+    from crocodile._stubs import StubCmd
     ap = CountingApprover()
     services.override("approvals", ap)
+    services.override("cmd", StubCmd())
     r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
     assert r.solved and r.test_runs == 2       # baseline + one verification, no flake rerun
