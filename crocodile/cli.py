@@ -9,7 +9,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from . import __version__
+from . import __version__, services
 from .loop import ALL_FLAGS, Agent
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="Crocodile: snaps up wasted tokens.")
@@ -43,7 +43,7 @@ def _printer(quiet: bool):
             hit = f"{100 * u['cached_tokens'] // max(1, u['prompt_tokens'])}%" if u["prompt_tokens"] else "-"
             err.print(f"[dim]· {d['model']}  in {u['prompt_tokens']} (cache {hit})  out {u['completion_tokens']}"
                       f"  -> {', '.join(d['tool_calls']) or 'text'}[/dim]")
-        elif kind == "takeover":
+        elif kind == "takeover" and services.is_stub("egress"):   # the real gateway draws its own banner
             err.print(f"[bold yellow]▲ MODEL TAKEOVER → {d['model']} (primary failed: {d.get('error_class')})"
                       "[/bold yellow]")
         elif kind == "escalate":
