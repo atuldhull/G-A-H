@@ -9,7 +9,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from . import __version__, services
+from . import __version__, services, ui_bridge
 from .loop import ALL_FLAGS, Agent
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="Crocodile: snaps up wasted tokens.")
@@ -34,7 +34,7 @@ def _flags(spec: str) -> set[str]:
     return out
 
 
-def _printer(quiet: bool):
+def _printer(quiet: bool, holder: dict):
     def on_event(kind: str, d: dict) -> None:
         if quiet:
             return
@@ -43,6 +43,13 @@ def _printer(quiet: bool):
             hit = f"{100 * u['cached_tokens'] // max(1, u['prompt_tokens'])}%" if u["prompt_tokens"] else "-"
             err.print(f"[dim]· {d['model']}  in {u['prompt_tokens']} (cache {hit})  out {u['completion_tokens']}"
                       f"  -> {', '.join(d['tool_calls']) or 'text'}[/dim]")
+        elif kind == "tool_done" and holder.get("agent") is not None and ui_bridge.available() \
+                and d.get("tool") == "run_tests":
+            try:   # Part 4 status line after test runs (cheap; skipped if Part 4 rejects a value)
+                from crocodile.ui import render_status
+                err.print(render_status(ui_bridge.snapshot(holder["agent"])), markup=False, highlight=False)
+            except ValueError:
+                pass
         elif kind == "takeover" and services.is_stub("egress"):   # the real gateway draws its own banner
             err.print(f"[bold yellow]▲ MODEL TAKEOVER → {d['model']} (primary failed: {d.get('error_class')})"
                       "[/bold yellow]")
@@ -76,8 +83,10 @@ def run(
         raise typer.BadParameter("give a task or --task-file")
     if tier not in ("cheap", "strong"):
         raise typer.BadParameter("tier must be cheap or strong")
+    holder: dict = {}
     agent = Agent(repo, task, oracle=test or None, full_suite=full_suite, flags=_flags(flags), tier=tier,
-                  approve_mode="auto" if yes else "ask", step_cap=steps, on_event=_printer(quiet))
+                  approve_mode="auto" if yes else "ask", step_cap=steps, on_event=_printer(quiet, holder))
+    holder["agent"] = agent
     if agent.r.stubs and not quiet:
         err.print(f"[yellow]note: using stubs for {', '.join(agent.r.stubs)} (not for demos)[/yellow]")
     try:
@@ -97,9 +106,32 @@ def run(
         err.print(f"[green]saved ~{total:,} input tokens (estimated, first-order): {items}[/green]")
     if r.rewinds or r.checkpoints:
         err.print(f"[dim]rewinds {r.rewinds}  checkpoints kept {r.checkpoints}[/dim]")
+    if not quiet and ui_bridge.available():
+        try:   # Part 4's evidence-gated receipt
+            from crocodile.ui import render_receipt
+            err.print(render_receipt(ui_bridge.receipt(agent)), markup=False, highlight=False)
+        except ValueError as e:
+            err.print(f"[dim](receipt unavailable: {e})[/dim]")
     if json_out:
         json_out.write_text(json.dumps(r.to_json(), indent=2), encoding="utf-8")
     raise typer.Exit(code)
+
+
+@app.command()
+def quote(
+    task: str | None = typer.Argument(None, help="Task text (or use --task-file)."),
+    repo: Path = typer.Option(Path("."), "--repo", help="Repository root."),
+    task_file: Path | None = typer.Option(None, "--task-file"),
+    ascii_only: bool = typer.Option(False, "--ascii"),
+):
+    """Static cost quote before running (no code is executed, no model is called)."""
+    if task_file:
+        task = task_file.read_text(encoding="utf-8")
+    if not task:
+        raise typer.BadParameter("give a task or --task-file")
+    if not ui_bridge.available():
+        raise typer.BadParameter("quote needs the Part 4 UI package (crocodile.ui)")
+    typer.echo(ui_bridge.quote(task, repo, ascii_only=ascii_only).rendering)
 
 
 @app.command()
