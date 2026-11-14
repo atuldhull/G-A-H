@@ -38,7 +38,7 @@ def _agent(repo, script, **kw):
     fake = FakeEgress(script)
     services.reset()
     services.override("egress", fake)
-    a = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="auto", **kw)
+    a = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask", **kw)
     return a, fake
 
 
@@ -104,7 +104,7 @@ def test_path_escape_blocked(repo):
     a, _ = _agent(repo, [[("read", {"path": "../secret.txt"})], [("finish", {"summary": "x"})]])
     a.run()
     tool_msgs = [m for m in a.history if m["role"] == "tool"]
-    assert "outside the repo" in tool_msgs[0]["content"]
+    assert "outside repository" in tool_msgs[0]["content"]
 
 
 def test_text_tool_calls_recovered():
@@ -129,14 +129,14 @@ def test_text_only_reply_gets_one_nudge(repo):
                      [("edit", {"path": "calc.py", "edits": [{"search": "return a - b", "replace": "return a + b"}]})]])
     services.reset()
     services.override("egress", fake)
-    r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="auto").run()
+    r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
     assert r.solved and len(fake.calls) == 3
 
 
 def test_fit_masks_when_window_small(repo, monkeypatch):
     import crocodile.loop as L
     monkeypatch.setitem(L.CTX_WINDOW, "cheap", 9000)
-    big = "x = 1\n" * 3000
+    big = ("x = '" + "a" * 100 + "'\n") * 3000
     (repo / "big.py").write_text(big, encoding="utf-8")
     a, fake = _agent(repo, [
         [("read", {"path": "big.py", "start": 1, "end": 1000})],
@@ -199,21 +199,21 @@ def test_salvage_write_with_unescaped_quotes():
 
 def test_interactive_runs_oracle_once_after_fix(repo):
     """No flake-guard rerun when a human approves each test run (fewer RED prompts)."""
-    from crocodile.agent_types import Decision
+    from crocodile.adapters import SecurityBridge
 
-    class CountingApprover:
+    class CountingApprover(SecurityBridge):
         def __init__(self):
+            super().__init__()
             self.test_asks = 0
 
         def ask(self, action, session):
             self.test_asks += action.kind == "test_consent"
-            return Decision(True, "test")
+            return super().ask(action, session)
     services.reset()
     services.override("egress", FakeEgress([[("edit", {"path": "calc.py", "edits": [
         {"search": "return a - b", "replace": "return a + b"}]})]]))
-    from crocodile._stubs import StubCmd
     ap = CountingApprover()
     services.override("approvals", ap)
-    services.override("cmd", StubCmd())
+    services.override("cmd", ap)
     r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
     assert r.solved and r.test_runs == 2       # baseline + one verification, no flake rerun

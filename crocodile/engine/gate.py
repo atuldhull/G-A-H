@@ -14,12 +14,14 @@ from pathlib import Path
 ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07")
 MUST_KEEP = re.compile(
     r"(Error\b|Exception\b|Traceback|^E\s|FAILED|ERROR|assert|panic|fatal|^\s*File \".*\", line \d+)",
-    re.IGNORECASE)
+    re.IGNORECASE,
+)
 NUM_PATH = re.compile(r"(0x[0-9a-f]+|\d+|[A-Za-z]:\\[^\s:]+|/[^\s:]+)")
 # Minimal fallback secret scan; Part 3's crocodile.security.secrets.scan replaces it when present.
 _SECRET = re.compile(
     r"(sk-[A-Za-z0-9_\-]{16,}|tvly-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}"
-    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?i:(?:api[_-]?key|secret|token|password)\s*[:=]\s*)['\"]?[^\s'\"]{8,})")
+    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?i:(?:api[_-]?key|secret|token|password)\s*[:=]\s*)['\"]?[^\s'\"]{8,})"
+)
 
 CAP_CHARS = 10_240
 CAP_LINES = 256
@@ -59,6 +61,7 @@ class Spill:
         self.mem: dict[int, str] = {}
 
     def put(self, text: str) -> str:
+        text = _secret_scan(text)
         self.n += 1
         if self.root is not None:
             (self.root / "out").mkdir(parents=True, exist_ok=True)
@@ -74,8 +77,9 @@ class Spill:
         n = int(m.group(1))
         if self.root is not None:
             p = self.root / "out" / f"{n}.txt"
-            return p.read_text(encoding="utf-8") if p.is_file() else None
-        return self.mem.get(n)
+            return _secret_scan(p.read_text(encoding="utf-8")) if p.is_file() else None
+        text = self.mem.get(n)
+        return _secret_scan(text) if text is not None else None
 
 
 def head_tail(lines: list[str], max_lines: int, max_chars: int, head: float = 0.2) -> list[str]:
@@ -118,8 +122,9 @@ def must_keep_grouped(lines: list[str], limit: int = 40) -> list[str]:
     return out
 
 
-def gate(raw: str, exit_code: int | None, spill: Spill, *, enabled: bool = True,
-         summary: str | None = None) -> Gated:
+def gate(
+    raw: str, exit_code: int | None, spill: Spill, *, enabled: bool = True, summary: str | None = None
+) -> Gated:
     """`summary` is a kind-specific view (e.g. pytest format_failure); else head+tail+must-keep."""
     text = _secret_scan(ANSI.sub("", raw))
     raw_tokens = est_tokens(text)
@@ -132,7 +137,7 @@ def gate(raw: str, exit_code: int | None, spill: Spill, *, enabled: bool = True,
     else:
         handle = spill.put(text)
         if summary is not None:
-            body = summary
+            body = _secret_scan(ANSI.sub("", summary))
         else:
             ht = head_tail(lines, CAP_LINES, CAP_CHARS)
             visible = set(ht)

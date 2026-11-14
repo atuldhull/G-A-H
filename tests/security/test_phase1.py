@@ -248,13 +248,20 @@ class Phase1Tests(unittest.TestCase):
         self.assertFalse(marker.exists())
 
     def test_consent_reuse_and_journaling(self):
-        self.allow(self.test)
-        with patch.object(approvals, "_console_answer") as reader:
-            decision = approvals.ask(self.test, session=self.session)
-        reader.assert_not_called()
-        self.assertEqual(decision.verdict, "allow")
-        self.assertEqual(self.session.events[-1]["by"], "consent")
-        approvals.validate_before_execution(self.test, decision, session=self.session)
+        first = self.allow(self.test)
+        approvals.validate_before_execution(self.test, first, session=self.session)
+        tokens = {first.token}
+        for _ in range(2):
+            with patch.object(approvals, "_console_answer") as reader:
+                decision = approvals.ask(self.test, session=self.session)
+            reader.assert_not_called()
+            self.assertEqual(decision.verdict, "allow")
+            self.assertEqual(self.session.events[-1]["by"], "consent")
+            self.assertNotIn(decision.token, tokens)
+            tokens.add(decision.token)
+            approvals.validate_before_execution(self.test, decision, session=self.session)
+            with self.assertRaises(approvals.ApprovalDenied):
+                approvals.validate_before_execution(self.test, decision, session=self.session)
 
     def test_config_changes_additions_removals_reprompt(self):
         config = self.root / "pytest.ini"

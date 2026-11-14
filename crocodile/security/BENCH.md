@@ -25,6 +25,28 @@ environment's executable inside the source tree.
 
 ## Official noninteractive bench session
 
+### Normal console consent reuse
+
+In the same active `ApprovalSession`, re-asking an unchanged, unsteered
+`test_consent` action reuses consent without calling the console. It still issues
+a fresh single-use permit on every allow (`by: consent`); consume each permit
+immediately before execution. This also holds after the previous permit was used.
+
+"Unchanged" means the full bound action: exact argv and interpreter pin, resolved
+cwd/root, configuration inventory and hashes, mode and execution-edit state.
+Repository provenance can prevent reuse even if argv is unchanged. Applied edits
+that `record_edit` classifies as execution changes invalidate consent. A new or
+resumed session, previous refusal/invalidated consent, or a hard denial does not
+inherit an earlier allow. Hard denials never become automatic approvals. Runtime
+executable changes can be denied rather than merely re-prompted.
+
+Ordinary arithmetic edits that the execution-surface classifier considers pure do
+not by themselves revoke consent; always pass the actual applied replacement text
+to `record_edit`. The owning adapter must re-ask and consume a fresh permit for
+every repeated execution, even when no new console prompt is needed.
+
+### Harness construction
+
 Normal `ApprovalSession(...)` remains console-only. `yes_green` still cannot
 approve test execution. No environment variable, repo marker, or Action field
 enables automatic approval.

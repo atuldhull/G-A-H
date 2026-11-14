@@ -12,10 +12,10 @@ import math
 import os
 import sqlite3
 import time
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from collections.abc import Callable
+from contextlib import contextmanager, nullcontext
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Literal
 
 from crocodile.contracts import LadderRung, Reservation
 from crocodile.gateway.prices import PriceTable
@@ -75,7 +75,7 @@ class Ladder:
 
 def get_utc_date_window() -> str:
     """Returns today's date in UTC format YYYY-MM-DD."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def init_database(db_path: str | Path) -> sqlite3.Connection:
@@ -154,6 +154,7 @@ def is_pid_alive(pid: int) -> bool:
         return True
     if os.name == "nt":
         import ctypes
+
         PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
         handle = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
         if handle:
@@ -176,11 +177,13 @@ class BudgetManager:
         price_table: PriceTable,
         limits: dict[str, float] | None = None,
         integrity_verifier: Callable[[], None] | None = None,
+        state_integrity=None,
     ) -> None:
         self.db_path = Path(db_path)
         self.price_table = price_table
         self.limits: dict[str, float] = limits or {}  # principal -> daily_usd
         self.integrity_verifier = integrity_verifier
+        self.state_integrity = state_integrity
         init_database(self.db_path)
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -188,6 +191,23 @@ class BudgetManager:
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA busy_timeout=15000;")
         return conn
+
+    @contextmanager
+    def _transaction(self, conn):
+        """Optional owner hook: verify/reseal under the same existing writer lock."""
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            guard = (
+                self.state_integrity.authorized_write(conn)
+                if self.state_integrity is not None
+                else nullcontext()
+            )
+            with guard:
+                yield conn
+            conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
 
     def get_principal_limit(self, principal: str) -> float:
         """Get the daily limit for a principal; defaults to 5.00 if unconfigured."""
@@ -295,95 +315,108 @@ class BudgetManager:
 
         conn = self._get_connection()
         try:
-            # BEGIN IMMEDIATE serializes reservations across all processes
-            conn.execute("BEGIN IMMEDIATE;")
+            with self._transaction(conn):
+                # BEGIN IMMEDIATE serializes reservations across all processes
 
-            # Check for clock rollback vs latest ledger entry
-            cur = conn.cursor()
-            cur.execute("SELECT MAX(window) FROM ledger WHERE principal = ?", (principal,))
-            latest_window = cur.fetchone()[0]
-            if latest_window and window < latest_window:
-                conn.execute("ROLLBACK;")
-                raise RuntimeError(
-                    f"Clock skew detected: current window {window} is behind ledger window {latest_window}"
+                # Check for clock rollback vs latest ledger entry
+                cur = conn.cursor()
+                cur.execute("SELECT MAX(window) FROM ledger WHERE principal = ?", (principal,))
+                latest_window = cur.fetchone()[0]
+                if latest_window and window < latest_window:
+                    raise RuntimeError(
+                        f"Clock skew detected: current window {window} is behind ledger window {latest_window}"
+                    )
+
+                self.expire_dead_leases(conn)
+
+                limit = self.get_principal_limit(principal)
+                cur.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(CASE WHEN status = 'settled' THEN actual_usd ELSE 0 END), 0.0),
+                        COALESCE(SUM(CASE WHEN status = 'held' THEN reserved_usd ELSE 0 END), 0.0)
+                    FROM ledger
+                    WHERE principal = ? AND window = ?
+                    """,
+                    (principal, window),
                 )
+                spent, held = cur.fetchone()
+                remaining = limit - spent - held
 
-            self.expire_dead_leases(conn)
+                # Near the limit: hard-bounded mode
+                initial_worst, _, _ = compute_worst(chain, est_in, max_out_cap)
+                n_in = bound_in if remaining < 3 * initial_worst else est_in
 
-            limit = self.get_principal_limit(principal)
-            cur.execute(
-                """
-                SELECT
-                    COALESCE(SUM(CASE WHEN status = 'settled' THEN actual_usd ELSE 0 END), 0.0),
-                    COALESCE(SUM(CASE WHEN status = 'held' THEN reserved_usd ELSE 0 END), 0.0)
-                FROM ledger
-                WHERE principal = ? AND window = ?
-                """,
-                (principal, window),
-            )
-            spent, held = cur.fetchone()
-            remaining = limit - spent - held
-
-            # Near the limit: hard-bounded mode
-            initial_worst, _, _ = compute_worst(chain, est_in, max_out_cap)
-            n_in = bound_in if remaining < 3 * initial_worst else est_in
-
-            # Shrink max_tokens if needed before refusing
-            max_out = max_out_cap
-            worst_cost, ceiling_model, tier_name = compute_worst(chain, n_in, max_out)
-            while worst_cost > remaining and max_out > max_out_floor:
-                max_out //= 2
+                # Shrink max_tokens if needed before refusing
+                max_out = max_out_cap
                 worst_cost, ceiling_model, tier_name = compute_worst(chain, n_in, max_out)
+                while worst_cost > remaining and max_out > max_out_floor:
+                    max_out //= 2
+                    worst_cost, ceiling_model, tier_name = compute_worst(chain, n_in, max_out)
 
-            if worst_cost > remaining:
-                conn.execute("ROLLBACK;")
-                raise Denied(remaining=remaining, needed=worst_cost, reason="budget_exhausted")
+                if worst_cost > remaining:
+                    raise Denied(remaining=remaining, needed=worst_cost, reason="budget_exhausted")
 
-            # Insert held reservation
-            res_id = f"res_{int(time.time() * 1000)}_{os.getpid()}_{math.ceil(time.perf_counter()*1e6)%10000}"
-            now = time.time()
-            cur.execute(
-                """
-                INSERT INTO ledger (
-                    id, principal, session, task, window, status,
-                    reserved_usd, actual_usd, model_ceiling, tier, rung,
-                    est_in, bound_in, max_out, owner_pid, owner_start,
-                    heartbeat, created_at
-                ) VALUES (
-                    ?, ?, ?, ?, ?, 'held',
-                    ?, 0.0, ?, ?, ?,
-                    ?, ?, ?, ?, ?,
-                    ?, ?
+                # Insert held reservation
+                res_id = f"res_{int(time.time() * 1000)}_{os.getpid()}_{math.ceil(time.perf_counter() * 1e6) % 10000}"
+                now = time.time()
+                cur.execute(
+                    """
+                    INSERT INTO ledger (
+                        id, principal, session, task, window, status,
+                        reserved_usd, actual_usd, model_ceiling, tier, rung,
+                        est_in, bound_in, max_out, owner_pid, owner_start,
+                        heartbeat, created_at
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, 'held',
+                        ?, 0.0, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?
+                    )
+                    """,
+                    (
+                        res_id,
+                        principal,
+                        session,
+                        task,
+                        window,
+                        worst_cost,
+                        ceiling_model,
+                        tier_name,
+                        rung,
+                        est_in,
+                        bound_in,
+                        max_out,
+                        os.getpid(),
+                        now,
+                        now,
+                        now,
+                    ),
                 )
-                """,
-                (
-                    res_id, principal, session, task, window,
-                    worst_cost, ceiling_model, tier_name, rung,
-                    est_in, bound_in, max_out, os.getpid(), now,
-                    now, now,
-                ),
-            )
-            conn.commit()
 
-            return Reservation(
-                id=res_id,
-                principal=principal,
-                usd=worst_cost,
-                model_ceiling=ceiling_model,
-                tier=tier_name,
-                est_in=est_in,
-                bound_in=bound_in,
-                max_out=max_out,
-                owner_pid=os.getpid(),
-                heartbeat=now,
-            )
+                return Reservation(
+                    id=res_id,
+                    principal=principal,
+                    usd=worst_cost,
+                    model_ceiling=ceiling_model,
+                    tier=tier_name,
+                    est_in=est_in,
+                    bound_in=bound_in,
+                    max_out=max_out,
+                    owner_pid=os.getpid(),
+                    heartbeat=now,
+                )
         except sqlite3.OperationalError as oe:
             try:
                 conn.execute("ROLLBACK;")
             except Exception:
                 pass
             # ADR-005: OperationalError on BEGIN IMMEDIATE -> Denied (fail closed)
-            raise Denied(remaining=0.0, needed=worst_cost if "worst_cost" in locals() else 0.0, reason=f"ledger_locked: {oe}")
+            raise Denied(
+                remaining=0.0,
+                needed=worst_cost if "worst_cost" in locals() else 0.0,
+                reason=f"ledger_locked: {oe}",
+            ) from oe
         except Exception:
             try:
                 conn.execute("ROLLBACK;")
@@ -404,7 +437,12 @@ class BudgetManager:
         request_id: str | None = None,
     ) -> float:
         """Reconciles reservation to actual spend once the inference completes."""
-        if not actual_model or (prompt_tokens == 0 and completion_tokens == 0 and cache_read_tokens == 0 and cache_write_tokens == 0):
+        if not actual_model or (
+            prompt_tokens == 0
+            and completion_tokens == 0
+            and cache_read_tokens == 0
+            and cache_write_tokens == 0
+        ):
             actual_usd = 0.0
         else:
             actual_usd = self.price_table.calculate_cost(
@@ -421,7 +459,7 @@ class BudgetManager:
 
         conn = self._get_connection()
         try:
-            with conn:
+            with self._transaction(conn):
                 conn.execute(
                     """
                     UPDATE ledger SET
@@ -438,9 +476,16 @@ class BudgetManager:
                     WHERE id = ?
                     """,
                     (
-                        actual_usd, overshoot_usd, actual_model,
-                        uncached_in, cache_read_tokens, cache_write_tokens,
-                        completion_tokens, request_id, now, res.id,
+                        actual_usd,
+                        overshoot_usd,
+                        actual_model,
+                        uncached_in,
+                        cache_read_tokens,
+                        cache_write_tokens,
+                        completion_tokens,
+                        request_id,
+                        now,
+                        res.id,
                     ),
                 )
             return actual_usd
@@ -457,7 +502,7 @@ class BudgetManager:
         now = time.time()
         conn = self._get_connection()
         try:
-            with conn:
+            with self._transaction(conn):
                 conn.execute(
                     "UPDATE ledger SET status = 'cancelled', settled_at = ? WHERE id = ?",
                     (now, res.id),
@@ -470,7 +515,7 @@ class BudgetManager:
         now = time.time()
         conn = self._get_connection()
         try:
-            with conn:
+            with self._transaction(conn):
                 conn.execute(
                     "UPDATE ledger SET heartbeat = ? WHERE id = ? AND status = 'held'",
                     (now, res_id),

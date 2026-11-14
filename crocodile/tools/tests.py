@@ -30,7 +30,7 @@ class TestReport:
     summary: str = ""
     exit_code: int = 0
     timed_out: bool = False
-    failure_text: str = ""     # compact format_failure view
+    failure_text: str = ""  # compact format_failure view
     first_error: str = ""
     raw: str = ""
 
@@ -75,8 +75,9 @@ def format_failure(raw: str, root: Path, max_fail: int = 5) -> tuple[str, str]:
     out, first_err = [], ""
     for name, lines in blocks[:max_fail]:
         e_lines = [x for x in lines if x.startswith("E ")][:8]
-        frames = [x.strip() for x in lines if re.match(r"^\S.*:\d+: \w*", x)
-                  and not x.startswith(("E ", ">"))][-3:]
+        frames = [
+            x.strip() for x in lines if re.match(r"^\S.*:\d+: \w*", x) and not x.startswith(("E ", ">"))
+        ][-3:]
         code = [x for x in lines if x.startswith(">")][-1:]
         if not first_err and e_lines:
             first_err = e_lines[0]
@@ -111,7 +112,7 @@ class TestRunner:
         self.ctx = ctx
         self.consent: dict[str, str] | None = None
         self.oracle_ids = oracle_ids or []
-        self.full_targets: list[str] | None = None   # [] = whole suite after oracle green; None = skip
+        self.full_targets: list[str] | None = None  # [] = whole suite after oracle green; None = skip
         self.baseline_passed: set[str] = set()
         self.last: TestReport | None = None
         self.runs = 0
@@ -124,23 +125,40 @@ class TestRunner:
         if key in self._approved:
             return
         listing = "\n".join(f"  {k}  {v}" for k, v in surface.items()) or "  (no conftest/config files)"
-        d = services.get("approvals").ask(Action(
-            kind="test_consent", level="red",
-            summary="THIS EXECUTES CODE FROM THE REPO (pytest imports conftest.py and the tests)",
-            argv=list(argv), reasons=["exec surface:\n" + listing]), self.ctx.session)
-        services.get("journal").append(self.ctx.session, "approval",
-                                       {"kind": "test_consent", "approved": d.approved})
+        d = services.get("approvals").ask(
+            Action(
+                kind="test_consent",
+                level="red",
+                summary="THIS EXECUTES CODE FROM THE REPO (pytest imports conftest.py and the tests)",
+                argv=list(argv),
+                reasons=["exec surface:\n" + listing],
+            ),
+            self.ctx.session,
+        )
+        services.get("journal").append(
+            self.ctx.session, "approval", {"kind": "test_consent", "approved": d.approved}
+        )
         if not d.approved:
             raise ToolError("test run not approved by the user; tests cannot run this session")
         self._approved.add(key)
         self.consent = surface
 
     def run(self, ids: list[str] | None = None, timeout: int = 90) -> TestReport:
-        targets = list(self.oracle_ids) if ids is None else list(ids)   # [] = whole suite
-        argv = [sys.executable, "-m", "pytest", "-q", "-rA", "--tb=short", "--no-header",
-                "-p", "no:cacheprovider", *targets]
+        targets = list(self.oracle_ids) if ids is None else list(ids)  # [] = whole suite
+        argv = [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-rA",
+            "--tb=short",
+            "--no-header",
+            "-p",
+            "no:cacheprovider",
+            *targets,
+        ]
         self._consent(argv)
-        r = services.get("cmd").run(argv, self.ctx.root, timeout=timeout)
+        r = services.get("cmd").run(argv, self.ctx.root, timeout=timeout, session=self.ctx.session)
         raw = (r.stdout or "") + ("\n" + r.stderr if r.stderr else "")
         rep = parse(raw, r.exit_code, self.ctx.root)
         rep.timed_out = r.timed_out
@@ -155,10 +173,11 @@ class TestRunner:
         # never a bare summary on failure: no parsed details -> head+tail+must-keep view instead
         summary = head if not rep.failed else (f"{rep.failure_text}\n{head}" if rep.failure_text else None)
         if rep.exit_code not in (0, 1) and not rep.failed:
-            summary = None   # collection/usage error: fall back to head+tail+must-keep
+            summary = None  # collection/usage error: fall back to head+tail+must-keep
         g = gate(rep.raw, rep.exit_code, self.ctx.spill, enabled=self.ctx.flag("gate"), summary=summary)
-        return Result(g.shown, ok=rep.exit_code == 0, spill=g.spill, exit=rep.exit_code,
-                      tokens_avoided=g.avoided)
+        return Result(
+            g.shown, ok=rep.exit_code == 0, spill=g.spill, exit=rep.exit_code, tokens_avoided=g.avoided
+        )
 
 
 def run_tests(args: dict, ctx: RunCtx) -> Result:
