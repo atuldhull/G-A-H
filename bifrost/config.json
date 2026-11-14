@@ -1,0 +1,175 @@
+{
+  "client_config": {
+    "enable_logging": true,
+    "enforce_auth_on_inference": true,
+    "allow_direct_keys": false
+  },
+  "providers": {
+    "gemini": {
+      "keys": [
+        {
+          "name": "gemini-primary",
+          "value": "env.GEMINI_API_KEY",
+          "models": ["*"],
+          "weight": 1.0
+        }
+      ],
+      "network_config": {
+        "max_retries": 0,
+        "default_request_timeout_in_seconds": 120
+      }
+    },
+    "anthropic": {
+      "keys": [
+        {
+          "name": "anth-primary",
+          "value": "env.ANTHROPIC_API_KEY",
+          "models": ["claude-sonnet-5-5", "claude-haiku-5-5"],
+          "weight": 1.0
+        }
+      ],
+      "network_config": {
+        "max_retries": 0,
+        "default_request_timeout_in_seconds": 120
+      }
+    },
+    "openai": {
+      "keys": [
+        {
+          "name": "oai-1",
+          "value": "env.OPENAI_API_KEY",
+          "models": ["gpt-5-mini"],
+          "weight": 1.0
+        }
+      ],
+      "network_config": {
+        "max_retries": 0
+      }
+    },
+    "ollama": {
+      "keys": [
+        {
+          "name": "ollama-local",
+          "value": "",
+          "models": ["qwen2.5-coder:7b"],
+          "weight": 1.0,
+          "ollama_key_config": {
+            "url": "http://127.0.0.1:11434"
+          }
+        }
+      ],
+      "network_config": {
+        "max_retries": 0,
+        "default_request_timeout_in_seconds": 300
+      }
+    }
+  },
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "vk-atul-public",
+        "name": "atul-public",
+        "value": "sk-bf-atul-public",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "anthropic",
+            "allowed_models": ["claude-sonnet-5-5", "claude-haiku-5-5"],
+            "allow_all_keys": true,
+            "weight": 1
+          },
+          {
+            "provider": "openai",
+            "allowed_models": ["gpt-5-mini"],
+            "allow_all_keys": true,
+            "weight": 1
+          },
+          {
+            "provider": "gemini",
+            "allowed_models": ["*"],
+            "allow_all_keys": true,
+            "weight": 1
+          }
+        ],
+        "budgets": [
+          {
+            "max_limit": 5.00,
+            "reset_duration": "1d"
+          }
+        ]
+      },
+      {
+        "id": "vk-atul-local",
+        "name": "atul-local",
+        "value": "sk-bf-atul-local",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "ollama",
+            "allowed_models": ["qwen2.5-coder:7b"],
+            "allow_all_keys": true,
+            "weight": 1
+          }
+        ]
+      },
+      {
+        "id": "vk-bob-public",
+        "name": "bob-public",
+        "value": "sk-bf-bob-public",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "anthropic",
+            "allowed_models": ["claude-haiku-5-5"],
+            "allow_all_keys": true,
+            "weight": 1
+          }
+        ],
+        "budgets": [
+          {
+            "max_limit": 0.05,
+            "reset_duration": "1d"
+          }
+        ]
+      },
+      {
+        "id": "vk-bench",
+        "name": "bench",
+        "value": "sk-bf-bench",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "anthropic",
+            "allowed_models": ["claude-haiku-5-5"],
+            "allow_all_keys": true,
+            "weight": 1
+          }
+        ],
+        "budgets": [
+          {
+            "max_limit": 15.00,
+            "reset_duration": "1d"
+          }
+        ]
+      }
+    ],
+    "routing_rules": [
+      {
+        "name": "local-only",
+        "enabled": true,
+        "cel_expression": "true",
+        "targets": [
+          {
+            "provider": "ollama",
+            "model": "qwen2.5-coder:7b",
+            "weight": 1
+          }
+        ],
+        "fallbacks": [],
+        "scope": "virtual_key",
+        "scope_id": "vk-atul-local",
+        "priority": 1
+      }
+    ]
+  }
+}
