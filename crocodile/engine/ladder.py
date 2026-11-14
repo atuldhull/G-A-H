@@ -71,9 +71,12 @@ def verify(ctx, touched: list[str], *, full: bool = True) -> Verdict:
     if "_oracle_modified" in ctx.session.flags:
         return Verdict("oracle", True, False, "oracle passes but a test file was modified; "
                        "green is void until the user re-confirms", [], "oracle modified")
-    tr.run()   # flake guard: rerun oracle once on first green
-    if not (tr.last and tr.last.exit_code == 0 and not tr.last.failed):
-        return Verdict("oracle", False, False, "oracle flaky: passed then failed on rerun", [], "flaky")
+    # Flake guard: rerun the oracle once on first green. Unattended runs only (bench/--yes); an
+    # interactive user would face an extra "THIS EXECUTES CODE" prompt for the same command.
+    if ctx.session.approve_mode == "auto":
+        tr.run()
+        if not (tr.last and tr.last.exit_code == 0 and not tr.last.failed):
+            return Verdict("oracle", False, False, "oracle flaky: passed then failed on rerun", [], "flaky")
     if full and tr.full_targets is not None:
         frep = tr.run(tr.full_targets)
         regressed = sorted(tr.baseline_passed - frep.passed)

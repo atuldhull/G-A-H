@@ -195,3 +195,23 @@ def test_salvage_write_with_unescaped_quotes():
          '    "content": "x = f\'{a + " " if a else ""}\'\nprint(x)"\n  }\n}\n```')
     calls = text_tool_calls(t)
     assert calls and calls[0].arguments == {"path": "p.py", "content": "x = f'{a + \" \" if a else \"\"}'\nprint(x)"}
+
+
+def test_interactive_runs_oracle_once_after_fix(repo):
+    """No flake-guard rerun when a human approves each test run (fewer RED prompts)."""
+    from crocodile.agent_types import Decision
+
+    class CountingApprover:
+        def __init__(self):
+            self.test_asks = 0
+
+        def ask(self, action, session):
+            self.test_asks += action.kind == "test_consent"
+            return Decision(True, "test")
+    services.reset()
+    services.override("egress", FakeEgress([[("edit", {"path": "calc.py", "edits": [
+        {"search": "return a - b", "replace": "return a + b"}]})]]))
+    ap = CountingApprover()
+    services.override("approvals", ap)
+    r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
+    assert r.solved and r.test_runs == 2       # baseline + one verification, no flake rerun
