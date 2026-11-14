@@ -1,9 +1,11 @@
 # mini-swe-agent 2.4.6 WSL2 adapter
 
 The adapter executes mini only in a separate WSL interpreter, never importing it
-into Crocodile or substituting Crocodile for a baseline run. Validation uses fake
-WSL/mini processes and synthetic exercises. No WSL installation, live gateway,
-credentials, real exercise or paid call was used.
+into Crocodile or substituting Crocodile for a baseline run. Adapter tests use fake
+WSL/mini processes and synthetic exercises. The [local environment record](mini-environment.md)
+now documents the installed Ubuntu mini 2.4.6 environment, key-free settings and
+offline Gemini routing check. Live gateway/model access remains unverified; no
+paid call or real benchmark exercise was run.
 
 ## Verified source configuration
 
