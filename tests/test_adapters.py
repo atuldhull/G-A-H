@@ -9,7 +9,12 @@ from crocodile.agent_types import Action, BudgetStop, Session
 
 
 def _session(tmp_path, **kw):
-    return Session(id="s1", repo=tmp_path, mode="public", **kw)
+    from crocodile import services
+
+    root = tmp_path / "repo"
+    root.mkdir(exist_ok=True)
+    context = services.get("security_factory")(root, "fixture task")
+    return Session(id="s1", repo=root, mode="public", security=context, original_task="fixture task", **kw)
 
 
 def test_gateway_egress_maps_result_and_budget(tmp_path, monkeypatch):
@@ -19,11 +24,28 @@ def test_gateway_egress_maps_result_and_budget(tmp_path, monkeypatch):
     from crocodile.gateway.budget import Denied
 
     eg = GatewayEgress()
-    body = {"model": "anthropic/claude-haiku-5-5",
-            "choices": [{"message": {"content": "PLAN: x", "tool_calls": [
-                {"id": "c1", "type": "function", "function": {"name": "read", "arguments": '{"path": "a.py"}'}}]}}],
-            "usage": {"prompt_tokens": 1200, "completion_tokens": 30,
-                      "prompt_tokens_details": {"cached_read_tokens": 1000}}}  # Part 2 field name
+    body = {
+        "model": "anthropic/claude-haiku-5-5",
+        "choices": [
+            {
+                "message": {
+                    "content": "PLAN: x",
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "type": "function",
+                            "function": {"name": "read", "arguments": '{"path": "a.py"}'},
+                        }
+                    ],
+                }
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 1200,
+            "completion_tokens": 30,
+            "prompt_tokens_details": {"cached_read_tokens": 1000},
+        },
+    }  # Part 2 field name
     monkeypatch.setattr(eg.client, "post_bifrost", lambda **kw: (200, body, {}))
     r = eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap")
     assert r.tool_calls[0].name == "read" and r.tool_calls[0].arguments == {"path": "a.py"}
@@ -32,6 +54,7 @@ def test_gateway_egress_maps_result_and_budget(tmp_path, monkeypatch):
 
     def deny(**kw):
         raise Denied(remaining=0.001, needed=0.05)
+
     monkeypatch.setattr(eg.client.budget_manager, "reserve", deny)
     with pytest.raises(BudgetStop):
         eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap")
@@ -44,11 +67,12 @@ def test_security_bridge_permit_flows_into_cmd(tmp_path):
 
     b = SecurityBridge()
     s = _session(tmp_path)
+    b.bind_session(s, s.security.p3)
     argv = [sys.executable, "-c", "print('hello')"]
     with patch.object(approvals, "_console_answer", return_value="y"):
         d = b.ask(Action(kind="shell", summary="run", argv=argv), s)
     assert d.approved
-    r = b.run(argv, tmp_path, timeout=30)            # consumes the single-use permit
+    r = b.run(argv, s.repo, timeout=30)  # consumes the single-use permit
     assert r.exit_code == 0 and "hello" in r.stdout
     with patch.object(approvals, "_console_answer", return_value="n"):
         d2 = b.ask(Action(kind="shell", summary="run", argv=argv), s)
@@ -62,8 +86,8 @@ def test_security_bridge_auto_mode_is_bench_only(tmp_path):
     b = SecurityBridge()
     s = _session(tmp_path, approve_mode="auto")
     argv = [sys.executable, "-c", "print(1)"]
-    assert b.ask(Action(kind="shell", summary="run", argv=argv), s).approved
-    assert b.run(argv, tmp_path, timeout=30).exit_code == 0
+    assert not b.ask(Action(kind="shell", summary="run", argv=argv), s).approved
+    assert b.run(argv, s.repo, timeout=30).exit_code == 126
 
 
 def test_gateway_egress_passes_temperature(tmp_path, monkeypatch):
@@ -78,14 +102,24 @@ def test_gateway_egress_passes_temperature(tmp_path, monkeypatch):
 
     def post(**kw):
         seen.update(kw["body"])
-        return 200, {"model": "anthropic/claude-haiku-5-5", "choices": [{"message": {"content": "ok"}}],
-                     "usage": {"prompt_tokens": 10, "completion_tokens": 1}}, {}
+        return (
+            200,
+            {
+                "model": "anthropic/claude-haiku-5-5",
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 1},
+            },
+            {},
+        )
+
     monkeypatch.setattr(eg.client, "post_bifrost", post)
-    eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap", temperature=0.7)
+    eg.chat(
+        [{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap", temperature=0.7
+    )
     assert seen.get("temperature") == 0.7
 
 
-def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch):
+def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch, app_security):
     approvals_mod = pytest.importorskip("crocodile.security.approvals")
     if not hasattr(approvals_mod.ApprovalSession, "for_bench"):
         pytest.skip("Part 3 without bench sessions")
@@ -98,18 +132,36 @@ def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch):
     scratch = tmp_path / "scratch"
     ws = scratch / "ws"
     ws.mkdir(parents=True)
-    sec = approvals_mod.ApprovalSession.for_bench(ws, parent=scratch, user_task="Fix add().")
+    from crocodile.security.classification import SecurityStore
+    from crocodile.security.confidential import Detector
+
+    sec = approvals_mod.ApprovalSession.for_bench(
+        ws,
+        parent=scratch,
+        user_task="Fix add().",
+        integrity=app_security,
+        confidentiality=Detector(SecurityStore(app_security.path, integrity=app_security)),
+    )
     try:
         (ws / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
         (ws / "calc_test.py").write_text(
-            "from calc import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n", encoding="utf-8")
-        fake = FakeEgress([[("edit", {"path": "calc.py",
-                                      "edits": [{"search": "return a - b", "replace": "return a + b"}]})]])
+            "from calc import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n", encoding="utf-8"
+        )
+        fake = FakeEgress(
+            [
+                [
+                    (
+                        "edit",
+                        {"path": "calc.py", "edits": [{"search": "return a - b", "replace": "return a + b"}]},
+                    )
+                ]
+            ]
+        )
         services.reset()
         services.override("egress", fake)
         r = Agent(ws, "Fix add().", oracle=["calc_test.py"], approve_mode="auto", security_session=sec).run()
         assert r.solved
-        assert any(e.get("by") == "bench" for e in sec.events)      # Part 3 issued the permits
+        assert any(e.get("by") == "bench" for e in sec.events)  # Part 3 issued the permits
     finally:
         sec.close_bench()
         services.reset()
@@ -117,6 +169,7 @@ def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch):
 
 def test_admin_limits_file_loaded(tmp_path, monkeypatch):
     from crocodile.adapters import load_limits
+
     f = tmp_path / "limits.yaml"
     f.write_text("users:\n  bob: 0.05\n  atul: 2\n", encoding="utf-8")
     monkeypatch.setenv("CROCODILE_LIMITS", str(f))

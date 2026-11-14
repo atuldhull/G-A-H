@@ -12,7 +12,7 @@ import os
 import re
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import prompt, services
@@ -29,20 +29,33 @@ from .tools import SCHEMAS, TOOLS, RunCtx, dispatch
 from .tools.base import SKIP_DIRS
 from .tools.tests import TestRunner
 
-ALL_FLAGS = {"cache", "gate", "readcache", "mask", "ladder", "stop_green", "thrash", "escalate", "preload",
-             "rewind"}
+ALL_FLAGS = {
+    "cache",
+    "gate",
+    "readcache",
+    "mask",
+    "ladder",
+    "stop_green",
+    "thrash",
+    "escalate",
+    "preload",
+    "rewind",
+}
 STEP_CAP = 30
 MAX_OUT = 4096
 # Context window per tier (tokens). Local must match OLLAMA_CONTEXT_LENGTH or Ollama silently truncates.
-CTX_WINDOW = {"strong": 200_000, "cheap": 200_000,
-              "local": int(os.environ.get("OLLAMA_CONTEXT_LENGTH") or 32_768)}
+CTX_WINDOW = {
+    "strong": 200_000,
+    "cheap": 200_000,
+    "local": int(os.environ.get("OLLAMA_CONTEXT_LENGTH") or 32_768),
+}
 
 
 @dataclass
 class Receipt:
     session: str
     solved: bool
-    status: str                      # SOLVED | SOLVED (partial suite) | STOPPED: <why> | UNVERIFIED
+    status: str  # SOLVED | SOLVED (partial suite) | STOPPED: <why> | UNVERIFIED
     steps: int = 0
     usage: Usage = field(default_factory=Usage)
     models: list[str] = field(default_factory=list)
@@ -56,7 +69,7 @@ class Receipt:
     flags: list[str] = field(default_factory=list)
     rewinds: int = 0
     checkpoints: int = 0
-    savings: dict = field(default_factory=dict)    # technique -> tokens saved (estimated, first-order)
+    savings: dict = field(default_factory=dict)  # technique -> tokens saved (estimated, first-order)
 
     def to_json(self) -> dict:
         d = self.__dict__.copy()
@@ -83,7 +96,7 @@ def _brief_tree(root: Path, limit: int = 60) -> str:
     return "\n".join(out)
 
 
-_DEC = json.JSONDecoder(strict=False)        # allow raw newlines/tabs inside strings
+_DEC = json.JSONDecoder(strict=False)  # allow raw newlines/tabs inside strings
 _BAD_ESC = re.compile(r"\\(?![\"\\/bfnrtu])")  # \' \( etc. are invalid JSON escapes: drop the backslash
 
 
@@ -110,13 +123,14 @@ def _salvage_write(text: str) -> list[ToolCallReq]:
     m = re.search(r'"name"\s*:\s*"write".*?"path"\s*:\s*"([^"]+)".*?"content"\s*:\s*"', text, re.S)
     if not m:
         return []
-    rest = text[m.end():]
+    rest = text[m.end() :]
     end = re.search(r'"\s*\}\s*\}?\s*(?:```)?\s*$', rest)
     if not end:
         return []
     raw = rest[: end.start()]
-    content = _ESC.sub(lambda e: chr(int(e.group(1)[1:], 16)) if e.group(1)[0] == "u"
-                       else _ESC_MAP[e.group(1)], raw)
+    content = _ESC.sub(
+        lambda e: chr(int(e.group(1)[1:], 16)) if e.group(1)[0] == "u" else _ESC_MAP[e.group(1)], raw
+    )
     return [ToolCallReq("text_0", "write", {"path": m.group(1), "content": content})]
 
 
@@ -151,7 +165,7 @@ def _close_braces(text: str, i: int):
     if not re.match(r'\{\s*"name"\s*:', text[i:]):
         return None
     chunk = text[i:].rstrip().removesuffix("```").rstrip()
-    body = chunk.rstrip("}] \n\t\r")             # also try: last string left unterminated
+    body = chunk.rstrip("}] \n\t\r")  # also try: last string left unterminated
     candidates = [chunk + e for e in ("}", "}}", "}}}")]
     candidates += [body + '"' + e for e in ("}", "}}", "}]}}", "}}}")]
     for cand in candidates:
@@ -163,27 +177,61 @@ def _close_braces(text: str, i: int):
             return obj
     return None
 
+
 class Agent:
-    def __init__(self, repo: Path, task: str, *, oracle: list[str] | None = None, full_suite: bool = False,
-                 flags: set[str] | None = None, tier: str = "cheap", approve_mode: str = "ask",
-                 step_cap: int = STEP_CAP, user: str = "default", on_event=None,
-                 security_session=None):
+    def __init__(
+        self,
+        repo: Path,
+        task: str,
+        *,
+        oracle: list[str] | None = None,
+        full_suite: bool = False,
+        flags: set[str] | None = None,
+        tier: str = "cheap",
+        approve_mode: str = "ask",
+        step_cap: int = STEP_CAP,
+        user: str = "default",
+        on_event=None,
+        security_session=None,
+        resume: str | None = None,
+    ):
         """security_session: a Part 3 ApprovalSession made by a trusted harness (e.g. for_bench)."""
         repo = repo.resolve()
-        sid = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
-        sdir = state_root() / sid
+        from .runtime_security import SecurityContext, session_directory
+
+        factory = services._cache.get("security_factory", SecurityContext)
+        saved = None
+        if approve_mode == "auto" and (security_session is None or not security_session.bench_auto):
+            raise ValueError("--yes/auto requires a harness-created official bench session")
+        sid = resume or time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
+        if resume:
+            resume_loader = services._cache.get("security_resume", SecurityContext.resume)
+            self.security, saved = resume_loader(repo, sid, security_session=security_session)
+            if task and task != self.security.original_task:
+                raise ValueError("resume cannot replace the original user task")
+            task = self.security.original_task
+        else:
+            self.security = factory(repo, task, security_session=security_session)
+        self.original_task = self.security.original_task
+        sdir = session_directory(sid)
         sdir.mkdir(parents=True, exist_ok=True)
-        mode = services.get("confidential").mode_for(repo)
-        self.s = Session(id=sid, repo=repo, mode=mode, user=user, approve_mode=approve_mode,  # type: ignore[arg-type]
-                         flags=set(ALL_FLAGS if flags is None else flags), state_dir=sdir)
-        if security_session is not None:
-            bridge = services.get("approvals")
-            if not hasattr(bridge, "bind_session"):
-                raise RuntimeError("security_session given but Part 3 security is not installed")
-            bridge.bind_session(self.s, security_session)
+        mode = self.security.p3.mode
+        self.s = Session(
+            id=sid,
+            repo=repo,
+            mode=mode,
+            user=user,
+            approve_mode=approve_mode,  # type: ignore[arg-type]
+            flags=set(ALL_FLAGS if flags is None else flags),
+            state_dir=sdir,
+            security=self.security,
+            original_task=self.original_task,
+        )
+        services.get("approvals").bind_session(self.s, self.security.p3)
         from .tools import web as _web
-        self.schemas = list(SCHEMAS)            # frozen for the session (part of the cache-stable prefix)
-        if _web.enabled(self.s):                # Tavily: public + interactive + key present
+
+        self.schemas = list(SCHEMAS)  # frozen for the session (part of the cache-stable prefix)
+        if _web.enabled(self.s):  # Tavily: public + interactive + key present
             self.s.flags.add("_web")
             self.schemas = sorted(self.schemas + [_web.SCHEMA], key=lambda s: s["function"]["name"])
         self.ctx = RunCtx(self.s, Spill(sdir), ReadCache(), Thrash())
@@ -191,15 +239,21 @@ class Agent:
         if full_suite:
             self.ctx.tests.full_targets = []
         self.ctx.oracle_files = {o.split("::")[0].replace("\\", "/") for o in (oracle or [])}
-        self.state = TaskState(task=task, oracle=list(oracle or []),
-                               tier="local" if mode == "confidential" else tier)
+        self.state = TaskState(
+            task=task, oracle=list(oracle or []), tier="local" if mode == "confidential" else tier
+        )
         self.step_cap = step_cap
         self.history: list[dict] = []
         self.meta: list[dict] = []
-        self.r = Receipt(session=sid, solved=False, status="UNVERIFIED",
-                         stubs=[n for n in ("egress", "journal", "approvals", "cmd", "confidential")
-                                if services.is_stub(n)],
-                         flags=sorted(self.s.flags))
+        self.r = Receipt(
+            session=sid,
+            solved=False,
+            status="UNVERIFIED",
+            stubs=[
+                n for n in ("egress", "journal", "approvals", "cmd", "confidential") if services.is_stub(n)
+            ],
+            flags=sorted(self.s.flags),
+        )
         self.on_event = on_event or (lambda kind, data: None)
         self.j = services.get("journal")
         self._nudge = ""
@@ -207,13 +261,78 @@ class Agent:
         self.rw: Rewinder | None = None
         self._base_score = -1
         self._last_prompt = 0
+        if saved is not None:
+            self.state = TaskState(**saved["task_state"])
+            self.state.task = self.original_task
+            self.history, self.meta = saved["history"], saved["meta"]
+            self.ctx.touched = set(saved["touched"])
+            self.ctx.shown_paths = set(saved["shown_paths"])
+            self.ctx.tests.oracle_ids = list(saved["oracle"])
+            self.ctx.oracle_files = set(saved["oracle_files"])
+            self.s.flags = set(saved["flags"])
+        self._resumed = saved is not None
+        self._save_context()
+
+    def _save_context(self, pending=None):
+        self._pending = pending
+        self.security.save(
+            self.s,
+            {
+                "task_state": asdict(self.state),
+                "history": self.history,
+                "meta": self.meta,
+                "touched": sorted(self.ctx.touched),
+                "shown_paths": sorted(self.ctx.shown_paths),
+                "oracle": list(self.ctx.tests.oracle_ids),
+                "oracle_files": sorted(self.ctx.oracle_files),
+                "flags": sorted(self.s.flags),
+            },
+            pending=pending,
+        )
 
     # ---- helpers ----
+    def _restore_files(self, files):
+        import difflib
+
+        from .agent_types import Action
+        from .tools.base import ToolError, secure_path
+
+        changes, diffs = {}, []
+        for raw, original in files.items():
+            path = secure_path(raw, self.ctx, for_write=True)
+            now = path.read_bytes().decode("utf-8") if path.exists() else ""
+            desired = original or ""
+            changes[raw] = original.encode("utf-8") if original is not None else None
+            diffs.extend(
+                difflib.unified_diff(
+                    now.splitlines(), desired.splitlines(), f"a/{raw}", f"b/{raw}", lineterm=""
+                )
+            )
+        action = Action(
+            "write",
+            "restore checkpoint",
+            paths=list(changes),
+            diff="\n".join(diffs),
+            replacements=[value for value in files.values() if value is not None],
+            changes=changes,
+        )
+        bridge = services.get("approvals")
+        decision = bridge.ask(action, self.s)
+        if not decision.approved:
+            raise ToolError("checkpoint restore not approved")
+        bridge.apply_write(action, decision, self.s, call_id="rewind-" + uuid.uuid4().hex)
+        return sorted(changes)
+
     def _add(self, msg: dict, meta: dict | None = None) -> None:
-        self.history.append(msg)
+        from .runtime_security import clean
+
+        self.history.append(clean(msg))
         self.meta.append(meta or {})
 
     def _event(self, kind: str, **data) -> None:
+        from .runtime_security import clean
+
+        data = clean(data)
         self.j.append(self.s, kind, data)
         self.on_event(kind, data)
 
@@ -248,7 +367,7 @@ class Agent:
         diff = rw.diff()
         restored = rw.restore()
         current = ""
-        for rel in restored:          # show the restored text so SEARCH blocks match what is on disk
+        for rel in restored:  # show the restored text so SEARCH blocks match what is on disk
             p = self.s.repo / rel
             if p.is_file() and p.stat().st_size <= 6000:
                 current += f"\n--- {rel} (current content, after undo) ---\n{p.read_text(encoding='utf-8')}"
@@ -267,17 +386,28 @@ class Agent:
         why = (v.first_error or v.stage)[:160]
         self.state.attempts.append(f"{gist} -> {why}")
         before = "broken code" if v.passed < 0 else f"{v.passed} passing"
-        self._add({"role": "user", "content": (
-            f"[rewind #{rw.rewinds}] Your last attempt did not increase the number of passing tests "
-            f"({before} vs {rw.cp.score} at the checkpoint), so it was undone: the files are back to the "
-            f"content shown earlier in this conversation.\nWhat that attempt changed:\n{diff}\n"
-            f"Why it failed:\n{v.shown[:1500]}\n{current}\n"
-            "Edit the CURRENT content above (not the undone attempt). Try a different approach.")})
+        self._add(
+            {
+                "role": "user",
+                "content": (
+                    f"[rewind #{rw.rewinds}] Your last attempt did not increase the number of passing tests "
+                    f"({before} vs {rw.cp.score} at the checkpoint), so it was undone: the files are back to the "
+                    f"content shown earlier in this conversation.\nWhat that attempt changed:\n{diff}\n"
+                    f"Why it failed:\n{v.shown[:1500]}\n{current}\n"
+                    "Edit the CURRENT content above (not the undone attempt). Try a different approach."
+                ),
+            }
+        )
         self.sav.carried("rewind", removed_tokens, step)
-        if rw.rewinds >= 2:            # two dead ends are evidence the task is hard: use the strong model
+        if rw.rewinds >= 2:  # two dead ends are evidence the task is hard: use the strong model
             self._escalate(f"{rw.rewinds} failed attempts rewound")
-        self._event("rewind", n=rw.rewinds, removed_tokens=removed_tokens, passed=v.passed,
-                    checkpoint_passed=rw.cp.score)
+        self._event(
+            "rewind",
+            n=rw.rewinds,
+            removed_tokens=removed_tokens,
+            passed=v.passed,
+            checkpoint_passed=rw.cp.score,
+        )
 
     # ---- main ----
     def run(self) -> Receipt:
@@ -285,18 +415,34 @@ class Agent:
         try:
             self._run()
         except BudgetStop as e:
+            self._pending = None
             self.r.status = f"STOPPED: budget ({e})"
             self._event("budget_stop", message=str(e))
         except KeyboardInterrupt:
             self.r.status = "STOPPED: interrupted"
+        except Exception as error:
+            from .security.integrity import IntegrityViolation
+
+            if not isinstance(error, IntegrityViolation):
+                raise
+            if not self.security.p3._aborted:
+                try:
+                    self.security.p3.abort_integrity("state", "verified", "invalid or unavailable")
+                except IntegrityViolation:
+                    pass
+            self.r.status = "STOPPED: integrity violation"
+            self._event("integrity_violation", session_aborted=True, reason=str(error))
         finally:
             self.r.wall_s = round(time.monotonic() - t0, 1)
             self.r.test_runs = self.ctx.tests.runs
             self.r.savings = self.sav.report(self.r.steps, self.r.usage.cached_tokens)
             if self.rw is not None:
                 self.r.rewinds, self.r.checkpoints = self.rw.rewinds, self.rw.commits
-            self._event("session_end", status=self.r.status, solved=self.r.solved,
-                        usage=self.r.usage.__dict__)
+            self._event(
+                "session_end", status=self.r.status, solved=self.r.solved, usage=self.r.usage.__dict__
+            )
+            if not self.security.p3._aborted:
+                self._save_context(pending=self._pending)
         return self.r
 
     def _evidence_files(self) -> list[Path]:
@@ -318,8 +464,13 @@ class Agent:
             except (OSError, SyntaxError):
                 continue
             for node in ast.walk(tree):
-                mods = [node.module] if isinstance(node, ast.ImportFrom) and node.module and not node.level \
-                    else [a.name for a in node.names] if isinstance(node, ast.Import) else []
+                mods = (
+                    [node.module]
+                    if isinstance(node, ast.ImportFrom) and node.module and not node.level
+                    else [a.name for a in node.names]
+                    if isinstance(node, ast.Import)
+                    else []
+                )
                 for mod in mods:
                     rel_mod = Path(*mod.split("."))
                     for base in (root, tp.parent):
@@ -339,18 +490,31 @@ class Agent:
             if root not in p.parents:
                 continue
             r = p.relative_to(root).as_posix()
-            if r in self.ctx.oracle_files or p.name.startswith("test_") or p.stem.endswith("_test") \
-                    or p.name in ("conftest.py", "__init__.py") or p.stat().st_size > max_chars:
+            if (
+                r in self.ctx.oracle_files
+                or p.name.startswith("test_")
+                or p.stem.endswith("_test")
+                or p.name in ("conftest.py", "__init__.py")
+                or p.stat().st_size > max_chars
+            ):
                 continue
-            out.append(f"\n--- {r} ---\n{p.read_text(encoding='utf-8', errors='replace')}")
+            from .tools.base import observe_file, secure_path
+
+            p = secure_path(r, self.ctx)
+            text = observe_file(self.ctx, p.read_text(encoding="utf-8", errors="replace"), r, 1)
+            out.append(f"\n--- {r} ---\n{text}")
             self.ctx.shown_paths.add(r)
             if len(out) >= max_files:
                 break
         tests = []
-        for o in sorted(self.ctx.oracle_files)[:2]:      # the oracle is the spec: show it if small
+        for o in sorted(self.ctx.oracle_files)[:2]:  # the oracle is the spec: show it if small
             p = self.s.repo / o
             if p.is_file() and p.stat().st_size <= 4 * max_chars:
-                tests.append(f"\n--- {o} ---\n{p.read_text(encoding='utf-8', errors='replace')}")
+                from .tools.base import observe_file, secure_path
+
+                p = secure_path(o, self.ctx)
+                text = observe_file(self.ctx, p.read_text(encoding="utf-8", errors="replace"), o, 1)
+                tests.append(f"\n--- {o} ---\n{text}")
                 self.ctx.shown_paths.add(o)
         text = ("\n\nSource files (current content):" + "".join(out)) if out else ""
         if tests:
@@ -365,6 +529,10 @@ class Agent:
         try:
             rep = tr.run()
         except Exception as e:  # consent declined etc.
+            from .security.integrity import IntegrityViolation
+
+            if isinstance(e, IntegrityViolation):
+                raise
             self.s.flags.add("_no_test_consent")
             return f"\n[tests not run: {e}]"
         tr.baseline_passed = set(rep.passed)
@@ -378,17 +546,30 @@ class Agent:
         return f"\nCurrent test results (before any change):\n{res.shown}"
 
     def _run(self) -> None:
-        self._event("session_start", repo=str(self.s.repo), mode=self.s.mode, flags=sorted(self.s.flags),
-                    tier=self.state.tier)
-        intro = (f"Task:\n{self.state.task}\n\nRepo files:\n{_brief_tree(self.s.repo)}"
-                 f"{self._preload()}{self._baseline()}")
-        self._add({"role": "user", "content": intro})
+        self.security.check(self.s)
+        self._event(
+            "session_resumed" if self._resumed else "session_started",
+            repo_root=str(self.s.repo),
+            mode=self.s.mode,
+            flags=sorted(self.s.flags),
+            tier=self.state.tier,
+        )
+        if not self._resumed:
+            intro = (
+                f"Task:\n{self.original_task}\n\nRepo files:\n{_brief_tree(self.s.repo)}"
+                f"{self._preload()}{self._baseline()}"
+            )
+            from .security.provenance import Source
+
+            self.security.observe(_brief_tree(self.s.repo), Source("cmd", "repo file names"))
+            self._add({"role": "user", "content": intro})
         if "rewind" in self.s.flags and self._base_score >= 0:
-            self.rw = Rewinder(self.s.repo, self._base_score)
+            self.rw = Rewinder(self.s.repo, self._base_score, restore_files=self._restore_files)
             self.ctx.on_before_write = self.rw.before_write
         finish_rejections = 0
         nudges = 0
         for step in range(1, self.step_cap + 1):
+            self.security.check(self.s)
             self.r.steps = step
             self.ctx.turn = step
             if "mask" in self.s.flags:
@@ -398,16 +579,24 @@ class Agent:
                     self.sav.carried("mask", saved, step - 1)
                     self._event("mask", saved=saved)
             pre_len = len(self.history)
-            msgs = prompt.build(self.history, self.state.render() + self._nudge,
-                                cache="cache" in self.s.flags)
+            msgs = prompt.build(
+                self.history, self.state.render() + self._nudge, cache="cache" in self.s.flags
+            )
             msgs = self._fit(msgs, step)
             if msgs is None:
                 self.r.status = "STOPPED: context full"
                 return
             tier = "local" if self.s.mode == "confidential" else self.state.tier
-            res = services.get("egress").chat(msgs, self.schemas, session=self.s, tier=tier, max_tokens=MAX_OUT,
-                                                temperature=0.7 if (self.state.switches or (
-                                                    self.rw and self.rw.rewinds)) else 0.0)
+            self._save_context(pending={"kind": "model"})
+            res = services.get("egress").chat(
+                msgs,
+                self.schemas,
+                session=self.s,
+                tier=tier,
+                max_tokens=MAX_OUT,
+                temperature=0.7 if (self.state.switches or (self.rw and self.rw.rewinds)) else 0.0,
+            )
+            self.security.check(self.s)
             self.r.usage.add(res.usage)
             self._last_prompt = res.usage.prompt_tokens
             if res.cost_usd is not None:
@@ -419,50 +608,89 @@ class Agent:
                 self._event("takeover", model=res.model_used, error_class=res.error_class)
             if not res.tool_calls:
                 res.tool_calls = text_tool_calls(res.text)
-            self._event("model_call", model=res.model_used, tier=tier, usage=res.usage.__dict__,
-                        tool_calls=[c.name for c in res.tool_calls], text=(res.text or "")[:8000])
+            self._event(
+                "model_call",
+                model=res.model_used,
+                tier=tier,
+                usage=res.usage.__dict__,
+                tool_calls=[c.name for c in res.tool_calls],
+                text=(res.text or "")[:8000],
+            )
             self.state.absorb(res.text)
 
             amsg: dict = {"role": "assistant", "content": res.text or None}
             if res.tool_calls:
-                amsg["tool_calls"] = [{"id": c.id, "type": "function", "function": {
-                    "name": c.name, "arguments": json.dumps(c.arguments)}} for c in res.tool_calls]
+                amsg["tool_calls"] = [
+                    {
+                        "id": c.id,
+                        "type": "function",
+                        "function": {"name": c.name, "arguments": json.dumps(c.arguments)},
+                    }
+                    for c in res.tool_calls
+                ]
             self._add(amsg)
+            self._save_context(pending={"kind": "tool_round"} if res.tool_calls else None)
 
             if res.tool_calls:
                 nudges = 0
-            elif nudges < 2:          # text-only reply: never counts as finishing on its own
+            elif nudges < 2:  # text-only reply: never counts as finishing on its own
                 nudges += 1
-                self._nudge = ("\n\nIMPORTANT: your last reply had no tool call. Reply now with tool calls "
-                               "(e.g. edit the source file); call finish only when done.")
+                self._nudge = (
+                    "\n\nIMPORTANT: your last reply had no tool call. Reply now with tool calls "
+                    "(e.g. edit the source file); call finish only when done."
+                )
                 self._add({"role": "user", "content": "[no tool call received]"})
                 continue
             self._nudge = ""
             finishing = not res.tool_calls
             edited_before = len(self.ctx.touched), self.state.edits
-            for c in res.tool_calls:
+            for index, c in enumerate(res.tool_calls):
+                self.security.check(self.s)
+                self.ctx.call_id = c.id
                 if c.name == "finish":
                     finishing = True
-                    self._add({"role": "tool", "tool_call_id": c.id, "content": "ok"},
-                              {"turn": step, "tool": "finish"})
+                    self._add(
+                        {"role": "tool", "tool_call_id": c.id, "content": "ok"},
+                        {"turn": step, "tool": "finish"},
+                    )
+                    self._save_context(
+                        pending=None if index == len(res.tool_calls) - 1 else {"kind": "tool_round"}
+                    )
                     continue
-                self._event("tool_started", tool=c.name, call_id=c.id,
-                            args={k: (v if len(str(v)) <= 300 else str(v)[:300] + "...")
-                                  for k, v in c.arguments.items()})
+                self._event(
+                    "tool_started",
+                    tool=c.name,
+                    call_id=c.id,
+                    args={
+                        k: (v if len(str(v)) <= 300 else str(v)[:300] + "...") for k, v in c.arguments.items()
+                    },
+                )
                 self.ctx.thrash.record_call(c.name, c.arguments)
+                self._save_context(pending={"kind": "tool", "call_id": c.id, "name": c.name})
                 out = dispatch(c.name, c.arguments, self.ctx)
-                if c.name in ("edit", "write") and out.ok:
+                if c.name in ("edit", "write", "delete") and out.edit_id is not None:
                     self.state.edits += 1
                 self.r.tokens_avoided += out.tokens_avoided
                 self.sav.carried("readcache" if c.name == "read" else "gate", out.tokens_avoided, step)
-                self._add({"role": "tool", "tool_call_id": c.id, "content": out.shown},
-                          {"turn": step, "tool": c.name, "spill": out.spill, "exit": out.exit})
+                self._add(
+                    {"role": "tool", "tool_call_id": c.id, "content": out.shown},
+                    {"turn": step, "tool": c.name, "spill": out.spill, "exit": out.exit},
+                )
                 if out.read_key and "readcache" in self.s.flags:
                     path, window, text = out.read_key
                     if not out.shown.split("\n", 1)[-1].startswith("[unchanged"):
                         self.ctx.readcache.record(path, window, text, step, len(self.history) - 1)
-                self._event("tool_done", tool=c.name, call_id=c.id, ok=out.ok,
-                            shown_tokens=est_tokens(out.shown), avoided=out.tokens_avoided)
+                self._event(
+                    "tool_done",
+                    tool=c.name,
+                    call_id=c.id,
+                    ok=out.ok,
+                    shown_tokens=est_tokens(out.shown),
+                    avoided=out.tokens_avoided,
+                )
+                self._save_context(
+                    pending=None if index == len(res.tool_calls) - 1 else {"kind": "tool_round"}
+                )
 
             edited = self.state.edits > edited_before[1]
             if edited:
@@ -471,28 +699,36 @@ class Agent:
                     self.rw.arm(pre_len)
             if (edited and "stop_green" in self.s.flags) or finishing:
                 checks_on = "ladder" in self.s.flags or "stop_green" in self.s.flags
-                v = verify(self.ctx, sorted(self.ctx.touched), full=True) if (
-                    (edited or self.state.edits) and checks_on) else None
+                v = (
+                    verify(self.ctx, sorted(self.ctx.touched), full=True)
+                    if ((edited or self.state.edits) and checks_on)
+                    else None
+                )
                 if v is not None and v.green:
                     self.r.solved = True
                     self.r.status = "SOLVED"
                     self.state.phase = "done"
-                    self.sav.once("stop_green", self._last_prompt + 150, step)   # no "double-check" turn
+                    self.sav.once("stop_green", self._last_prompt + 150, step)  # no "double-check" turn
                     self._event("green", stage=v.stage)
                     return
                 if v is not None and not v.ok:
                     self.state.failing = v.sig_ids or self.state.failing
                     self.state.phase = "fix"
                     rw = self.rw
-                    if rw is not None and v.stage in ("syntax", "lint", "oracle") and not finishing \
-                            and not rw.improved(v.passed) and rw.can_rewind():
+                    if (
+                        rw is not None
+                        and v.stage in ("syntax", "lint", "oracle")
+                        and not finishing
+                        and not rw.improved(v.passed)
+                        and rw.can_rewind()
+                    ):
                         self._rewind(v, step)
                     else:
                         if "thrash" in self.s.flags:
                             self.ctx.thrash.record_failure(failure_sig(v.sig_ids, v.first_error))
                         self._add({"role": "user", "content": f"[auto-check: {v.stage} failed]\n{v.shown}"})
                         if rw is not None and rw.cp.hist_len is not None and rw.improved(v.passed):
-                            rw.commit(len(self.history), v.passed)       # progress: new checkpoint
+                            rw.commit(len(self.history), v.passed)  # progress: new checkpoint
                             self._event("checkpoint", passed=v.passed)
                 if finishing:
                     if v is None or (v.ok and not self.ctx.tests.oracle_ids):
@@ -510,8 +746,13 @@ class Agent:
                     # change of strategy. The second trigger stops.
                     self._escalate(self.ctx.thrash.reason)
                     self.state.switches = max(self.state.switches, 1)
-                    self._add({"role": "user", "content": f"[strategy switch: {self.ctx.thrash.reason}. "
-                               "Step back, re-read the failing test and try a different approach.]"})
+                    self._add(
+                        {
+                            "role": "user",
+                            "content": f"[strategy switch: {self.ctx.thrash.reason}. "
+                            "Step back, re-read the failing test and try a different approach.]",
+                        }
+                    )
                 elif verdict is not None:
                     self.r.status = f"STOPPED: thrash ({self.ctx.thrash.reason})"
                     self._event("stop_report", reason=self.ctx.thrash.reason, failing=self.state.failing)

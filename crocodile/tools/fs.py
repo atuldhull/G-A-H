@@ -6,7 +6,8 @@ import fnmatch
 import os
 import re
 
-from .base import SKIP_DIRS, Result, RunCtx, ToolError, rel, resolve_in_repo
+from ..security.secrets import path_is_redacted, secret_scan
+from .base import SKIP_DIRS, Result, RunCtx, ToolError, observe_file, rel, secure_path
 
 MAX_READ_LINES = 400
 MAX_HITS = 50
@@ -23,10 +24,12 @@ def read(args: dict, ctx: RunCtx) -> Result:
         lines = text.splitlines()
         s = max(1, int(start or 1))
         e = min(len(lines), int(end or s + 199))
-        return Result(f"{path} lines {s}-{e} of {len(lines)}\n" + "\n".join(lines[s - 1:e]))
-    p = resolve_in_repo(path, ctx.root)
+        return Result(f"{path} lines {s}-{e} of {len(lines)}\n" + "\n".join(lines[s - 1 : e]))
+    p = secure_path(path, ctx)
     if not p.is_file():
         raise ToolError(f"not a file: {path}")
+    if path_is_redacted(p.relative_to(ctx.root)):
+        return Result("[REDACTED sensitive file]")
     if p.stat().st_size > 2_000_000:
         raise ToolError("file too large; use search or a line range")
     text = p.read_text(encoding="utf-8", errors="replace")
@@ -34,8 +37,9 @@ def read(args: dict, ctx: RunCtx) -> Result:
     n = len(lines)
     s = max(1, int(start or 1))
     e = min(n, int(end)) if end else min(n, s + MAX_READ_LINES - 1)
-    window_text = "\n".join(lines[s - 1:e])
+    window_text = "\n".join(lines[s - 1 : e])
     r = rel(p, ctx.root)
+    window_text = observe_file(ctx, window_text, r, s)
     ctx.shown_paths.add(r)
     head = f"{r} (lines {s}-{e} of {n})" if (s > 1 or e < n) else f"{r} ({n} lines)"
     more = f"\n[more: read('{r}', {e + 1}, ...)]" if e < n else ""
@@ -43,8 +47,12 @@ def read(args: dict, ctx: RunCtx) -> Result:
         short = ctx.readcache.lookup(r, (s, e), window_text, ctx.turn, ctx.masked)
         if short is not None:
             from ..engine.gate import est_tokens
-            return Result(f"{head}\n{short}", tokens_avoided=max(0, est_tokens(window_text) - 20),
-                          read_key=(r, (s, e), window_text))
+
+            return Result(
+                f"{head}\n{short}",
+                tokens_avoided=max(0, est_tokens(window_text) - 20),
+                read_key=(r, (s, e), window_text),
+            )
     return Result(f"{head}\n{window_text}{more}", read_key=(r, (s, e), window_text))
 
 
@@ -56,7 +64,7 @@ def _walk(root, sub):
 
 
 def list_(args: dict, ctx: RunCtx) -> Result:
-    p = resolve_in_repo(str(args.get("path") or "."), ctx.root)
+    p = secure_path(str(args.get("path") or "."), ctx)
     if not p.is_dir():
         raise ToolError("not a directory")
     depth = max(1, min(4, int(args.get("depth") or 2)))
@@ -64,7 +72,12 @@ def list_(args: dict, ctx: RunCtx) -> Result:
     base_parts = len(p.parts)
     for f in _walk(ctx.root, p):
         from pathlib import Path
+
         fp = Path(f)
+        try:
+            secure_path(str(fp), ctx)
+        except (ValueError, ToolError):
+            continue
         if len(fp.parts) - base_parts > depth:
             continue
         out.append(rel(fp, ctx.root))
@@ -79,7 +92,7 @@ def search(args: dict, ctx: RunCtx) -> Result:
         rx = re.compile(str(args["pattern"]))
     except re.error as e:
         raise ToolError(f"bad regex: {e}") from None
-    p = resolve_in_repo(str(args.get("path") or "."), ctx.root)
+    p = secure_path(str(args.get("path") or "."), ctx)
     glob = args.get("glob")
     hits: list[str] = []
     files = [str(p)] if p.is_file() else _walk(ctx.root, p)
@@ -88,6 +101,9 @@ def search(args: dict, ctx: RunCtx) -> Result:
         if glob and not fnmatch.fnmatch(os.path.basename(f), glob):
             continue
         try:
+            fp = secure_path(f, ctx)
+            if path_is_redacted(fp.relative_to(ctx.root)):
+                continue
             if os.path.getsize(f) > 1_000_000:
                 continue
             with open(f, encoding="utf-8", errors="strict") as fh:
@@ -96,8 +112,11 @@ def search(args: dict, ctx: RunCtx) -> Result:
                         total += 1
                         if len(hits) < MAX_HITS:
                             from pathlib import Path
-                            hits.append(f"{rel(Path(f), ctx.root)}:{i}: {line.rstrip()[:200]}")
-        except (UnicodeDecodeError, OSError):
+
+                            r = rel(Path(f), ctx.root)
+                            text = observe_file(ctx, line.rstrip(), r, i)
+                            hits.append(f"{r}:{i}: {secret_scan(text)[:200]}")
+        except (UnicodeDecodeError, OSError, ValueError, ToolError):
             continue
     if not hits:
         return Result("no matches")

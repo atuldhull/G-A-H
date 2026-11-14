@@ -53,6 +53,10 @@ class ProvenanceIndex:
         if text:
             self._entries.append((text, src))
 
+    def observations(self) -> tuple[tuple[str, Source], ...]:
+        """Owner checkpoint snapshot; callers must sign it before trusting replay."""
+        return tuple(self._entries)
+
     def steered_by(self, fields: list[tuple[str, str]]) -> list[Source]:
         values = []
         for value, kind in fields:

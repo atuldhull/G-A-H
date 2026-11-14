@@ -560,7 +560,7 @@ def undo(
     return ShadowUndo(root, storage=storage, session=session).undo(steps)
 
 
-def main(argv=None) -> int:
+def main(argv=None, *, session=None, storage=None) -> int:
     """Standalone handler pending Part 1 registration of `crocodile undo [N] --list`."""
     parser = argparse.ArgumentParser(description="Undo Crocodile file edits")
     parser.add_argument("steps", nargs="?", type=int, default=1)
@@ -571,8 +571,9 @@ def main(argv=None) -> int:
         from .confidential import mode_for
 
         root = args.repo.resolve(strict=True)
-        session = ApprovalSession(root, mode=mode_for(root, root=root))
-        manager = ShadowUndo(root, session=session)
+        if session is None:
+            session = ApprovalSession(root, mode=mode_for(root, root=root))
+        manager = ShadowUndo(root, session=session, storage=storage)
         if args.list:
             for entry in manager.list():
                 print(f"{entry['id']} {entry['state']}")

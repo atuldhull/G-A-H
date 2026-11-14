@@ -243,6 +243,10 @@ class SecurityStore:
         evidence = self.evidence()
         if at_time is not None:
             evidence = [event for event in evidence if event["ts"] <= at_time]
+        return self._history(identity, evidence)
+
+    @staticmethod
+    def _history(identity, evidence):
         aliases = set(identity.ids)
         while True:
             expanded = aliases | set().union(
@@ -256,6 +260,10 @@ class SecurityStore:
 
     def is_confidential(self, identity: RepoIdentity, *, at_time=None) -> bool:
         _, history = self.history(identity, at_time=at_time)
+        return self._classified(history)
+
+    @staticmethod
+    def _classified(history):
         last_conf = max(
             (e["ts"] for e in history if e["mode"] == "confidential"), default=-1
         )
@@ -271,10 +279,11 @@ class SecurityStore:
 
     def path_is_confidential(self, path: Path, *, stop: Path | None = None) -> bool:
         # Match canonical ancestor IDs, even if a marker or registry row vanished.
+        # One verified snapshot per check; never reuse it across tool decisions.
+        evidence = self.evidence()
         for parent in (path, *path.parents):
-            if self.is_confidential(
-                RepoIdentity(os.path.normcase(str(parent.resolve())))
-            ):
+            _, history = self._history(RepoIdentity(os.path.normcase(str(parent.resolve()))), evidence)
+            if self._classified(history):
                 return True
             if parent == stop:
                 break
