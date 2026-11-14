@@ -181,6 +181,11 @@ class Agent:
             if not hasattr(bridge, "bind_session"):
                 raise RuntimeError("security_session given but Part 3 security is not installed")
             bridge.bind_session(self.s, security_session)
+        from .tools import web as _web
+        self.schemas = list(SCHEMAS)            # frozen for the session (part of the cache-stable prefix)
+        if _web.enabled(self.s):                # Tavily: public + interactive + key present
+            self.s.flags.add("_web")
+            self.schemas = sorted(self.schemas + [_web.SCHEMA], key=lambda s: s["function"]["name"])
         self.ctx = RunCtx(self.s, Spill(sdir), ReadCache(), Thrash())
         self.ctx.tests = TestRunner(self.ctx, oracle)
         if full_suite:
@@ -226,14 +231,14 @@ class Agent:
         """Keep prompt + max output under the window: mask everything old, else refuse (never truncate)."""
         tier = "local" if self.s.mode == "confidential" else self.state.tier
         window = CTX_WINDOW[tier]
-        size = est_tokens(json.dumps(msgs)) + est_tokens(json.dumps(SCHEMAS))
+        size = est_tokens(json.dumps(msgs)) + est_tokens(json.dumps(self.schemas))
         if size + MAX_OUT <= 0.7 * window:
             return msgs
         saved = maybe_mask(self.history, self.meta, step, self.ctx.masked, age=1, min_gain=0)
         self.r.tokens_avoided += saved
         self._event("fit", before=size, saved=saved, window=window)
         msgs = prompt.build(self.history, self.state.render(), cache="cache" in self.s.flags)
-        size = est_tokens(json.dumps(msgs)) + est_tokens(json.dumps(SCHEMAS))
+        size = est_tokens(json.dumps(msgs)) + est_tokens(json.dumps(self.schemas))
         return msgs if size + MAX_OUT <= 0.95 * window else None
 
     def _rewind(self, v, step: int) -> None:
@@ -400,7 +405,7 @@ class Agent:
                 self.r.status = "STOPPED: context full"
                 return
             tier = "local" if self.s.mode == "confidential" else self.state.tier
-            res = services.get("egress").chat(msgs, SCHEMAS, session=self.s, tier=tier, max_tokens=MAX_OUT,
+            res = services.get("egress").chat(msgs, self.schemas, session=self.s, tier=tier, max_tokens=MAX_OUT,
                                                 temperature=0.7 if (self.state.switches or (
                                                     self.rw and self.rw.rewinds)) else 0.0)
             self.r.usage.add(res.usage)

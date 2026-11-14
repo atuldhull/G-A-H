@@ -20,7 +20,7 @@ from typing import Any, Literal, Protocol
 Mode = Literal["public", "confidential"]
 Tier = Literal["strong", "cheap", "local"]
 Level = Literal["green", "amber", "red"]
-ActionKind = Literal["write", "shell", "git", "test_consent"]
+ActionKind = Literal["write", "shell", "git", "test_consent", "network"]
 
 # Journal event names (owner: Part 2). Payloads are plain JSON dicts.
 EVENTS = (
@@ -82,6 +82,7 @@ class Action:
     level: Level = "amber"
     reasons: list[str] = field(default_factory=list)
     paths: list[str] = field(default_factory=list)   # repo-relative files a write touches
+    query: str | None = None                          # network: the outbound search text
 
 
 @dataclass
@@ -116,6 +117,8 @@ class Session:
 class EgressAPI(Protocol):
     def chat(self, messages: list[dict], tools: list[dict], *, session: Session, tier: Tier,
              max_tokens: int = 4096, temperature: float = 0.0) -> ChatResult: ...
+
+    def web_search(self, query: str, *, session: Session) -> dict: ...
 
 
 class JournalAPI(Protocol):

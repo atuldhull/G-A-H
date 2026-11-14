@@ -113,6 +113,15 @@ class GatewayEgress:
         )
 
 
+    def web_search(self, query: str, *, session: Session) -> dict:
+        """Tavily via Part 2's gated search_tavily (hard-denied in confidential mode)."""
+        key = _stubs.tavily_key()
+        if not key:
+            raise RuntimeError("no Tavily key (set TAVILY_API_KEY or keyring crocodile/tavily)")
+        r = self.client.search_tavily(query, key, mode=session.mode)
+        return {"results": r.results, "credits": r.credits_used}
+
+
 class GatewayJournal:
     """Durable events in Part 2's journal; the per-session JSONL stays for debugging and the bench."""
 
@@ -167,7 +176,8 @@ class SecurityBridge:
                 self.auto_argv.add(tuple(action.argv))
             return Decision(True, "auto (bench sandbox; Part 3 console approvals bypassed)")
         a = self.types.Action(kind=action.kind, argv=list(action.argv) if action.argv else None,
-                              diff=action.diff, source=action.source, cwd=".", paths=list(action.paths))
+                              diff=action.diff, source=action.source, cwd=".", paths=list(action.paths),
+                              query=action.query)
         p3s = self._p3(session)
         d = self.approvals.ask(a, session=p3s)
         ok = d.verdict == "allow"

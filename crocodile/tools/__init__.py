@@ -7,10 +7,11 @@ from .cmd import git, run_cmd
 from .edit import edit_tool, write_tool
 from .fs import list_, read, search
 from .tests import run_tests
+from .web import web_docs
 
 TOOLS = {
     "read": read, "list": list_, "search": search, "edit": edit_tool, "write": write_tool,
-    "run_tests": run_tests, "run_cmd": run_cmd, "git": git,
+    "run_tests": run_tests, "run_cmd": run_cmd, "git": git, "web_docs": web_docs,
 }
 READ_ONLY = {"read", "list", "search", "git"}
 

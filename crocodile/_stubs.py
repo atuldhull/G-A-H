@@ -79,6 +79,44 @@ class StubEgress:
         )
 
 
+def tavily_key() -> str:
+    """Tavily key: Credential Manager (keyring 'crocodile'/'tavily') first, env TAVILY_API_KEY as fallback."""
+    try:
+        import keyring
+        k = keyring.get_password("crocodile", "tavily")
+    except Exception:   # no keyring backend
+        k = None
+    return k or os.environ.get("TAVILY_API_KEY", "")
+
+
+def stub_web_search(query: str, session: Session) -> dict:
+    """Direct Tavily search for dev (no gateway). Lean request; refused in confidential mode."""
+    import httpx
+
+    if session.mode == "confidential":
+        raise PermissionError("web search is not available in confidential mode")
+    key = tavily_key()
+    if not key:
+        raise RuntimeError("no Tavily key (set TAVILY_API_KEY or keyring crocodile/tavily)")
+    try:
+        from crocodile.gateway.tavily import build_tavily_request, parse_tavily_response
+        url, headers, payload = build_tavily_request(query=query, api_key=key)
+    except ImportError:
+        url, headers = "https://api.tavily.com/search", {"Authorization": f"Bearer {key}"}
+        payload = {"query": query, "search_depth": "basic", "max_results": 3, "include_answer": False}
+        parse_tavily_response = None
+    r = httpx.post(url, json=payload, headers=headers, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    if parse_tavily_response is not None:
+        res = parse_tavily_response(data)
+        return {"results": res.results, "credits": res.credits_used}
+    return {"results": [{"title": x.get("title", ""), "url": x.get("url", ""), "content": x.get("content", "")[:600]}
+                        for x in data.get("results", [])[:3]], "credits": 1}
+
+
+StubEgress.web_search = lambda self, query, *, session: stub_web_search(query, session)  # type: ignore[attr-defined]
+
 class StubJournal:
     def append(self, session: Session, event: str, payload: dict) -> None:
         if session.state_dir is None:
