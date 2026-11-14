@@ -91,10 +91,33 @@ def test_success_uses_exact_planned_mini_slots_config_and_fresh_grading(fake_min
         assert row["cost_attribution"]["authoritative_cost_usd"] is None and not row["comparison_ready"]
         assert not row["hard_deadline_enforced"] and row["worker_deadline_enforced"]
     config = fake_mini.mini.config
-    assert config["model"]["model_name"] == "openai/anthropic/claude-haiku-5-5"
+    assert config["model"]["model_name"] == "openai/gemini/gemini-3.5-flash-lite"
     assert config["model"]["cost_tracking"] == "ignore_errors"
     assert config["model"]["set_cache_control"] == "default_end"
     assert config["model"]["model_kwargs"] == {"drop_params": True, "extra_body": {"fallbacks": []}}
+
+
+def test_approved_gemini_profiles_align_with_frozen_policy_without_live_claims():
+    from bench.plan import EVALUATION_POLICY
+
+    directory = mini.CONFIG_PATH.parent
+    settings = mini.Settings(**json.loads((directory / "mini-settings.ubuntu.json").read_text()))
+    native = json.loads((directory / "crocodile-gemini-bench.json").read_text())
+    adapter = mini.MiniAdapter(settings)
+    policy = EVALUATION_POLICY
+    assert adapter.config["model"]["model_name"] == "openai/" + policy["model"]
+    assert settings.api_base == policy["gateway_url"] + "/v1"
+    assert mini.Settings("Synthetic-Ubuntu", "/fake/python").api_base == settings.api_base
+    assert native["bifrost_url"] == policy["gateway_url"] == "http://127.0.0.1:18080"
+    assert native["models"] == {tier: {"chain": [policy["model"]]} for tier in ("cheap", "strong")}
+    assert (policy["virtual_key_id"], policy["virtual_key_name"]) == ("vk-bench", "bench")
+    assert policy["measured_model_fallbacks"] == [] and policy["measured_escalation"] is False
+    assert policy["thinking"] == policy["effort"] == "provider-default"
+    assert adapter.config["thinking_policy"]["thinking"] == "provider-default"
+    assert adapter.config["model"]["model_kwargs"] == {"drop_params": True, "extra_body": {"fallbacks": []}}
+    assert settings.credential_env == "CROCODILE_BENCH_VK"
+    assert settings.session_header_verified is False and settings.session_header_evidence == ""
+    assert set(native) == {"bifrost_url", "models"}  # No unsupported VK selector or credential.
 
 
 def test_interleaving_preserves_all_five_runs_without_adapter_substitution(fake_mini):
@@ -258,7 +281,7 @@ def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypat
     task.write_text("Synthetic task")
     config = deepcopy(mini.MiniAdapter(mini.Settings("fake", "/python")).config)
     assert mini_bridge.worker({"credential_env": "FAKE_BENCH_VK", "config": config, "workspace": str(tmp_path),
-                               "task_file": str(task), "receipt": str(receipt), "api_base": "http://127.0.0.1:8080/v1",
+                               "task_file": str(task), "receipt": str(receipt), "api_base": "http://127.0.0.1:18080/v1",
                                "session_header": "synthetic-session"}) == 0
     assert options["model_kwargs"]["extra_headers"]["x-bf-vk"] == key
     assert options["model_kwargs"]["extra_headers"]["x-bf-session-id"] == "synthetic-session"
@@ -288,6 +311,17 @@ def test_model_configuration_drift_is_incomplete_before_launch(fake_mini):
     rows = execute(fake_mini)
     assert fake_mini.backend.calls == 0
     assert all(row["status"] == "incomplete" and row["error"]["type"] == "MiniPlanConfigMismatch" for row in rows)
+
+
+def test_legacy_model_plan_is_rejected_before_any_adapter_or_agent_call(fake_mini):
+    legacy = deepcopy(fake_mini.plan)
+    legacy["evaluation_policy"].update(model="anthropic/claude-haiku-5-5", thinking="adaptive", effort="medium")
+    fake_mini.path.write_text(json.dumps(legacy), encoding="utf-8")
+    with pytest.raises(ValueError, match="frozen model/thinking/cache"):
+        execute(fake_mini)
+    assert fake_mini.backend.calls == 0
+    assert not fake_mini.agents and not fake_mini.sessions
+    assert not fake_mini.output.exists()
 
 
 def test_wsl_path_translation_is_argv_only_and_no_shell_is_used(tmp_path, monkeypatch):

@@ -1,9 +1,15 @@
 # mini-swe-agent 2.4.6 WSL2 adapter
 
 The adapter executes mini only in a separate WSL interpreter, never importing it
-into Crocodile or substituting Crocodile for a baseline run. Validation uses fake
-WSL/mini processes and synthetic exercises. No WSL installation, live gateway,
-credentials, real exercise or paid call was used.
+into Crocodile or substituting Crocodile for a baseline run. Adapter tests use fake
+WSL/mini processes and synthetic exercises. The [local environment record](mini-environment.md)
+now documents the installed Ubuntu mini 2.4.6 environment, key-free settings and
+offline Gemini routing check. Live gateway/model access remains unverified; no
+paid call or real benchmark exercise was run.
+
+The current [Gemini policy/readiness record](gemini-readiness.md) supersedes the
+initial Haiku/8080 profile. Configuration is updated; live connectivity, bench VK
+binding and session-header evidence remain blocked.
 
 ## Verified source configuration
 
@@ -19,7 +25,7 @@ must match Git blob `8b72f71f8092ae805ec43221dbeaeefc2340cd3e`. Sources:
 
 `bench/configs/mini-2.4.6.json` freezes version/template identity,
 `step_limit: 30`, `wall_time_limit_seconds: 600`, `cost_limit: 0`, model
-`openai/anthropic/claude-haiku-5-5`, `cost_tracking: ignore_errors`,
+`openai/gemini/gemini-3.5-flash-lite`, `cost_tracking: ignore_errors`,
 `set_cache_control: default_end`, `drop_params: true`, and `fallbacks: []`.
 No temperature/top-p/sampling parameter or semantic cache key is added.
 
@@ -32,8 +38,8 @@ cannot safely be saved with a bench key in model kwargs.
 
 Installed version and template identity are checked at runtime. LiteLLM version
 is retained in successful receipts; transitive dependencies are not newly locked.
-Adaptive thinking/medium effort relies on the agreed provider defaults. Equality
-through LiteLLM/Bifrost and Crocodile is **not live-verified**. Plans with a
+Thinking and effort use provider defaults, with no explicit request override.
+Equality through LiteLLM/Bifrost and Crocodile is **not live-verified**. Plans with a
 different declared evaluation policy are refused.
 
 ## Configuration and execution
@@ -46,7 +52,7 @@ WSL/network/gateway configuration. A key-free settings JSON example is:
 {
   "distro": "Ubuntu",
   "python": "/home/USER/.venvs/mini-2.4.6/bin/python",
-  "api_base": "http://127.0.0.1:8080/v1",
+  "api_base": "http://127.0.0.1:18080/v1",
   "credential_env": "CROCODILE_BENCH_VK",
   "session_header_verified": false,
   "session_header_evidence": ""
@@ -149,12 +155,12 @@ live. Native Crocodile still has only its cooperative deadline.
 ## Remaining live fairness checks
 
 Verify bench VK identity/shared cap, gateway version, mirrored reachability,
-header forwarding, actual served model, adaptive/medium defaults, prompt caching
+header forwarding, actual served model, provider-default thinking, prompt caching
 and server semantic-cache disablement. Crocodile's owner adapter still has public
 alias/fallback/escalation/temperature defaults needing coordinated override; no
 other owner's code changes here. Mini retains its default 30-second per-command
 timeout, an environment difference to review. The cost exporter still rejects
-current Haiku tiering, cache writes with unknown TTL, retries and unverified
+multiple price tiers, cache writes with unknown TTL, retries and unverified
 completeness. These remain live-smoke blockers; synthetic passes are not evidence
 of a comparable paid benchmark.
 

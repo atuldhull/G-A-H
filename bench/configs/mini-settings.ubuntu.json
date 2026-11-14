@@ -1,0 +1,8 @@
+{
+  "distro": "Ubuntu",
+  "python": "/home/gunda/venvs/crocodile-mini/bin/python",
+  "api_base": "http://127.0.0.1:18080/v1",
+  "credential_env": "CROCODILE_BENCH_VK",
+  "session_header_verified": false,
+  "session_header_evidence": ""
+}

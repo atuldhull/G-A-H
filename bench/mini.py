@@ -24,7 +24,7 @@ TEMPLATE_BLOB = "8b72f71f8092ae805ec43221dbeaeefc2340cd3e"
 class Settings:
     distro: str
     python: str
-    api_base: str = "http://127.0.0.1:8080/v1"
+    api_base: str = "http://127.0.0.1:18080/v1"
     credential_env: str = "CROCODILE_BENCH_VK"
     session_header_verified: bool = False
     session_header_evidence: str = ""
