@@ -11,7 +11,9 @@ from bench.run import _validate
 
 
 DEFAULT_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v1.json"
+V2_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v2.json"
 REPO_ROOT = Path(__file__).resolve().parent.parent
+ACCEPTED_LIMITATIONS = {"hard-stop-containment", "mini-output-cap", "cache-parity", "sampling-difference"}
 TOP_FIELDS = {
     "schema_version", "kind", "revision", "provenance", "datasets", "plan", "gateway",
     "agents", "limits", "grading", "evidence", "outcomes", "pooling", "readiness",
@@ -71,7 +73,7 @@ def _key_free(value):
 
 
 def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=(), audit_current=False):
-    """Validate static consistency; v1 can never authorize runs or pooled claims.
+    """Validate immutable release snapshots; static success is not authorization.
 
     Optional data_root is the assembled builder output, not a native checkout.
     Optional manifests must contain one full plan and all four shard plans.
@@ -79,19 +81,35 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
     pytest, mini, gateway, credential or SQLite access occurs.
     """
     try:
-        _need(isinstance(config, dict) and set(config) == TOP_FIELDS, "Invalid canonical config fields")
-        _need(type(config["schema_version"]) is int and config["schema_version"] == 1
+        _need(isinstance(config, dict), "Invalid canonical config fields")
+        v2 = config.get("revision") == "gemini-54-v2"
+        fields = TOP_FIELDS | {"changes_from_v1", "known_limitations"} if v2 else TOP_FIELDS
+        _need(set(config) == fields, "Invalid canonical config fields")
+        _need(type(config["schema_version"]) is int and config["schema_version"] == (2 if v2 else 1)
               and config["kind"] == "canonical-gemini-benchmark"
-              and config["revision"] == "gemini-54-v1", "Unsupported canonical revision")
+              and config["revision"] in {"gemini-54-v1", "gemini-54-v2"}, "Unsupported canonical revision")
         _key_free(config)
         ready = config["readiness"]
         _need(ready["paid_runs_authorized"] is False and ready["cross_shard_comparable"] is False,
-              "This v1 snapshot cannot authorize execution or comparability")
+              "This blocked release snapshot cannot authorize execution or comparability")
         gaps = ready["unresolved"]
-        _need(isinstance(gaps, list) and gaps, "Unresolved evidence cannot be erased from v1")
+        _need(isinstance(gaps, list) and gaps, "Unresolved evidence cannot be erased from this release")
         _need(len({g["id"] for g in gaps}) == len(gaps)
               and all(all(isinstance(g[k], str) and g[k].strip() for k in ("id", "owner", "reason"))
                       for g in gaps), "Invalid unresolved evidence")
+        if v2:
+            limitations = config["known_limitations"]
+            _need(isinstance(limitations, list) and len(limitations) == 4
+                  and {item["id"] for item in limitations} == ACCEPTED_LIMITATIONS
+                  and all(item["comparability_gate"] is False and item["accepted_by"] == "Atul"
+                          and isinstance(item["description"], str) and item["description"].strip()
+                          for item in limitations), "Accepted limitations must not become comparability gates")
+            _need(not ACCEPTED_LIMITATIONS.intersection(g["id"] for g in gaps),
+                  "Accepted limitation listed as a release blocker")
+            _need("mini-attempt-3a111322" in {g["id"] for g in gaps},
+                  "Unresolved mini attempt cannot be cleared without a new reviewed release")
+            _need(isinstance(config["changes_from_v1"], list) and config["changes_from_v1"],
+                  "V2 requires a change record")
         plan = config["plan"]
         _need(plan["evaluation_policy"] == EVALUATION_POLICY, "Planner policy differs from canonical config")
         _need(plan["shard_ranges"] == [list(r) for r in SHARD_RANGES], "Shard ranges differ")
@@ -111,12 +129,18 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         _need(gateway["physical_version_vk_and_cap_verified"] is False
               and config["provenance"]["observed_environment_versions"]["cross_machine_lock_verified"] is False,
               "Live/environment verification cannot be asserted by this snapshot")
+        if v2:
+            observed = gateway["live_evidence"]
+            _need(observed["status"] == "reported-verified-on-Atul-machine"
+                  and observed["independently_verified_here"] is False,
+                  "Remote gateway evidence must not be promoted to local verification")
         model = EVALUATION_POLICY["model"]
         _need(set(agents) == set(AGENTS), "Agent variants differ")
         for name, agent in agents.items():
             _need(agent["wire_model"] == model and agent["fallbacks"] == []
                   and agent["measured_escalation"] is False
-                  and agent["thinking"] == "provider-default" and agent["sampling"] == "omit",
+                  and agent["thinking"] == "provider-default"
+                  and agent["sampling"] == ("native-0.0-or-0.7" if v2 and name != "mini-swe-agent" else "omit"),
                   "Agent model/override policy mismatch")
         _need(agents["crocodile"]["flags"] is None and agents["all-off-twin"]["flags"] == [],
               "Crocodile/twin flags differ")
@@ -165,7 +189,8 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
                   "runtime_git_commit": config["provenance"]["runtime_git_commit"],
                   "validator_sha256_lf": _sha(Path(__file__).read_bytes().replace(b"\r\n", b"\n")),
                   "dataset_validated": False, "manifests_validated": 0,
-                  "paid_runs_authorized": False, "cross_shard_comparable": False, "unresolved": gaps}
+                  "paid_runs_authorized": False, "cross_shard_comparable": False, "unresolved": gaps,
+                  "known_limitations": config.get("known_limitations", [])}
         if data_root is not None:
             data = Path(data_root).resolve()
             for filename, field in (("tasks.json", "tasks_sha256"), ("oracles.json", "oracles_sha256")):
@@ -177,6 +202,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
             _validate(full, oracles)
             _need(set(config["datasets"]["tasks"]) == set(order), "Task evidence coverage mismatch")
             for task in full["tasks"]:
+                _need(not v2 or "\r" not in task["task_text"], "V2 requires LF-only task text")
                 frozen = config["datasets"]["tasks"][task["task_id"]]
                 source = Path(task["source_path"])
                 _need(task["task_text_sha256"] == frozen["task_text_sha256"]
@@ -220,7 +246,9 @@ def main(argv=None):
     except (OSError, ValueError) as error:
         parser.exit(2, f"Canonical validation failed: {error}\n")
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
-    return 1 if args.require_comparable else 0 if result["static_valid"] else 2
+    if args.require_comparable:
+        return 0 if result["static_valid"] and result["cross_shard_comparable"] else 1
+    return 0 if result["static_valid"] else 2
 
 
 if __name__ == "__main__":

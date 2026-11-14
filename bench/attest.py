@@ -89,7 +89,7 @@ def attest_plan(config_path, data_root, plan_path, oracles, *, repo_root=REPO_RO
         "canonical_comparability_ready": report["cross_shard_comparable"],
         "eligible_for_pooled_report": bool(allowed and complete_shard),
         "execution_authorized": bool(allowed), "unresolved": report["unresolved"],
-        "historical_snapshot_notice": "Frozen v1 unresolved entries are historical; current audit does not rewrite them.",
+        "historical_snapshot_notice": "Frozen release entries are historical; current audit does not rewrite them.",
     }
 
 
