@@ -217,3 +217,31 @@ def test_interactive_runs_oracle_once_after_fix(repo):
     services.override("cmd", ap)
     r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
     assert r.solved and r.test_runs == 2       # baseline + one verification, no flake rerun
+
+
+def test_refused_test_consent_ends_cleanly(repo):
+    """Part 3 review group 3: if policy refuses/voids test consent after an edit, end with an honest
+    receipt instead of an error or extra model turns."""
+    from crocodile.adapters import SecurityBridge
+    from crocodile.agent_types import CmdResult
+
+    class VoidAfterEdit(SecurityBridge):
+        def __init__(self):
+            super().__init__()
+            self.runs = 0
+
+        def run(self, argv, cwd, *, timeout=120, session=None, **kw):
+            self.runs += 1
+            if self.runs > 1:                                  # baseline ran; post-edit run refused
+                return CmdResult(list(argv), 126, "", "test consent no longer valid: will execute edited code")
+            return super().run(argv, cwd, timeout=timeout, session=session, **kw)
+    services.reset()
+    fake = FakeEgress([[("edit", {"path": "calc.py", "edits": [
+        {"search": "return a - b", "replace": "return a + b"}]})]])
+    services.override("egress", fake)
+    bridge = VoidAfterEdit()
+    services.override("approvals", bridge)
+    services.override("cmd", bridge)
+    r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
+    assert not r.solved and r.status == "UNVERIFIED (tests not approved)"
+    assert len(fake.calls) == 1                                 # no wasted model turns after the refusal
