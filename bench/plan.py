@@ -16,6 +16,15 @@ DATASETS = ("polyglot", "quixbugs")
 AGENTS = ("crocodile", "mini-swe-agent", "all-off-twin")
 TEST_PREFIX = ["python", "-m", "pytest", "-q"]
 ID_PATTERN = re.compile(r"[a-z0-9][a-z0-9._-]*\Z")
+SHARD_RANGES = ((1, 14), (15, 28), (29, 41), (42, 54))
+SHARDS = ("1/4", "2/4", "3/4", "4/4")
+FULL_COUNTS = {"polyglot": 34, "quixbugs": 20}
+EVALUATION_POLICY = {
+    "model": "anthropic/claude-haiku-5-5", "thinking": "adaptive", "effort": "medium",
+    "gateway": "Bifrost", "semantic_cache": False, "prompt_caching": True,
+    "mini_swe_agent_version": "2.4.6", "parallel_runs": 4,
+    "grading_timeout_seconds": 180,
+}
 
 
 def _object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -90,15 +99,39 @@ def _entry(value: object) -> dict[str, object]:
     }
 
 
+def _full_plan_identity(tasks: list[dict], roots: dict, repeats: dict) -> str:
+    """Hash portable task definitions and run policy, before sharding/limiting.
+
+    Absolute roots, index ordering/location and output location are excluded.
+    Exercise file contents are not hashed; dataset revision pinning is still needed.
+    """
+    definitions = [{
+        "task_id": task["task_id"], "dataset": task["dataset"],
+        "source_relative": task["source_relative"],
+        "task_file_relative": Path(task["task_file"]).relative_to(roots[task["dataset"]]).as_posix(),
+        "task_text_sha256": task["task_text_sha256"],
+        "test_command": task["test_command"], "test_paths": task["test_paths"],
+    } for task in tasks]
+    identity = {
+        "identity_version": 1, "tasks": definitions, "agent_order": list(AGENTS),
+        "runs_per_task": repeats, "step_cap": 30, "wall_clock_cap_seconds": 600,
+        "evaluation_policy": EVALUATION_POLICY,
+    }
+    contents = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(contents.encode("ascii")).hexdigest()
+
+
 def build_plan(
     task_index: str | os.PathLike[str], *,
     polyglot: str | os.PathLike[str] | None = None,
     quixbugs: str | os.PathLike[str] | None = None,
     dataset_set: str = "both", limit: int | None = None, runs: int = 2,
+    shard: str | None = None,
 ) -> dict[str, object]:
     """Validate selected indexed tasks and expand them into deterministic runs.
 
-    All selected tasks are validated before the global task limit is applied.
+    All selected tasks are validated before sharding and the task limit.
+    With a shard, the limit is local to its fixed contiguous task slice.
     This function only reads JSON, prompt text, and filesystem metadata. It never
     imports an exercise, collects tests, prepares copies, or starts a process.
     """
@@ -107,6 +140,11 @@ def build_plan(
     _positive(runs, "runs")
     if limit is not None:
         _positive(limit, "limit")
+    if shard is not None:
+        if not isinstance(shard, str) or shard not in SHARDS:
+            raise ValueError("shard must be exactly 1/4, 2/4, 3/4, or 4/4")
+        if dataset_set != "both":
+            raise ValueError("--shard requires --set both and the full 54-task plan")
     selected = DATASETS if dataset_set == "both" else (dataset_set,)
     supplied = {"polyglot": polyglot, "quixbugs": quixbugs}
     roots = {}
@@ -176,8 +214,30 @@ def build_plan(
             raise ValueError(f"No indexed tasks found for selected dataset: {dataset}")
 
     indexed_count = len(tasks)
-    tasks = tasks[:limit] if limit is not None else tasks
     repeats = {"crocodile": runs, "mini-swe-agent": runs, "all-off-twin": 1}
+    counts = {dataset: sum(task["dataset"] == dataset for task in tasks) for dataset in selected}
+    if shard is not None and counts != FULL_COUNTS:
+        raise ValueError("--shard requires a validated full plan of exactly 54 tasks: "
+                         "34 polyglot and 20 quixbugs (before --limit)")
+    full_plan_id = _full_plan_identity(tasks, roots, repeats)
+    full_plan = {
+        "id": full_plan_id, "identity_version": 1,
+        "task_count": indexed_count, "tasks_by_dataset": counts,
+        "task_ids": [task["task_id"] for task in tasks],
+    }
+    tasks = [{**task, "full_plan_id": full_plan_id, "full_plan_position": position,
+              "shard_number": None}
+             for position, task in enumerate(tasks, 1)]
+    shard_info = None
+    if shard is not None:
+        number = SHARDS.index(shard) + 1
+        start, end = SHARD_RANGES[number - 1]
+        tasks = [{**task, "shard_number": number} for task in tasks[start - 1:end]]
+        shard_info = {
+            "number": number, "of": 4, "full_plan_start": start, "full_plan_end": end,
+            "task_count_before_limit": len(tasks),
+        }
+    tasks = tasks[:limit] if limit is not None else tasks
     planned = [
         {
             **task,
@@ -189,14 +249,10 @@ def build_plan(
     ]
     return {
         "schema_version": 1, "kind": "benchmark-run-plan", "execution_enabled": False,
-        "selection": {"set": dataset_set, "limit": limit},
+        "selection": {"set": dataset_set, "limit": limit, "shard": shard},
+        "full_plan": full_plan, "shard": shard_info,
         "dataset_roots": {dataset: str(roots[dataset]) for dataset in selected},
-        "evaluation_policy": {
-            "model": "anthropic/claude-haiku-5-5", "thinking": "adaptive", "effort": "medium",
-            "gateway": "Bifrost", "semantic_cache": False, "prompt_caching": True,
-            "mini_swe_agent_version": "2.4.6", "parallel_runs": 4,
-            "grading_timeout_seconds": 180,
-        },
+        "evaluation_policy": dict(EVALUATION_POLICY),
         "indexed_task_count": indexed_count, "task_count": len(tasks),
         "run_count": len(planned), "runs_per_task": repeats,
         "tasks_by_dataset": {
@@ -238,6 +294,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--runs", type=int, default=2)
+    parser.add_argument("--shard", choices=SHARDS,
+                        help="Fixed slice of the full 34+20 task plan; --limit applies within it")
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Explicit planning-only mode; this command never executes runs",
@@ -246,7 +304,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         plan = build_plan(
             args.task_index, polyglot=args.polyglot, quixbugs=args.quixbugs,
-            dataset_set=args.set, limit=args.limit, runs=args.runs,
+            dataset_set=args.set, limit=args.limit, runs=args.runs, shard=args.shard,
         )
         destination = write_manifest(plan, args.output)
     except (OSError, ValueError) as error:
@@ -256,6 +314,15 @@ def main(argv: Sequence[str] | None = None) -> int:
           f"{plan['run_count']} runs")
     print("Tasks by dataset: " + json.dumps(plan["tasks_by_dataset"], sort_keys=True))
     print("Runs by agent: " + json.dumps(plan["runs_by_agent"], sort_keys=True))
+    if plan["shard"] is not None:
+        shard_info = plan["shard"]
+        print(f"Shard {args.shard}: full-plan tasks {shard_info['full_plan_start']}"
+              f"-{shard_info['full_plan_end']}; --limit applies within this shard")
+        if args.limit is not None and plan["task_count"] < shard_info["task_count_before_limit"]:
+            print("Partial shard: not a complete comparable benchmark shard.")
+        if args.runs != 2:
+            print("Nonstandard repeats: not the agreed 2/2/1 benchmark protocol.")
+    print(f"Full-plan identity: {plan['full_plan']['id']}")
     print(f"Manifest: {destination}")
     print("No agents or tests executed; costs are not estimated.")
     return 0

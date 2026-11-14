@@ -22,10 +22,6 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from crocodile.gateway.budget import BudgetManager, Denied
-from crocodile.gateway.prices import PriceTable
-
-
 def naive_worker(
     db_path: str,
     proc_id: int,
@@ -72,6 +68,9 @@ def ours_worker(
     result_queue: mp.Queue,
 ):
     """Simulates Crocodile's atomic reservation pattern (ADR-005)."""
+    from crocodile.gateway.budget import BudgetManager, Denied
+    from crocodile.gateway.prices import PriceTable
+
     pt = PriceTable.from_yaml_file("prices.yaml")
     bm = BudgetManager(db_path, pt, limits={"race_user": limit})
     succeeded = 0
@@ -107,6 +106,9 @@ def ours_worker(
 
 
 def run_race(procs: int = 8, calls: int = 10, limit: float = 0.02, latency: float = 0.05):
+    from crocodile.gateway.budget import BudgetManager
+    from crocodile.gateway.prices import PriceTable
+
     print("=" * 70)
     print(f"CROCODILE BUDGET RACE DEMO ({procs} processes, {calls} calls each, limit ${limit:.4f})")
     print("=" * 70)
@@ -127,7 +129,6 @@ def run_race(procs: int = 8, calls: int = 10, limit: float = 0.02, latency: floa
         ]
 
         print("\n[1/2] Running Naive Check-Then-Record (Peers pattern)...")
-        t0 = time.time()
         for p in naive_processes:
             p.start()
         for p in naive_processes:
