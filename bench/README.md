@@ -1,5 +1,10 @@
 # Benchmark preparation, grading, planning, and offline reporting
 
+The [in-process runner](runner.md) now connects planned Crocodile/all-off attempts
+to the merged Agent and independent grader, with durable resume evidence. Mini
+and authoritative cost attribution remain explicitly incomplete. No live
+benchmark results are supplied. Its opt-in CLI is `python -m bench.run --help`.
+
 This first Person 4 milestone prepares disposable exercise workspaces for the
 future benchmark harness. It copies ordinary files, tests, and empty directories,
 excluding every directory named `.meta` at every depth. The evaluation design

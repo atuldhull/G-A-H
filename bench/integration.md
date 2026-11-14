@@ -112,6 +112,13 @@ calculate_report(plan_path, results_path, logs_path, prices_path, *, seed) -> di
 
 ## Remaining execution blockers
 
+Follow-up: the [runner milestone](runner.md) implements the in-place preparation
+and durable execution/evidence portions of items 1 and 4 below, using the present
+Agent and bench-session APIs. The list records the original inspection findings;
+hard deadlines, gateway fairness, authoritative cost export and mini remain open.
+`populate_workspace(source, existing_empty_destination)` now preserves the pinned
+root, while `prepare_workspace` retains its original new-destination contract.
+
 1. **In-place preparation:** `prepare_workspace` currently rejects an existing
    destination, while `for_bench` requires an existing empty pinned root. Add a
    separately tested in-place preparation mode/adapter under `bench/` before
