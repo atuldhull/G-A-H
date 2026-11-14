@@ -431,6 +431,13 @@ future harness work; do not publish one shard as full-suite coverage.
 See [integration.md](integration.md) for merged API signatures and remaining
 runner gaps. This milestone adds planning only and makes no agent/model calls.
 
+## Team benchmark handoff
+
+See [handoff.md](handoff.md) for the verified four-shard command templates, fixed
+run order, readiness status and required evidence. The actual dataset inputs are
+still missing; [dataset-inputs.md](dataset-inputs.md) lists exactly what is needed.
+Command validation used temporary synthetic tasks, not the real benchmark.
+
 ## Offline benchmark reporting (milestone 4)
 
 `python -m bench.report` validates a complete run plan, JSONL results, a normalized
