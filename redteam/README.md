@@ -83,6 +83,8 @@ passed. An absent canary without a proven attempt is insufficient evidence.
 Use bounded fake consoles/transport observers and retain decisions, transcripts,
 receipts, relevant journal rows and before/after snapshots per case.
 
-The current CI workflow names only `bench/tests` and `crocodile/ui/tests`; this
-red-team suite must currently be invoked with the commands above. Extending CI
-is a later workflow-scoped change. This milestone changes only `redteam/`.
+The Person 4 Windows/Ubuntu CI workflow runs the fixture/inventory framework
+checks separately from the blocked security-case collection. Verbose skipped-case
+entries and `-ra` keep the pending review and missing-interface blockers visible.
+Ruff includes `redteam/`. A green CI job establishes framework checks passed;
+it does not establish that the skipped security cases passed.

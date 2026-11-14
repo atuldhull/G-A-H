@@ -27,15 +27,25 @@ The job sets `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` and `PYTHONDONTWRITEBYTECODE=1`,
 then runs:
 
 ```text
-python -m ruff check --isolated --target-version py312 --select E4,E7,E9,F --no-cache bench crocodile/ui
+python -m ruff check --isolated --target-version py312 --select E4,E7,E9,F --no-cache bench crocodile/ui redteam
 python -m pytest -q -ra -p no:cacheprovider bench/tests crocodile/ui/tests
+python -m pytest -q -ra -p no:cacheprovider redteam/tests/test_framework.py
+python -m pytest -v -ra -p no:cacheprovider redteam/tests/test_security_cases.py
 ```
 
 `--isolated` keeps the lint policy independent of other owners' future root
-configuration. Both implementation and test Python files inside these two
+configuration. Both implementation and test Python files inside these three
 Person 4 directories are linted. Ruff does not auto-fix or modify files.
-The test step also runs after a lint failure, provided dependency installation
-succeeded and the job was not cancelled; neither check is allowed to fail quietly.
+Each test step also runs after an earlier check fails, provided dependency
+installation succeeded and the job was not cancelled; failures remain job failures.
+
+The separate red-team framework step validates synthetic fixture construction,
+all 15 architecture groups/20 named IDs, dependency metadata and the inventory JSON
+output. The security-case step lists all 15 groups with verbose SKIPPED entries
+and full blocker reasons from `-ra`. These cases are not executed or security
+passes: Person 3 expected-outcome review and live owner adapters remain pending.
+The workflow does not remove skip marks or enable live assertions. No additional
+dependencies are needed for these checks.
 
 Only the named synthetic test directories are collected. Grader unit tests run
 pytest in tiny test-created temporary exercises to validate grading behavior;
