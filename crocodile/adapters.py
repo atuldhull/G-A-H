@@ -148,9 +148,20 @@ class SecurityBridge:
             self.sessions[s.id] = self.approvals.ApprovalSession(repo_root=Path(s.repo), mode=s.mode)
         return self.sessions[s.id]
 
+    def bind_session(self, s: Session, p3_session: Any) -> None:
+        """Use a harness-made Part 3 session (e.g. ApprovalSession.for_bench) for this agent session."""
+        if Path(p3_session.repo_root).resolve() != Path(s.repo).resolve():
+            raise ValueError("security session repo_root does not match the agent repo")
+        self.sessions[s.id] = p3_session
+
+    def _official_bench(self, s: Session) -> bool:
+        p3s = self.sessions.get(s.id)
+        return bool(p3s is not None and getattr(p3s, "bench_auto", False))
+
     # approvals -------------------------------------------------------------
     def ask(self, action: Action, session: Session) -> Decision:
-        if session.approve_mode == "auto":      # bench sandbox only (CLI --yes, throwaway copies)
+        if session.approve_mode == "auto" and not self._official_bench(session):
+            # CLI --yes on a throwaway copy, without Part 3's bench session: plain runner, logged.
             if action.argv:
                 self.auto_argv.add(tuple(action.argv))
             return Decision(True, "auto (bench sandbox; Part 3 console approvals bypassed)")

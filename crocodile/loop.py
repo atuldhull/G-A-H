@@ -166,7 +166,9 @@ def _close_braces(text: str, i: int):
 class Agent:
     def __init__(self, repo: Path, task: str, *, oracle: list[str] | None = None, full_suite: bool = False,
                  flags: set[str] | None = None, tier: str = "cheap", approve_mode: str = "ask",
-                 step_cap: int = STEP_CAP, user: str = "default", on_event=None):
+                 step_cap: int = STEP_CAP, user: str = "default", on_event=None,
+                 security_session=None):
+        """security_session: a Part 3 ApprovalSession made by a trusted harness (e.g. for_bench)."""
         repo = repo.resolve()
         sid = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
         sdir = state_root() / sid
@@ -174,6 +176,11 @@ class Agent:
         mode = services.get("confidential").mode_for(repo)
         self.s = Session(id=sid, repo=repo, mode=mode, user=user, approve_mode=approve_mode,  # type: ignore[arg-type]
                          flags=set(ALL_FLAGS if flags is None else flags), state_dir=sdir)
+        if security_session is not None:
+            bridge = services.get("approvals")
+            if not hasattr(bridge, "bind_session"):
+                raise RuntimeError("security_session given but Part 3 security is not installed")
+            bridge.bind_session(self.s, security_session)
         self.ctx = RunCtx(self.s, Spill(sdir), ReadCache(), Thrash())
         self.ctx.tests = TestRunner(self.ctx, oracle)
         if full_suite:
