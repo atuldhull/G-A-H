@@ -31,7 +31,7 @@ def naive_worker(
     mock_latency: float,
     result_queue: mp.Queue,
 ):
-    """Simulates naive check-then-record pattern used by peers (Gidorah, StaleGuard)."""
+    """Simulates the naive check-then-record budget pattern (check usage, call, then record)."""
     succeeded = 0
     denied = 0
 
