@@ -25,7 +25,7 @@ crocodile = "crocodile.cli:app"
 crock = "crocodile.cli:app"
 
 [tool.setuptools.packages.find]
-include = ["crocodile*"]
+include = ["crocodile*", "redteam"]
 
 [tool.ruff]
 line-length = 110

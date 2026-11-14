@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class Match:
-    start: int        # line index (inclusive)
-    end: int          # line index (exclusive)
+    start: int  # line index (inclusive)
+    end: int  # line index (exclusive)
     stage: str
     score: float = 1.0
     indent_delta: str = ""
@@ -30,7 +30,7 @@ class NoMatch(Exception):
 
 def _find_all(hay: list[str], needle: list[str]) -> list[int]:
     n = len(needle)
-    return [i for i in range(len(hay) - n + 1) if hay[i:i + n] == needle]
+    return [i for i in range(len(hay) - n + 1) if hay[i : i + n] == needle]
 
 
 def _indent(s: str) -> str:
@@ -43,10 +43,10 @@ def _ws_match(hay: list[str], needle: list[str]) -> list[tuple[int, str]]:
     stripped = [x.strip() for x in needle]
     out = []
     for i in range(len(hay) - n + 1):
-        if [x.strip() for x in hay[i:i + n]] != stripped:
+        if [x.strip() for x in hay[i : i + n]] != stripped:
             continue
         deltas = set()
-        for h, s in zip(hay[i:i + n], needle, strict=True):
+        for h, s in zip(hay[i : i + n], needle, strict=True):
             if s.strip():
                 hi, si = _indent(h), _indent(s)
                 if hi.endswith(si):
@@ -114,14 +114,14 @@ def locate(content: str, search: str) -> Match:
         if size <= 0:
             continue
         for i in range(max(0, len(hay) - size) + 1):
-            r = difflib.SequenceMatcher(None, "\n".join(hay[i:i + size]), target, autojunk=False)
+            r = difflib.SequenceMatcher(None, "\n".join(hay[i : i + size]), target, autojunk=False)
             if r.real_quick_ratio() < 0.6 or r.quick_ratio() < 0.6:
                 continue
             scored.append((r.ratio(), i, size))
     good = [s for s in scored if s[0] >= 0.9]
     if good:
         sc, i, sz = max(good)
-        rivals = [g for g in good if g[1] + g[2] <= i or g[1] >= i + sz]   # non-overlapping candidates
+        rivals = [g for g in good if g[1] + g[2] <= i or g[1] >= i + sz]  # non-overlapping candidates
         if not rivals:
             return Match(i, i + sz, "fuzzy", score=round(sc, 2))
     # 6 did you mean
@@ -130,8 +130,10 @@ def locate(content: str, search: str) -> Match:
         _, i, sz = best
         lo, hi = max(0, i - 5), min(len(hay), i + sz + 5)
         snippet = "\n".join(f"{k + 1:>5}| {hay[k]}" for k in range(lo, hi))
-        raise NoMatch(f"SEARCH not found. Did you mean lines {i + 1}-{i + sz}?\n{snippet}\n"
-                      "Resend only this block with SEARCH copied exactly.")
+        raise NoMatch(
+            f"SEARCH not found. Did you mean lines {i + 1}-{i + sz}?\n{snippet}\n"
+            "Resend only this block with SEARCH copied exactly."
+        )
     raise NoMatch("SEARCH not found and nothing similar. read() the file and copy the lines exactly.")
 
 
@@ -145,26 +147,28 @@ def apply_edit(content: str, search: str, replace: str) -> tuple[str, Match]:
         # REPLACE at the file's indentation, adding the delta again would double-indent it.
         def min_indent(xs: list[str]) -> int:
             return min((len(x) - len(x.lstrip()) for x in xs if x.strip()), default=0)
-        if min_indent(rep) < min_indent(lines[m.start:m.end]):
+
+        if min_indent(rep) < min_indent(lines[m.start : m.end]):
             rep = [m.indent_delta + x if x.strip() else x for x in rep]
     nl = "\r\n" if "\r\n" in content else "\n"
     trailing = content.endswith(("\n", "\r\n"))
-    new = nl.join(lines[: m.start] + rep + lines[m.end:])
+    new = nl.join(lines[: m.start] + rep + lines[m.end :])
     return (new + nl if trailing or not content else new), m
 
 
 # ---------- the tool ----------
 
+
 def edit_tool(args: dict, ctx) -> Result:
     from .. import services
     from ..agent_types import Action
-    from .base import Result, ToolError, rel, resolve_in_repo
+    from .base import Result, ToolError, rel, secure_path
 
     path = str(args.get("path", ""))
     edits = args.get("edits") or []
     if not isinstance(edits, list) or not edits:
         raise ToolError("edits must be a non-empty list of {search, replace}")
-    p = resolve_in_repo(path, ctx.root, for_write=True)
+    p = secure_path(path, ctx, for_write=True)
     r = rel(p, ctx.root) if p.exists() else p.relative_to(ctx.root.resolve()).as_posix()
     exists = p.is_file()
     if not exists and not (len(edits) == 1 and not str(edits[0].get("search", "")).strip()):
@@ -173,50 +177,82 @@ def edit_tool(args: dict, ctx) -> Result:
         cur = p.read_text(encoding="utf-8", errors="replace")
         ctx.shown_paths.add(r)
         if len(cur) <= 6000:
-            raise ToolError(f"{r} was not read yet, so nothing was changed. Current content:\n{cur}\n"
-                            "Resend the edit with SEARCH copied exactly from this content.")
+            raise ToolError(
+                f"{r} was not read yet, so nothing was changed. Current content:\n{cur}\n"
+                "Resend the edit with SEARCH copied exactly from this content."
+            )
         raise ToolError(f"read('{r}') before editing it, so SEARCH matches what is on disk")
-    old = p.read_text(encoding="utf-8", errors="replace") if exists else ""
+    old = p.read_bytes().decode("utf-8") if exists else ""
     new = old
     notes, failed = [], []
+    applied = []
     if not exists:
         new = str(edits[0].get("replace", ""))
         if new and not new.endswith("\n"):
             new += "\n"
         notes.append("created")
+        applied.append(new)
     else:
         for k, e in enumerate(edits, 1):
             s, rp = str(e.get("search", "")), str(e.get("replace", ""))
             ctx.thrash.record_edit(r, s, rp)
             try:
                 new, m = apply_edit(new, s, rp)
+                applied.append(rp)
                 if m.stage != "exact":
-                    notes.append(f"block {k}: {m.stage} match" + (f" {m.score}" if m.stage == "fuzzy" else ""))
+                    notes.append(
+                        f"block {k}: {m.stage} match" + (f" {m.score}" if m.stage == "fuzzy" else "")
+                    )
             except NoMatch as err:
                 if rp.strip() and rp.strip() in new:
-                    failed.append(f"block {k}: already applied (REPLACE text is in the file); "
-                                  "do not resend it, move to the next change")
+                    failed.append(
+                        f"block {k}: already applied (REPLACE text is in the file); "
+                        "do not resend it, move to the next change"
+                    )
                 else:
                     failed.append(f"block {k}: {err}")
     if new == old:
         return Result("no change applied.\n" + "\n".join(failed), ok=False)
-    diff = "\n".join(difflib.unified_diff(old.splitlines(), new.splitlines(), f"a/{r}", f"b/{r}",
-                                          lineterm="", n=2))
-    is_test = r in ctx.oracle_files or p.name == "conftest.py" or p.name.startswith("test_") \
+    diff = "\n".join(
+        difflib.unified_diff(old.splitlines(), new.splitlines(), f"a/{r}", f"b/{r}", lineterm="", n=2)
+    )
+    is_test = (
+        r in ctx.oracle_files
+        or p.name == "conftest.py"
+        or p.name.startswith("test_")
         or p.stem.endswith("_test")
+    )
     level = "red" if is_test else "amber"
     reasons = ["modifies the success criterion (test/conftest)"] if is_test else []
-    d = services.get("approvals").ask(Action(kind="write", summary=f"edit {r}", diff=diff, level=level, paths=[r],
-                                             reasons=reasons + notes), ctx.session)
-    services.get("journal").append(ctx.session, "approval", {"kind": "write", "path": r,
-                                                             "approved": d.approved, "level": level})
+    d = services.get("approvals").ask(
+        Action(
+            kind="write",
+            summary=f"edit {r}",
+            diff=diff,
+            level=level,
+            paths=[r],
+            reasons=reasons + notes,
+            replacements=applied,
+            changes={r: new.encode("utf-8")},
+        ),
+        ctx.session,
+    )
+    services.get("journal").append(
+        ctx.session, "approval", {"kind": "write", "path": r, "approved": d.approved, "level": level}
+    )
     if not d.approved:
         return Result(f"user declined the edit to {r}", ok=False)
     if ctx.on_before_write is not None:
         ctx.on_before_write(r, old if exists else None)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with open(p, "w", encoding="utf-8", newline="") as f:
-        f.write(new)
+    action = Action(
+        kind="write",
+        summary=f"edit {r}",
+        diff=diff,
+        paths=[r],
+        replacements=applied,
+        changes={r: new.encode("utf-8")},
+    )
+    checkpoint = services.get("approvals").apply_write(action, d, ctx.session, call_id=ctx.call_id)
     ctx.readcache.invalidate(r)
     ctx.shown_paths.add(r)
     ctx.touched.add(r)
@@ -229,7 +265,7 @@ def edit_tool(args: dict, ctx) -> Result:
         msg += "; " + "; ".join(notes)
     if failed:
         msg += "\nFAILED blocks (resend only these):\n" + "\n".join(failed)
-    return Result(msg, ok=not failed)
+    return Result(msg, ok=not failed, edit_id=checkpoint)
 
 
 WRITE_MAX_LINES = 200
@@ -239,15 +275,15 @@ def write_tool(args: dict, ctx) -> Result:
     """Whole-file write for small files (weak models handle this far better than SEARCH/REPLACE)."""
     from .. import services
     from ..agent_types import Action
-    from .base import Result, ToolError, resolve_in_repo
+    from .base import Result, ToolError, secure_path
 
     path = str(args.get("path", ""))
     content = args.get("content")
     if not isinstance(content, str):
         raise ToolError("content must be the full new file text")
-    p = resolve_in_repo(path, ctx.root, for_write=True)
+    p = secure_path(path, ctx, for_write=True)
     r = p.relative_to(ctx.root.resolve()).as_posix()
-    old = p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
+    old = p.read_bytes().decode("utf-8") if p.is_file() else ""
     if old.count("\n") > WRITE_MAX_LINES:
         raise ToolError(f"{r} has more than {WRITE_MAX_LINES} lines; use edit with SEARCH/REPLACE")
     if content and not content.endswith("\n"):
@@ -257,29 +293,78 @@ def write_tool(args: dict, ctx) -> Result:
     if content == old:
         last = ctx.tests.last if ctx.tests is not None else None
         why = f"\nIt still fails:\n{last.failure_text[:1500]}" if last is not None and last.failed else ""
-        return Result(f"no change: {r} already has exactly this content. Sending it again will not help; "
-                      f"change the logic that the failing test exercises.{why}", ok=False)
+        return Result(
+            f"no change: {r} already has exactly this content. Sending it again will not help; "
+            f"change the logic that the failing test exercises.{why}",
+            ok=False,
+        )
     ctx.thrash.record_edit(r, "<write>", content)
-    diff = "\n".join(difflib.unified_diff(old.splitlines(), content.splitlines(), f"a/{r}", f"b/{r}",
-                                          lineterm="", n=2))
-    is_test = r in ctx.oracle_files or p.name == "conftest.py" or p.name.startswith("test_") \
+    diff = "\n".join(
+        difflib.unified_diff(old.splitlines(), content.splitlines(), f"a/{r}", f"b/{r}", lineterm="", n=2)
+    )
+    is_test = (
+        r in ctx.oracle_files
+        or p.name == "conftest.py"
+        or p.name.startswith("test_")
         or p.stem.endswith("_test")
+    )
     level = "red" if is_test else "amber"
-    d = services.get("approvals").ask(Action(kind="write", summary=f"write {r}", diff=diff, level=level, paths=[r],
-                                             reasons=["modifies the success criterion (test/conftest)"]
-                                             if is_test else []), ctx.session)
-    services.get("journal").append(ctx.session, "approval", {"kind": "write", "path": r,
-                                                             "approved": d.approved, "level": level})
+    d = services.get("approvals").ask(
+        Action(
+            kind="write",
+            summary=f"write {r}",
+            diff=diff,
+            level=level,
+            paths=[r],
+            reasons=["modifies the success criterion (test/conftest)"] if is_test else [],
+            replacements=[content],
+            changes={r: content.encode("utf-8")},
+        ),
+        ctx.session,
+    )
+    services.get("journal").append(
+        ctx.session, "approval", {"kind": "write", "path": r, "approved": d.approved, "level": level}
+    )
     if not d.approved:
         return Result(f"user declined the write to {r}", ok=False)
     if ctx.on_before_write is not None:
         ctx.on_before_write(r, old if p.is_file() else None)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with open(p, "w", encoding="utf-8", newline="") as f:
-        f.write(content)
+    action = Action(
+        kind="write",
+        summary=f"write {r}",
+        diff=diff,
+        paths=[r],
+        replacements=[content],
+        changes={r: content.encode("utf-8")},
+    )
+    checkpoint = services.get("approvals").apply_write(action, d, ctx.session, call_id=ctx.call_id)
     ctx.readcache.invalidate(r)
     ctx.shown_paths.add(r)
     ctx.touched.add(r)
     if is_test and r in ctx.oracle_files:
         ctx.session.flags.add("_oracle_modified")
-    return Result(f"wrote {r} ({content.count(chr(10))} lines)")
+    return Result(f"wrote {r} ({content.count(chr(10))} lines)", edit_id=checkpoint)
+
+
+def delete_tool(args: dict, ctx) -> Result:
+    from .. import services
+    from ..agent_types import Action
+    from .base import Result, ToolError, secure_path
+
+    path = secure_path(str(args.get("path", "")), ctx, for_write=True)
+    relative = path.relative_to(ctx.root).as_posix()
+    if not path.is_file() or relative not in ctx.shown_paths:
+        raise ToolError("read the regular file before deleting it")
+    old = path.read_bytes().decode("utf-8")
+    diff = "\n".join(difflib.unified_diff(old.splitlines(), [], f"a/{relative}", "/dev/null", lineterm=""))
+    action = Action("write", f"delete {relative}", diff=diff, paths=[relative], changes={relative: None})
+    bridge = services.get("approvals")
+    decision = bridge.ask(action, ctx.session)
+    if not decision.approved:
+        return Result("user declined deletion", ok=False)
+    if ctx.on_before_write is not None:
+        ctx.on_before_write(relative, old)
+    checkpoint = bridge.apply_write(action, decision, ctx.session, call_id=ctx.call_id)
+    ctx.readcache.invalidate(relative)
+    ctx.touched.add(relative)
+    return Result(f"deleted {relative}", edit_id=checkpoint)

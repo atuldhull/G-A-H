@@ -71,6 +71,6 @@ def test_preload_follows_test_imports(tmp_path, monkeypatch):
                                   "edits": [{"search": "return a - b", "replace": "return a + b"}]})]])
     services.reset()
     services.override("egress", fake)
-    res = Agent(r, "Fix add.", oracle=["tests/test_mathx.py"], approve_mode="auto").run()
+    res = Agent(r, "Fix add.", oracle=["tests/test_mathx.py"], approve_mode="ask").run()
     services.reset()
     assert res.solved and len(fake.calls) == 1          # no search/read turns: the import pointed at it

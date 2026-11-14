@@ -1,0 +1,25 @@
+Crocodile
+Copyright (c) 2026 The Crocodile team. Licensed under the MIT License (see LICENSE).
+
+No third-party source code is copied into this repository. The following open-source
+projects informed designs that were re-implemented independently; they are credited here.
+
+Ideas re-implemented (no code copied)
+- LiteLLM (MIT): reserve-at-maximum, reconcile, cancel budget reservation pattern.
+- Aider (Apache-2.0): staged SEARCH/REPLACE edit matching.
+- SWE-agent (MIT): batched masking of old tool output.
+- Gemini CLI (Apache-2.0): tail-biased output truncation with spill, command-safety facts.
+- Codex CLI (Apache-2.0): protected file names and git option denials (as facts).
+- Roo Code (Apache-2.0) and OpenCode (MIT): hardened shadow-git configuration for undo.
+
+Used, not modified or redistributed
+- Bifrost by Maxim AI (Apache-2.0): AI gateway, run as a pinned v2.5.1 binary.
+- Tavily API: web documentation search.
+- mini-swe-agent (MIT): baseline agent for the benchmark only; never imported.
+
+Benchmark datasets (downloaded at run time, not redistributed)
+- Aider polyglot-benchmark (Exercism exercises, MIT).
+- QuixBugs (MIT).
+
+Python dependencies are listed in pyproject.toml under their own licences
+(httpx BSD-3-Clause; typer, rich, pyyaml, pydantic, keyring, pytest, ruff, matplotlib, tiktoken MIT or similar).

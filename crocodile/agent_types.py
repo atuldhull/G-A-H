@@ -24,18 +24,28 @@ ActionKind = Literal["write", "shell", "git", "test_consent", "network"]
 
 # Journal event names (owner: Part 2). Payloads are plain JSON dicts.
 EVENTS = (
-    "session_start", "model_call", "tool_started", "tool_done", "approval",
-    "takeover", "budget_warn", "budget_stop", "escalate", "green", "session_end",
+    "session_start",
+    "model_call",
+    "tool_started",
+    "tool_done",
+    "approval",
+    "takeover",
+    "budget_warn",
+    "budget_stop",
+    "escalate",
+    "green",
+    "session_end",
 )
 
 
 # ---------- model calls (Part 2 implements, Part 1 calls) ----------
 
+
 @dataclass
 class Usage:
-    prompt_tokens: int = 0          # includes cached tokens (Bifrost/OpenAI convention)
+    prompt_tokens: int = 0  # includes cached tokens (Bifrost/OpenAI convention)
     completion_tokens: int = 0
-    cached_tokens: int = 0          # subset of prompt_tokens served from cache
+    cached_tokens: int = 0  # subset of prompt_tokens served from cache
 
     def add(self, other: Usage) -> None:
         self.prompt_tokens += other.prompt_tokens
@@ -57,8 +67,8 @@ class ChatResult:
     usage: Usage
     model_used: str
     is_fallback: bool = False
-    error_class: str | None = None   # error class of the primary when a fallback answered
-    cost_usd: float | None = None    # filled by Part 2 when known
+    error_class: str | None = None  # error class of the primary when a fallback answered
+    cost_usd: float | None = None  # filled by Part 2 when known
     finish_reason: str | None = None
 
 
@@ -72,23 +82,27 @@ class BudgetStop(Exception):
 
 # ---------- approvals and commands (Part 3 implements, Part 1 calls) ----------
 
+
 @dataclass
 class Action:
     kind: ActionKind
-    summary: str                         # one line, shown as the panel title
-    argv: list[str] | None = None        # for shell/git/test_consent
-    diff: str | None = None              # for write
-    source: str | None = None            # "README.md:40" when repo text suggested it (provenance-lite)
+    summary: str  # one line, shown as the panel title
+    argv: list[str] | None = None  # for shell/git/test_consent
+    diff: str | None = None  # for write
+    source: str | None = None  # "README.md:40" when repo text suggested it (provenance-lite)
     level: Level = "amber"
     reasons: list[str] = field(default_factory=list)
-    paths: list[str] = field(default_factory=list)   # repo-relative files a write touches
-    query: str | None = None                          # network: the outbound search text
+    paths: list[str] = field(default_factory=list)  # repo-relative files a write touches
+    query: str | None = None  # network: the outbound search text
+    replacements: list[str] = field(default_factory=list)
+    changes: dict[str, bytes | None] = field(default_factory=dict, repr=False)
 
 
 @dataclass
 class Decision:
     approved: bool
     reason: str = ""
+    permit: Any = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -103,20 +117,31 @@ class CmdResult:
 
 # ---------- session (Part 1 owns; read by everyone) ----------
 
+
 @dataclass
 class Session:
     id: str
     repo: Path
     mode: Mode
     user: str = "default"
-    approve_mode: Literal["ask", "auto"] = "ask"   # "auto" only via the bench CLI flag, never from the model
+    approve_mode: Literal["ask", "auto"] = "ask"  # "auto" only via the bench CLI flag, never from the model
     flags: set[str] = field(default_factory=set)
-    state_dir: Path | None = None                  # per-session scratch: spill files, journal
+    state_dir: Path | None = None  # per-session scratch: spill files, journal
+    security: Any = field(default=None, repr=False)
+    original_task: str = ""
 
 
 class EgressAPI(Protocol):
-    def chat(self, messages: list[dict], tools: list[dict], *, session: Session, tier: Tier,
-             max_tokens: int = 4096, temperature: float = 0.0) -> ChatResult: ...
+    def chat(
+        self,
+        messages: list[dict],
+        tools: list[dict],
+        *,
+        session: Session,
+        tier: Tier,
+        max_tokens: int = 4096,
+        temperature: float = 0.0,
+    ) -> ChatResult: ...
 
     def web_search(self, query: str, *, session: Session) -> dict: ...
 
@@ -131,7 +156,9 @@ class ApprovalsAPI(Protocol):
 
 
 class CmdAPI(Protocol):
-    def run(self, argv: list[str], cwd: Path, *, timeout: int = 120) -> CmdResult: ...
+    def run(
+        self, argv: list[str], cwd: Path, *, timeout: int = 120, session: Session | None = None
+    ) -> CmdResult: ...
 
 
 class ConfidentialAPI(Protocol):

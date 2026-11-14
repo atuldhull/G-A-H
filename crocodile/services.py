@@ -1,12 +1,7 @@
-"""Resolves each service the loop uses to the real part (via crocodile.adapters) or a stub.
+"""Bind the agent to the budgeted gateway and initialized Part 3 security bridge.
 
-- egress:       Part 2 gateway (Bifrost) when installed; the direct-provider stub when
-                CROCODILE_API_KEY_ENV is set (dev testing) or the gateway is absent.
-- journal:      Part 2 EventJournal (+ JSONL), else JSONL only.
-- approvals/cmd: Part 3 security bridge (one shared object), else console/subprocess stubs.
-- confidential: Part 3 mode_for, else always "public".
-
-Tests and the bench can override any service with `services.override(name, impl)`.
+Missing execution/egress implementations fail closed. Trusted fixture and harness
+code can inject services; repository text and model arguments cannot choose them.
 """
 
 from __future__ import annotations
@@ -31,8 +26,10 @@ def _build(name: str) -> Any:
     from . import adapters
 
     if name == "egress":
-        if os.environ.get("CROCODILE_API_KEY_ENV") or not _has("crocodile.gateway.egress"):
-            return _stubs.StubEgress()
+        if os.environ.get("CROCODILE_API_KEY_ENV"):
+            raise RuntimeError("direct-provider fallback is disabled; use the budgeted gateway")
+        if not _has("crocodile.gateway.egress"):
+            raise RuntimeError("gateway implementation is required")
         return adapters.GatewayEgress()
     if name == "journal":
         return adapters.GatewayJournal() if _has("crocodile.gateway.journal") else _stubs.StubJournal()
@@ -41,10 +38,13 @@ def _build(name: str) -> Any:
             bridge = _cache.get("_security") or adapters.SecurityBridge()
             _cache["_security"] = bridge
             return bridge
-        return _stubs.StubApprovals() if name == "approvals" else _stubs.StubCmd()
+        raise RuntimeError("Part 3 security implementation is required")
     if name == "confidential":
-        return adapters.SecurityConfidential() if _has("crocodile.security.confidential") \
+        return (
+            adapters.SecurityConfidential()
+            if _has("crocodile.security.confidential")
             else _stubs.StubConfidential()
+        )
     raise KeyError(name)
 
 
@@ -59,13 +59,11 @@ def is_stub(name: str) -> bool:
 
 
 def git_read(op: str, session) -> Any:
-    """Read-only git (status/diff/log): Part 3 fixed templates when present, else a hardened argv."""
+    """Read-only Git must use Part 3's audited fixed templates."""
     impl = get("cmd")
     if hasattr(impl, "git_read"):
         return impl.git_read(op, session)
-    from .tools.cmd import _GIT_READ
-    argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=", "--no-pager", *_GIT_READ[op]]
-    return impl.run(argv, session.repo, timeout=30)
+    raise RuntimeError("the audited Git implementation is required")
 
 
 def override(name: str, impl: Any) -> None:
@@ -74,3 +72,10 @@ def override(name: str, impl: Any) -> None:
 
 def reset() -> None:
     _cache.clear()
+
+
+def security(session):
+    if session.security is None:
+        raise RuntimeError("security context was not initialized")
+    session.security.check(session)
+    return session.security

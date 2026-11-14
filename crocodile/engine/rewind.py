@@ -21,17 +21,18 @@ NOTE_DIFF_LINES = 40
 
 @dataclass
 class Checkpoint:
-    hist_len: int | None          # history length to cut back to (None until the first edit turn)
-    score: int                    # oracle tests passing at this checkpoint (-1 = unknown/broken)
-    files: dict[str, str | None] = field(default_factory=dict)   # original content (None = did not exist)
+    hist_len: int | None  # history length to cut back to (None until the first edit turn)
+    score: int  # oracle tests passing at this checkpoint (-1 = unknown/broken)
+    files: dict[str, str | None] = field(default_factory=dict)  # original content (None = did not exist)
 
 
 class Rewinder:
-    def __init__(self, root: Path, score: int):
+    def __init__(self, root: Path, score: int, *, restore_files=None):
         self.root = root
         self.cp = Checkpoint(None, score)
         self.rewinds = 0
         self.commits = 0
+        self.restore_files = restore_files
 
     def before_write(self, rel: str, old: str | None) -> None:
         """Called by edit/write before touching a file: remember its content at the checkpoint."""
@@ -57,22 +58,18 @@ class Rewinder:
         for rel, old in sorted(self.cp.files.items()):
             p = self.root / rel
             new = p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
-            out += difflib.unified_diff((old or "").splitlines(), new.splitlines(), f"a/{rel}", f"b/{rel}",
-                                        lineterm="", n=1)
+            out += difflib.unified_diff(
+                (old or "").splitlines(), new.splitlines(), f"a/{rel}", f"b/{rel}", lineterm="", n=1
+            )
         if len(out) > NOTE_DIFF_LINES:
             out = out[:NOTE_DIFF_LINES] + [f"... [{len(out) - NOTE_DIFF_LINES} more diff lines]"]
         return "\n".join(out)
 
     def restore(self) -> list[str]:
         """Put every touched file back to its checkpoint content. Returns the restored paths."""
-        for rel, old in self.cp.files.items():
-            p = self.root / rel
-            if old is None:
-                p.unlink(missing_ok=True)
-            else:
-                with open(p, "w", encoding="utf-8", newline="") as f:
-                    f.write(old)
-        restored = sorted(self.cp.files)
+        if self.restore_files is None:
+            raise PermissionError("checkpoint restoration requires the security write handler")
+        restored = self.restore_files(self.cp.files)
         self.cp.files = {}
         self.rewinds += 1
         return restored

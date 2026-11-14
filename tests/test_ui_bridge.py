@@ -36,11 +36,13 @@ def test_no_tests_says_tests_not_run(tmp_path, monkeypatch):
     from crocodile import services
     from crocodile.loop import Agent
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
-    (tmp_path / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
     services.reset()
     services.override("egress", FakeEgress([[("finish", {"summary": "x"})], [("finish", {"summary": "x"})],
                                             [("finish", {"summary": "x"})]]))
-    a = Agent(tmp_path, "Fix add.", approve_mode="auto")
+    a = Agent(root, "Fix add.", approve_mode="ask")
     a.run()
     services.reset()
     assert render_receipt(ui_bridge.receipt(a)).startswith("TESTS NOT RUN")

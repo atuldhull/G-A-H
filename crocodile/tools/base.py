@@ -11,8 +11,24 @@ from ..engine.gate import Spill
 from ..engine.readcache import ReadCache
 from ..engine.thrash import Thrash
 
-SKIP_DIRS = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", ".mypy_cache",
-             ".pytest_cache", ".ruff_cache", ".tox", "dist", "build", ".crocodile", ".idea", ".vscode"}
+SKIP_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    "dist",
+    "build",
+    ".crocodile",
+    ".idea",
+    ".vscode",
+}
 
 
 class ToolError(Exception):
@@ -26,7 +42,8 @@ class Result:
     spill: str | None = None
     exit: int | None = None
     tokens_avoided: int = 0
-    read_key: tuple[str, tuple[int, int], str] | None = None   # (path, window, text) for the read cache
+    read_key: tuple[str, tuple[int, int], str] | None = None  # (path, window, text) for the read cache
+    edit_id: str | None = None
 
 
 @dataclass
@@ -38,10 +55,11 @@ class RunCtx:
     turn: int = 0
     masked: set[int] = field(default_factory=set)
     touched: set[str] = field(default_factory=set)
-    shown_paths: set[str] = field(default_factory=set)   # files read() has shown (edit locality rule)
+    shown_paths: set[str] = field(default_factory=set)  # files read() has shown (edit locality rule)
     oracle_files: set[str] = field(default_factory=set)  # test files frozen at start: edits are red
-    tests: Any = None                                    # tools.tests.TestRunner
-    on_before_write: Any = None                          # (rel, old_content|None) -> None; rewind hook
+    tests: Any = None  # tools.tests.TestRunner
+    on_before_write: Any = None  # (rel, old_content|None) -> None; rewind hook
+    call_id: str = "tool"
 
     @property
     def root(self) -> Path:
@@ -71,38 +89,120 @@ def rel(p: Path, root: Path) -> str:
     return p.resolve().relative_to(root.resolve()).as_posix()
 
 
+def secure_path(raw: str, ctx: RunCtx, *, for_write=False):
+    from .. import services
+    from ..security.paths import resolve_in_repo as validate
+
+    context = services.security(ctx.session)
+    from ..security.classification import ClassificationError
+
+    try:
+        path = validate(
+            raw, ctx.root, for_write=for_write, mode=ctx.session.mode, store=context.p3.confidentiality.store
+        )
+        context.p3.confidentiality.guard(path, root=ctx.root, mode=ctx.session.mode)
+    except (ValueError, ClassificationError) as error:
+        raise ToolError(str(error)) from error
+    return path
+
+
+def observe_file(ctx: RunCtx, text: str, path: str, line: int):
+    from .. import services
+    from ..security.provenance import Source
+
+    return services.security(ctx.session).observe(text, Source("file", path, line))
+
+
 def _fn(name: str, desc: str, props: dict, required: list[str]) -> dict:
-    return {"type": "function", "function": {
-        "name": name, "description": desc,
-        "parameters": {"type": "object", "properties": props, "required": required,
-                       "additionalProperties": False}}}
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": desc,
+            "parameters": {
+                "type": "object",
+                "properties": props,
+                "required": required,
+                "additionalProperties": False,
+            },
+        },
+    }
 
 
 # Frozen and sorted by name: part of the cache-stable prefix. Keep descriptions terse.
-SCHEMAS: list[dict] = sorted([
-    _fn("edit", "Edit a file with SEARCH/REPLACE blocks. SEARCH must copy existing lines exactly "
-        "(<=60 lines, unique). Empty search + new path creates the file.",
-        {"path": {"type": "string"},
-         "edits": {"type": "array", "items": {"type": "object", "properties": {
-             "search": {"type": "string"}, "replace": {"type": "string"}},
-             "required": ["search", "replace"]}}},
-        ["path", "edits"]),
-    _fn("finish", "Stop. Use when the task is done or impossible. Tests are checked automatically.",
-        {"summary": {"type": "string"}}, ["summary"]),
-    _fn("git", "Read-only git: status, diff or log.",
-        {"op": {"type": "string", "enum": ["status", "diff", "log"]}}, ["op"]),
-    _fn("list", "List files under a directory.",
-        {"path": {"type": "string"}, "depth": {"type": "integer"}}, []),
-    _fn("read", "Read a file (or a spill handle like out:3). Optional 1-based line range.",
-        {"path": {"type": "string"}, "start": {"type": "integer"}, "end": {"type": "integer"}},
-        ["path"]),
-    _fn("run_cmd", "Run one command as an argv list (no shell). Needs user approval.",
-        {"argv": {"type": "array", "items": {"type": "string"}}}, ["argv"]),
-    _fn("run_tests", "Run pytest. Optional test ids or files; default: the task's tests.",
-        {"ids": {"type": "array", "items": {"type": "string"}}}, []),
-    _fn("write", "Replace a whole file (<=200 lines) or create one. Send the complete new content.",
-        {"path": {"type": "string"}, "content": {"type": "string"}}, ["path", "content"]),
-    _fn("search", "Regex search in repo files. Returns file:line: text.",
-        {"pattern": {"type": "string"}, "path": {"type": "string"}, "glob": {"type": "string"}},
-        ["pattern"]),
-], key=lambda s: s["function"]["name"])
+SCHEMAS: list[dict] = sorted(
+    [
+        _fn(
+            "edit",
+            "Edit a file with SEARCH/REPLACE blocks. SEARCH must copy existing lines exactly "
+            "(<=60 lines, unique). Empty search + new path creates the file.",
+            {
+                "path": {"type": "string"},
+                "edits": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"search": {"type": "string"}, "replace": {"type": "string"}},
+                        "required": ["search", "replace"],
+                    },
+                },
+            },
+            ["path", "edits"],
+        ),
+        _fn(
+            "finish",
+            "Stop. Use when the task is done or impossible. Tests are checked automatically.",
+            {"summary": {"type": "string"}},
+            ["summary"],
+        ),
+        _fn(
+            "git",
+            "Read-only git: status, diff or log.",
+            {"op": {"type": "string", "enum": ["status", "diff", "log"]}},
+            ["op"],
+        ),
+        _fn(
+            "list",
+            "List files under a directory.",
+            {"path": {"type": "string"}, "depth": {"type": "integer"}},
+            [],
+        ),
+        _fn(
+            "read",
+            "Read a file (or a spill handle like out:3). Optional 1-based line range.",
+            {"path": {"type": "string"}, "start": {"type": "integer"}, "end": {"type": "integer"}},
+            ["path"],
+        ),
+        _fn(
+            "run_cmd",
+            "Run one command as an argv list (no shell). Needs user approval.",
+            {"argv": {"type": "array", "items": {"type": "string"}}},
+            ["argv"],
+        ),
+        _fn(
+            "run_tests",
+            "Run pytest. Optional test ids or files; default: the task's tests.",
+            {"ids": {"type": "array", "items": {"type": "string"}}},
+            [],
+        ),
+        _fn(
+            "write",
+            "Replace a whole file (<=200 lines) or create one. Send the complete new content.",
+            {"path": {"type": "string"}, "content": {"type": "string"}},
+            ["path", "content"],
+        ),
+        _fn(
+            "delete",
+            "Delete one previously read regular file, with write approval and undo.",
+            {"path": {"type": "string"}},
+            ["path"],
+        ),
+        _fn(
+            "search",
+            "Regex search in repo files. Returns file:line: text.",
+            {"pattern": {"type": "string"}, "path": {"type": "string"}, "glob": {"type": "string"}},
+            ["pattern"],
+        ),
+    ],
+    key=lambda s: s["function"]["name"],
+)

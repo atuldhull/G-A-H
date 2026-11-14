@@ -16,13 +16,13 @@ from .gate import gate
 
 @dataclass
 class Verdict:
-    stage: str            # syntax | lint | oracle | full
+    stage: str  # syntax | lint | oracle | full
     ok: bool
     green: bool
     shown: str
     sig_ids: list[str]
     first_error: str
-    passed: int = -1      # oracle tests passing (-1 = syntax/lint failure or unknown)
+    passed: int = -1  # oracle tests passing (-1 = syntax/lint failure or unknown)
 
 
 def _syntax(root: Path, touched: list[str]) -> tuple[bool, str]:
@@ -40,13 +40,29 @@ def _syntax(root: Path, touched: list[str]) -> tuple[bool, str]:
     return (not errs), "\n".join(errs)
 
 
-def _lint(root: Path, touched: list[str]) -> tuple[bool, str]:
+def _lint(ctx, touched: list[str]) -> tuple[bool, str]:
+    root = ctx.root
     py = [r for r in touched if r.endswith(".py") and (root / r).is_file()]
     exe = shutil.which("ruff")
     if not py or not exe or Path(exe).resolve().is_relative_to(root.resolve()):
         return True, ""
-    r = services.get("cmd").run([exe, "check", "--isolated", "--no-cache", "--select",
-                                 "F821,F822,F823,E9", "--output-format", "concise", *py], root, timeout=60)
+    argv = [
+        exe,
+        "check",
+        "--isolated",
+        "--no-cache",
+        "--select",
+        "F821,F822,F823,E9",
+        "--output-format",
+        "concise",
+        *py,
+    ]
+    from ..agent_types import Action
+
+    decision = services.get("approvals").ask(Action("shell", "isolated static lint", argv=argv), ctx.session)
+    if not decision.approved:
+        return False, "lint was not approved"
+    r = services.get("cmd").run(argv, root, timeout=60, session=ctx.session)
     if r.exit_code == 0:
         return True, ""
     lines = [x for x in r.stdout.splitlines() if ":" in x and not x.startswith("Found")]
@@ -54,10 +70,15 @@ def _lint(root: Path, touched: list[str]) -> tuple[bool, str]:
 
 
 def verify(ctx, touched: list[str], *, full: bool = True) -> Verdict:
+    from ..tools.base import secure_path
+
+    services.security(ctx.session)
+    for path in touched:
+        secure_path(path, ctx)
     ok, msg = _syntax(ctx.root, touched)
     if not ok:
         return Verdict("syntax", False, False, msg, [], msg.splitlines()[0])
-    ok, msg = _lint(ctx.root, touched)
+    ok, msg = _lint(ctx, touched)
     if not ok:
         return Verdict("lint", False, False, msg, [], msg.splitlines()[0] if msg else "")
     tr = ctx.tests
@@ -69,8 +90,14 @@ def verify(ctx, touched: list[str], *, full: bool = True) -> Verdict:
         shown = tr.show(rep).shown
         return Verdict("oracle", False, False, shown, sorted(rep.failed), rep.first_error, len(rep.passed))
     if "_oracle_modified" in ctx.session.flags:
-        return Verdict("oracle", True, False, "oracle passes but a test file was modified; "
-                       "green is void until the user re-confirms", [], "oracle modified")
+        return Verdict(
+            "oracle",
+            True,
+            False,
+            "oracle passes but a test file was modified; green is void until the user re-confirms",
+            [],
+            "oracle modified",
+        )
     # Flake guard: rerun the oracle once on first green. Unattended runs only (bench/--yes); an
     # interactive user would face an extra "THIS EXECUTES CODE" prompt for the same command.
     if ctx.session.approve_mode == "auto":
@@ -82,7 +109,19 @@ def verify(ctx, touched: list[str], *, full: bool = True) -> Verdict:
         regressed = sorted(tr.baseline_passed - frep.passed)
         if regressed:
             g = gate("\n".join(regressed), None, ctx.spill)
-            return Verdict("full", False, False, "regressions (passed before, fail now):\n" + g.shown,
-                           regressed, f"regression {regressed[0]}")
-    return Verdict("full" if full and tr.full_targets is not None else "oracle", True, True,
-                   rep.summary or "tests pass", [], "")
+            return Verdict(
+                "full",
+                False,
+                False,
+                "regressions (passed before, fail now):\n" + g.shown,
+                regressed,
+                f"regression {regressed[0]}",
+            )
+    return Verdict(
+        "full" if full and tr.full_targets is not None else "oracle",
+        True,
+        True,
+        rep.summary or "tests pass",
+        [],
+        "",
+    )
