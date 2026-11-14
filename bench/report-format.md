@@ -105,8 +105,11 @@ timeout-session usage, filter the correct benchmark VK/session IDs, reconcile
 late usage, and only then mark a session complete. Do not put raw credentials or
 VK values in these files.
 
-This exporter/normalization adapter is an integration requirement, not implemented
-here. Hashes establish immutable local evidence identity and arithmetic
+The limited [exporter](bifrost-export.md) now produces this normalized evidence
+for supported, explicitly reviewed sessions. It rejects tiered pricing, positive
+cache writes, retries/fallbacks and unverified completeness. Cost records still
+need joining with independent grading and the planned grid. Hashes establish
+immutable local evidence identity and arithmetic
 consistency; they cannot establish that a fabricated/truncated export is genuine
 or that an upstream `complete` assertion is true. Trusted acquisition, review of
 the export, and provider-price verification remain required.

@@ -158,6 +158,11 @@ Native gateway prices and the offline reporter's normalized interchange differ;
 conversion plus source hashes is still required. These attempt records deliberately
 are not the reporter's verified-cost input schema and cannot be published directly.
 
+A [limited read-only exporter](bifrost-export.md) is now available for reviewed
+successful non-retry sessions with explicit zero cache writes and flat prices.
+It is not automatically wired into this runner and does not resolve the default
+Haiku tiering, cache-write TTL, retry, or physical session-completeness gaps.
+
 Mini still needs its separate pinned 2.4.6 environment, WSL path/process adapter,
 identical task/model/test/cap/cache settings, session headers, receipt/usage capture
 and independent grading. Preserve its two planned slots. The runner also does not

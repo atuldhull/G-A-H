@@ -5,6 +5,11 @@ to the merged Agent and independent grader, with durable resume evidence. Mini
 and authoritative cost attribution remain explicitly incomplete. No live
 benchmark results are supplied. Its opt-in CLI is `python -m bench.run --help`.
 
+The [read-only cost evidence adapter](bifrost-export.md) supports a limited,
+review-gated subset of the conversation-supplied Bifrost logs mapping. Positive
+cache writes, retries/fallbacks and tiered pricing remain incomplete; the default
+Haiku price entry is therefore not yet supported for comparable live evidence.
+
 This first Person 4 milestone prepares disposable exercise workspaces for the
 future benchmark harness. It copies ordinary files, tests, and empty directories,
 excluding every directory named `.meta` at every depth. The evaluation design
