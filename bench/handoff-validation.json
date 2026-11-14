@@ -1,0 +1,67 @@
+{
+  "all_five_runs_stay_together": true,
+  "bifrost_connections": 0,
+  "common_full_plan_identity": true,
+  "credentials_read": false,
+  "data_kind": "synthetic",
+  "date": "2026-11-14",
+  "deterministic_repeat_dry_runs": 4,
+  "exercise_code_executed": false,
+  "full_plan_positions": "1-54, contiguous",
+  "full_task_coverage": 54,
+  "help_exit_codes": {
+    "bench.grade": 0,
+    "bench.mini": 0,
+    "bench.plan": 0,
+    "bench.run": 0
+  },
+  "kind": "handoff-command-validation",
+  "limitations": [
+    "Synthetic CLI validation is not a verified real dataset index or a benchmark result.",
+    "Runner commands were checked with --help and without --execute; live execution was not launched.",
+    "Real paths, task texts, targets, dependencies and dataset revisions remain missing.",
+    "No credentials, model services or Bifrost databases were accessed."
+  ],
+  "local_wsl_metadata": {
+    "default_distribution": "Ubuntu",
+    "default_version": 2,
+    "executable_available": true,
+    "list_exit_code": 0,
+    "live_bifrost_connectivity_tested": false,
+    "mini_environment_verified": false,
+    "session_header_forwarding_verified": false,
+    "status_exit_code": 0,
+    "ubuntu_state_at_inspection": "Stopped"
+  },
+  "mini_no_execute_exit_code": 2,
+  "model_calls": 0,
+  "oracle_filter_from_document": "passed",
+  "oracle_targets_exist_in_synthetic_originals": true,
+  "overlapping_tasks": 0,
+  "planner_dry_runs": 4,
+  "real_dataset_index_validated": false,
+  "runner_execution_validated": false,
+  "runner_no_execute_exit_codes": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "runtime_commit": "1a374a5b1dd1772f916d799d199778ed5613938b",
+  "schema_version": 1,
+  "shard_run_counts": [
+    70,
+    70,
+    65,
+    65
+  ],
+  "shard_task_counts": [
+    14,
+    14,
+    13,
+    13
+  ],
+  "synthetic_canary_absent": true,
+  "temporary_datasets_retained": false,
+  "unique_run_ids": 270
+}
