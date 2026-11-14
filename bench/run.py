@@ -398,8 +398,23 @@ def run_plan(plan_path, output, *, oracles, agent_factory=None, session_factory=
             factory = session_factory
             if factory is None and run["agent_variant"] != "mini-swe-agent":
                 # Lazy import, inside the attempt so import failure gets evidence.
+                from crocodile.security import ApprovalSession
+                from crocodile.security.integrity import StateIntegrity
+                from crocodile.security.confidential import Detector, SecurityStore
+                from crocodile.runtime_security import state_path
+                try:
+                    _state = StateIntegrity(state_path())
+                    _state.verify_state()
+                    _detector = Detector(SecurityStore(_state.path, integrity=_state))
+                except Exception:
+                    _state = None
+                    _detector = None
+
                 def factory(*args, **kwargs):
-                    from crocodile.security import ApprovalSession
+                    if _state is not None:
+                        kwargs.setdefault("integrity", _state)
+                    if _detector is not None:
+                        kwargs.setdefault("confidentiality", _detector)
                     return ApprovalSession.for_bench(*args, **kwargs)
             try:
                 fatal = _attempt(row, run, oracles[run["task_id"]], artifacts, scratch,
