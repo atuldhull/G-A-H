@@ -35,6 +35,11 @@ def tree_hash(root: Path) -> str:
     return h.hexdigest()[:16]
 
 
+def lf(text: str) -> str:
+    """Task prompts are byte-identical for every agent: LF line endings only."""
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 tasks, oracles, rows = [], {}, []
 
 # ---- Polyglot: all 34 Python practice exercises -------------------------------------------
@@ -51,7 +56,7 @@ for ex in sorted(p for p in practice.iterdir() if p.is_dir()):
         text += "\n" + app.read_text(encoding="utf-8")
     text += (f"\n\nImplement the code in {', '.join(stub)} so the tests in {', '.join(tests)} pass. "
              "Do not modify the tests.\n")
-    (out / "polyglot" / "tasks" / f"{tid}.md").write_text(text, encoding="utf-8")
+    (out / "polyglot" / "tasks" / f"{tid}.md").write_text(lf(text), encoding="utf-8", newline="\n")
     tasks.append({"dataset": "polyglot", "id": tid, "source": tid, "task_file": f"tasks/{tid}.md",
                   "test_command": CMD})
     oracles[f"polyglot/{tid}"] = tests
@@ -106,7 +111,7 @@ for name in candidates:
     text = (f"The function in python_programs/{name}.py has a bug: the tests in "
             f"python_testcases/test_{name}.py fail. Find and fix the bug in python_programs/{name}.py. "
             "Do not modify the tests.\n")
-    (out / "quixbugs" / "tasks" / f"{name}.md").write_text(text, encoding="utf-8")
+    (out / "quixbugs" / "tasks" / f"{name}.md").write_text(lf(text), encoding="utf-8", newline="\n")
     tasks.append({"dataset": "quixbugs", "id": name, "source": name, "task_file": f"tasks/{name}.md",
                   "test_command": CMD,
                   "test_paths": ["conftest.py", "python_testcases/load_testdata.py",
@@ -115,8 +120,9 @@ for name in candidates:
     rows.append(("quixbugs", name, tree_hash(dst)))
 assert len(selected) == QB_COUNT, f"only {len(selected)} QuixBugs programs met the rule"
 
-(out / "tasks.json").write_text(json.dumps({"schema_version": 1, "tasks": tasks}, indent=2), encoding="utf-8")
-(out / "oracles.json").write_text(json.dumps(oracles, indent=2), encoding="utf-8")
+(out / "tasks.json").write_text(json.dumps({"schema_version": 1, "tasks": tasks}, indent=2) + "\n",
+                                encoding="utf-8", newline="\n")
+(out / "oracles.json").write_text(json.dumps(oracles, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def fhash(p):
@@ -134,6 +140,6 @@ m = ["# Benchmark inputs manifest", "",
      "", "## Excluded QuixBugs candidates", ""]
 m += [f"- {n}: {why}" for n, why in excluded] or ["- none"]
 m += ["", "## Tasks (dataset, id, source tree sha256/16)", ""] + [f"- {d}/{i} `{h}`" for d, i, h in rows]
-(out / "MANIFEST.md").write_text("\n".join(m) + "\n", encoding="utf-8")
+(out / "MANIFEST.md").write_text("\n".join(m) + "\n", encoding="utf-8", newline="\n")
 print(f"tasks: {len(tasks)} (polyglot {sum(t['dataset']=='polyglot' for t in tasks)}, quixbugs {len(selected)})")
 print("excluded:", excluded)
