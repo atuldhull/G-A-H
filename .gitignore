@@ -1,4 +1,4 @@
-﻿# local / secrets
+# local / secrets
 .env
 .env.*
 *.key
