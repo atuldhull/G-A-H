@@ -27,7 +27,7 @@ from .engine.thrash import Thrash, failure_sig
 from .journal_contract import SESSION_STARTED
 from .state import TaskState
 from .tools import SCHEMAS, TOOLS, RunCtx, dispatch
-from .tools.base import SKIP_DIRS
+from .tools.base import SKIP_DIRS, ToolError
 from .tools.tests import TestRunner
 
 ALL_FLAGS = {
@@ -700,11 +700,19 @@ class Agent:
                     self.rw.arm(pre_len)
             if (edited and "stop_green" in self.s.flags) or finishing:
                 checks_on = "ladder" in self.s.flags or "stop_green" in self.s.flags
-                v = (
-                    verify(self.ctx, sorted(self.ctx.touched), full=True)
-                    if ((edited or self.state.edits) and checks_on)
-                    else None
-                )
+                try:
+                    v = (
+                        verify(self.ctx, sorted(self.ctx.touched), full=True)
+                        if ((edited or self.state.edits) and checks_on)
+                        else None
+                    )
+                except ToolError as e:
+                    # The user refused (or Part 3 voided) test consent: nothing can be verified, so end
+                    # with an honest "tests not approved" receipt instead of an error.
+                    self.s.flags.add("_no_test_consent")
+                    self.r.status = "UNVERIFIED (tests not approved)"
+                    self._event("verify_refused", reason=str(e)[:200])
+                    return
                 if v is not None and v.green:
                     self.r.solved = True
                     self.r.status = "SOLVED"

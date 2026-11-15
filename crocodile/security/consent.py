@@ -3,7 +3,10 @@
 import configparser
 import hashlib
 import os
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 from dataclasses import dataclass
 from pathlib import Path
 

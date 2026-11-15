@@ -14,7 +14,11 @@ import sqlite3
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
-from datetime import UTC, datetime
+try:
+    from datetime import UTC, datetime
+except ImportError:
+    from datetime import datetime, timezone
+    UTC = timezone.utc
 from pathlib import Path
 
 from crocodile.contracts import LadderRung, Reservation

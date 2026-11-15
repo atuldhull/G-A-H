@@ -159,6 +159,10 @@ class TestRunner:
         ]
         self._consent(argv)
         r = services.get("cmd").run(argv, self.ctx.root, timeout=timeout, session=self.ctx.session)
+        if r.exit_code == 126 and (r.stderr or "").startswith(("denied by policy", "test consent no longer valid")):
+            # Policy refused to run the tests (consent refused or voided): not a test failure.
+            self._approved.clear()
+            raise ToolError(f"tests not run: {r.stderr.strip()[:200]}")
         raw = (r.stdout or "") + ("\n" + r.stderr if r.stderr else "")
         rep = parse(raw, r.exit_code, self.ctx.root)
         rep.timed_out = r.timed_out

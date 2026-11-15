@@ -182,6 +182,105 @@ def quote(
 
 
 @app.command()
+def init(
+    fresh: bool = typer.Option(False, "--fresh",
+                               help="Rename an existing UNSEALED state DB aside (never deleted) and enroll anew."),
+):
+    """One-time trusted enrollment: create the shared state DB and seal it (HMAC key in Credential Manager).
+
+    Refuses an already sealed DB (no re-enrollment, no repair) and never adopts an existing
+    unsealed DB unless --fresh moves it aside first.
+    """
+    import sqlite3
+    import time
+
+    from .gateway.budget import init_database
+    from .runtime_security import state_path
+    from .security.classification import SecurityStore
+    from .security.integrity import IntegrityViolation, StateIntegrity
+
+    path = state_path()
+    if path.exists():
+        con = sqlite3.connect(path)
+        try:
+            sealed = con.execute("SELECT 1 FROM meta WHERE k='hmac'").fetchone() is not None
+        except sqlite3.Error:
+            sealed = False
+        finally:
+            con.close()             # always release: Windows cannot rename an open file
+        if sealed:
+            typer.echo(f"Already enrolled: {path} (sealed).")
+            _write_default_settings(path.parent)
+            raise typer.Exit(0)
+        if not fresh:
+            typer.echo(f"Refusing: {path} exists but is not sealed (untrusted state). "
+                       "Re-run with --fresh to move it aside and enroll a new one.", err=True)
+            raise typer.Exit(1)
+        backup = path.with_name(f"{path.name}.unsealed-{time.strftime('%Y%m%d-%H%M%S')}")
+        for suffix in ("", "-wal", "-shm"):
+            p = Path(str(path) + suffix)
+            if p.exists():
+                p.rename(Path(str(backup) + suffix))
+        typer.echo(f"Moved unsealed DB aside: {backup}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    db = init_database(path)                               # Part 2 schema (ledger, meta, calib)
+    try:
+        SecurityStore._schema(db)                          # Part 3 classification/canary tables
+        db.execute("CREATE TABLE IF NOT EXISTS grants(session TEXT, argv_json TEXT)")
+        db.commit()
+        db.execute("BEGIN IMMEDIATE")                      # serialized one-time seal
+        StateIntegrity(path).initialize(db)                # creates the HMAC key in Credential Manager
+        db.commit()
+    except IntegrityViolation as e:
+        db.rollback()
+        typer.echo(f"Refusing: {e}", err=True)
+        raise typer.Exit(1) from None
+    finally:
+        db.close()
+    typer.echo(f"Enrolled and sealed: {path}")
+    _write_default_settings(path.parent)
+
+
+def _write_default_settings(folder: Path) -> None:
+    """User settings next to the state DB (doctor reads them). Never overwrites; no secrets."""
+    import yaml
+
+    from .adapters import PROJECT_ROOT, bifrost_url, chain_for
+
+    local = chain_for("local")
+    ctx = int(os.environ.get("OLLAMA_CONTEXT_LENGTH") or 32768)
+    files = {
+        "config.yaml": {
+            "bifrost_url": bifrost_url(),
+            "models": {"cheap": {"chain": chain_for("cheap")}, "strong": {"chain": chain_for("strong")},
+                       "local": {"chain": local, "ctx_window": max(32768, ctx)}},
+            "confidential": {"local_model_allowlist": [m.split("/", 1)[1] for m in local if m.startswith("ollama/")],
+                             "ollama_host": "http://127.0.0.1:11434"},
+        },
+        "policy.yaml": {"version": 1},
+    }
+    for name, data in files.items():
+        target = folder / name
+        if target.exists():
+            typer.echo(f"Kept existing {target}")
+            continue
+        target.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        typer.echo(f"Wrote {target}")
+    prices = folder / "prices.yaml"
+    if prices.exists():
+        typer.echo(f"Kept existing {prices}")
+    else:
+        table = yaml.safe_load((PROJECT_ROOT / "prices.yaml").read_text(encoding="utf-8")) or {}
+        for tier in ("cheap", "strong", "local"):          # doctor checks exact chain models:
+            for model in chain_for(tier):                    # expand "provider/*" wildcards for them
+                wildcard = model.split("/", 1)[0] + "/*"
+                if model not in table and wildcard in table:
+                    table[model] = table[wildcard]
+        prices.write_text(yaml.safe_dump(table, sort_keys=False), encoding="utf-8")
+        typer.echo(f"Wrote {prices}")
+
+
+@app.command()
 def version():
     """Print the version."""
     typer.echo(__version__)

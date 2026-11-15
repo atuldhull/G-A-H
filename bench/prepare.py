@@ -87,6 +87,45 @@ def prepare_workspace(
     return destination_path
 
 
+def populate_workspace(
+    source: str | os.PathLike[str], destination: str | os.PathLike[str]
+) -> Path:
+    """Populate an existing empty pinned bench root without replacing it.
+
+    Unlike prepare_workspace, failure leaves partial contents for the caller to
+    discard AFTER closing its bench session. The root itself is never removed.
+    Use only a stable source and an exclusively owned local temporary destination.
+    """
+    original, target = Path(source).absolute(), Path(destination).absolute()
+    if not _is_directory(original) or not _is_directory(target):
+        raise ValueError("Source and pinned destination must be directories")
+    original, target = original.resolve(strict=True), target.resolve(strict=True)
+    if original.name == ".meta":
+        raise ValueError("Source cannot itself be a .meta directory")
+    if original == target or original in target.parents or target in original.parents:
+        raise ValueError("Source and destination paths must not overlap")
+    if any(target.iterdir()):
+        raise FileExistsError("Pinned destination must be empty")
+    entries = list(_inventory(original))
+    identity = target.stat()
+    for relative, directory in entries:
+        current = target.stat()
+        if (not _is_directory(target)
+                or (current.st_dev, current.st_ino) != (identity.st_dev, identity.st_ino)):
+            raise ValueError("Pinned destination identity changed")
+        source_path, copied = original / relative, target / relative
+        if _is_directory(source_path) != directory:
+            raise ValueError("Source changed during population")
+        if directory:
+            copied.mkdir()
+        else:
+            # Exclusive creation: never overwrite a racing or preexisting entry.
+            with source_path.open("rb") as incoming, copied.open("xb") as outgoing:
+                shutil.copyfileobj(incoming, outgoing)
+            _is_directory(copied)
+    return target
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the standalone benchmark preparation command."""
     parser = argparse.ArgumentParser(description=__doc__)
