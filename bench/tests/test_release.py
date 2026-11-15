@@ -1,6 +1,7 @@
 """Synthetic release bundles, never real benchmark outcomes or live checks."""
 
 from copy import deepcopy
+import hashlib
 import json
 import socket
 import subprocess
@@ -69,7 +70,8 @@ def test_v2_cannot_forge_readiness_or_erase_accepted_differences(bundle, mutatio
         canonical.validate_config(config)
 
 
-def test_bundle_has_exact_coverage_oracles_settings_and_no_execution(bundle, monkeypatch):
+@pytest.mark.parametrize("include_smoke", [False, True])
+def test_bundle_has_exact_coverage_oracles_settings_and_no_execution(bundle, monkeypatch, include_smoke):
     config, path, data, output, settings, canary = bundle
 
     def forbidden(*args, **kwargs):
@@ -77,11 +79,11 @@ def test_bundle_has_exact_coverage_oracles_settings_and_no_execution(bundle, mon
 
     monkeypatch.setattr(subprocess, "Popen", forbidden)
     monkeypatch.setattr(socket.socket, "connect", forbidden)
-    result = release.prepare_release(path, data, output, settings)
+    result = release.prepare_release(path, data, output, settings, include_smoke=include_smoke)
     assert result["launch_blocked"] and not canary.exists()
     assert result["validation"]["manifests_validated"] == 5
-    assert [(a["tasks"], a["runs"]) for a in result["artifacts"].values()] == [
-        (54, 270), (14, 70), (14, 70), (13, 65), (13, 65)]
+    expected = [(54, 270), (14, 70), (14, 70), (13, 65), (13, 65)]
+    assert [(a["tasks"], a["runs"]) for a in result["artifacts"].values()] == expected + ([(3, 15)] if include_smoke else [])
     full = canonical._json(output / "full.json")
     task_ids, run_ids = [], []
     originals = canonical._json(data / "oracles.json")
@@ -99,6 +101,13 @@ def test_bundle_has_exact_coverage_oracles_settings_and_no_execution(bundle, mon
     assert task_ids == config["plan"]["task_order"] and len(set(task_ids)) == 54
     assert run_ids == [row["run_id"] for row in full["runs"]] and len(set(run_ids)) == 270
     assert canonical._json(output / "mini-settings.json")["session_header_verified"] is False
+    if include_smoke:
+        smoke = canonical._json(output / "smoke.json")
+        assert smoke["tasks"] == [{**task, "shard_number": 1} for task in full["tasks"][:3]]
+        assert smoke["runs"] == [{**run, "shard_number": 1} for run in full["runs"][:15]]
+        assert smoke["selection"]["limit"] == 3 and smoke["selection"]["shard"] == "1/4"
+        assert canonical._json(output / "smoke-oracles.json") == {
+            task["task_id"]: originals[task["task_id"]] for task in smoke["tasks"]}
     with pytest.raises(ValueError, match="fresh output"):
         release.prepare_release(path, data, output, settings)
 
@@ -130,16 +139,47 @@ def test_require_comparable_remains_blocked_for_valid_v2(bundle, capsys):
     assert json.loads(capsys.readouterr().out)["unresolved"][0]["id"] == "mini-attempt-3a111322"
 
 
-def test_published_v2_is_immutable_and_diagnostic_fix_requires_a_new_runtime_snapshot():
+def test_published_v2_is_immutable_without_requiring_historical_runtime_to_be_current():
     config = canonical._json(canonical.V2_CONFIG)
+    raw = canonical.V2_CONFIG.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(raw).hexdigest() == "4cdf9b9331d84981c624ecdf0ac3a8b9114f50f9374ad1ae89ad4021080e48f6"
     assert canonical.config_id(config) == "700089ad8472546868ea39edee3f8e43b5b9ff87204cfaabf9268a0d616a0494"
-    with pytest.raises(ValueError, match="source snapshot differs"):
-        canonical.validate_config(config)
     result = canonical.validate_config(config, audit_current=True)
-    assert not result["static_valid"] and not result["runtime_matches_snapshot"]
-    assert {"bench/mini.py", "bench/prepare.py"} <= {item["path"] for item in result["runtime_drift"]}
+    # Current sources may evolve. Auditing never rewrites the historical pins;
+    # strict execution validation still rejects any actual runtime drift.
+    assert result["static_valid"] == result["runtime_matches_snapshot"] == (not result["runtime_drift"])
+    if result["runtime_drift"]:
+        with pytest.raises(ValueError, match="source snapshot differs"):
+            canonical.validate_config(config)
+    else:
+        assert canonical.validate_config(config)["static_valid"]
     assert result["runtime_git_commit"] == "67fa99fc8b4a112221e3606c87a5d16413675158"
     assert not result["paid_runs_authorized"] and not result["cross_shard_comparable"]
     assert config["datasets"]["tasks_sha256"] == "3181a82f9c34fcc732761a2ba27157b7a80bb6ea51fc6c73be34bc83a01dcf18"
     assert config["datasets"]["oracles_sha256"] == "38cb911edfdbb09f5fd33df793f9bb89e7922524494c5e791b05a27edc9cc537"
     assert config["gateway"]["live_evidence"]["independently_verified_here"] is False
+
+
+def test_actual_mutation_of_v2_is_detected():
+    published = canonical._json(canonical.V2_CONFIG)
+    mutated = deepcopy(published)
+    mutated["provenance"]["runtime_files_sha256_lf"]["bench/mini.py"] = "0" * 64
+    assert canonical.config_id(mutated) != canonical.config_id(published)
+    assert canonical.config_id(mutated) != "700089ad8472546868ea39edee3f8e43b5b9ff87204cfaabf9268a0d616a0494"
+
+
+def test_v3_requires_diagnostic_runtime_pins_and_keeps_unsupported_evidence_blocked(bundle):
+    config, _, data, _, _, _ = bundle
+    config.update(schema_version=3, revision="gemini-54-v3", changes_from_v2=["Synthetic diagnostic snapshot"])
+    config.pop("changes_from_v1")
+    name = "bench/failure_evidence.py"
+    for relative in (name, "bench/canonical.py", "bench/attest.py"):
+        config["provenance"]["runtime_files_sha256_lf"][relative] = hashlib.sha256(
+            (canonical.REPO_ROOT / relative).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    result = canonical.validate_config(config, data_root=data)
+    assert result["static_valid"] and result["dataset_validated"]
+    assert not result["cross_shard_comparable"] and not result["paid_runs_authorized"]
+    assert len(result["known_limitations"]) == 4 and result["unresolved"]
+    config["provenance"]["runtime_files_sha256_lf"].pop(name)
+    with pytest.raises(ValueError, match="Missing v3 diagnostic/runtime pins"):
+        canonical.validate_config(config)

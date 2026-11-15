@@ -12,6 +12,7 @@ from bench.run import _validate
 
 DEFAULT_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v1.json"
 V2_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v2.json"
+V3_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v3.json"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACCEPTED_LIMITATIONS = {"hard-stop-containment", "mini-output-cap", "cache-parity", "sampling-difference"}
 TOP_FIELDS = {
@@ -82,12 +83,15 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
     """
     try:
         _need(isinstance(config, dict), "Invalid canonical config fields")
-        v2 = config.get("revision") == "gemini-54-v2"
-        fields = TOP_FIELDS | {"changes_from_v1", "known_limitations"} if v2 else TOP_FIELDS
+        revision = config.get("revision")
+        modern = revision in {"gemini-54-v2", "gemini-54-v3"}
+        change_field = "changes_from_v2" if revision == "gemini-54-v3" else "changes_from_v1"
+        fields = TOP_FIELDS | {change_field, "known_limitations"} if modern else TOP_FIELDS
         _need(set(config) == fields, "Invalid canonical config fields")
-        _need(type(config["schema_version"]) is int and config["schema_version"] == (2 if v2 else 1)
+        _need(type(config["schema_version"]) is int
+              and config["schema_version"] == {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3}.get(revision)
               and config["kind"] == "canonical-gemini-benchmark"
-              and config["revision"] in {"gemini-54-v1", "gemini-54-v2"}, "Unsupported canonical revision")
+              and revision in {"gemini-54-v1", "gemini-54-v2", "gemini-54-v3"}, "Unsupported canonical revision")
         _key_free(config)
         ready = config["readiness"]
         _need(ready["paid_runs_authorized"] is False and ready["cross_shard_comparable"] is False,
@@ -97,7 +101,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         _need(len({g["id"] for g in gaps}) == len(gaps)
               and all(all(isinstance(g[k], str) and g[k].strip() for k in ("id", "owner", "reason"))
                       for g in gaps), "Invalid unresolved evidence")
-        if v2:
+        if modern:
             limitations = config["known_limitations"]
             _need(isinstance(limitations, list) and len(limitations) == 4
                   and {item["id"] for item in limitations} == ACCEPTED_LIMITATIONS
@@ -108,8 +112,8 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
                   "Accepted limitation listed as a release blocker")
             _need("mini-attempt-3a111322" in {g["id"] for g in gaps},
                   "Unresolved mini attempt cannot be cleared without a new reviewed release")
-            _need(isinstance(config["changes_from_v1"], list) and config["changes_from_v1"],
-                  "V2 requires a change record")
+            _need(isinstance(config[change_field], list) and config[change_field],
+                  "Release requires a change record")
         plan = config["plan"]
         _need(plan["evaluation_policy"] == EVALUATION_POLICY, "Planner policy differs from canonical config")
         _need(plan["shard_ranges"] == [list(r) for r in SHARD_RANGES], "Shard ranges differ")
@@ -129,7 +133,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         _need(gateway["physical_version_vk_and_cap_verified"] is False
               and config["provenance"]["observed_environment_versions"]["cross_machine_lock_verified"] is False,
               "Live/environment verification cannot be asserted by this snapshot")
-        if v2:
+        if modern:
             observed = gateway["live_evidence"]
             _need(observed["status"] == "reported-verified-on-Atul-machine"
                   and observed["independently_verified_here"] is False,
@@ -140,7 +144,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
             _need(agent["wire_model"] == model and agent["fallbacks"] == []
                   and agent["measured_escalation"] is False
                   and agent["thinking"] == "provider-default"
-                  and agent["sampling"] == ("native-0.0-or-0.7" if v2 and name != "mini-swe-agent" else "omit"),
+                  and agent["sampling"] == ("native-0.0-or-0.7" if modern and name != "mini-swe-agent" else "omit"),
                   "Agent model/override policy mismatch")
         _need(agents["crocodile"]["flags"] is None and agents["all-off-twin"]["flags"] == [],
               "Crocodile/twin flags differ")
@@ -174,6 +178,9 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         sources = config["provenance"]["runtime_files_sha256_lf"]
         _need({"bench/run.py", "bench/mini_bridge.py", "bench/grade.py", "bench/bifrost_export.py",
                "crocodile/adapters.py", "prices.yaml"} <= sources.keys(), "Missing required runtime pins")
+        if revision == "gemini-54-v3":
+            _need({"bench/mini.py", "bench/prepare.py", "bench/failure_evidence.py",
+                   "bench/canonical.py", "bench/attest.py"} <= sources.keys(), "Missing v3 diagnostic/runtime pins")
         _need(config["evidence"]["canonical_native_prices_sha256"] == sources["prices.yaml"],
               "Canonical price snapshot differs")
         drift = []
@@ -202,7 +209,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
             _validate(full, oracles)
             _need(set(config["datasets"]["tasks"]) == set(order), "Task evidence coverage mismatch")
             for task in full["tasks"]:
-                _need(not v2 or "\r" not in task["task_text"], "V2 requires LF-only task text")
+                _need(not modern or "\r" not in task["task_text"], "Release requires LF-only task text")
                 frozen = config["datasets"]["tasks"][task["task_id"]]
                 source = Path(task["source_path"])
                 _need(task["task_text_sha256"] == frozen["task_text_sha256"]

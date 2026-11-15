@@ -46,7 +46,7 @@ def _write(path, value):
         stream.write((json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n").encode("utf-8"))
 
 
-def prepare_release(config_path, data_root, output, mini_settings):
+def prepare_release(config_path, data_root, output, mini_settings, *, include_smoke=False):
     """New output only. Read local inputs; never invoke agents, tests or services.
 
     The returned commands are evidence, not execution authorization. If artifact
@@ -68,12 +68,18 @@ def prepare_release(config_path, data_root, output, mini_settings):
     all_oracles = _json(data / "oracles.json")
     plans = [build_plan(data / "tasks.json", polyglot=data / "polyglot", quixbugs=data / "quixbugs",
                         shard=shard) for shard in (None, "1/4", "2/4", "3/4", "4/4")]
+    labels = ["full", "shard-1", "shard-2", "shard-3", "shard-4"]
+    if include_smoke:
+        plans.append(build_plan(data / "tasks.json", polyglot=data / "polyglot", quixbugs=data / "quixbugs",
+                                shard="1/4", limit=3))
+        labels.append("smoke")
     output.mkdir()  # No overwrite/resume of a partly written release bundle.
     _write(output / "mini-settings.json", asdict(settings))
     manifests, artifacts, commands = [], {}, {}
-    for label, plan in zip(("full", "shard-1", "shard-2", "shard-3", "shard-4"), plans):
+    for label, plan in zip(labels, plans):
         manifest = write_manifest(plan, output / f"{label}.json")
-        manifests.append(manifest)
+        if label != "smoke":
+            manifests.append(manifest)
         subset = {task["task_id"]: all_oracles[task["task_id"]] for task in plan["tasks"]}
         oracle_path = output / f"{label}-oracles.json"
         _write(oracle_path, subset)
@@ -102,9 +108,12 @@ def main(argv=None):
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--mini-settings", type=Path, required=True)
+    parser.add_argument("--include-smoke", action="store_true",
+                        help="Also prepare shard 1's first three tasks (15 slots); never execute")
     args = parser.parse_args(argv)
     try:
-        result = prepare_release(args.config, args.data_root, args.output, args.mini_settings)
+        result = prepare_release(args.config, args.data_root, args.output, args.mini_settings,
+                                 include_smoke=args.include_smoke)
     except (OSError, ValueError, TypeError) as error:
         parser.exit(2, f"Release preparation failed: {error}\n")
     for label, artifact in result["artifacts"].items():
