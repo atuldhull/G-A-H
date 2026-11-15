@@ -176,9 +176,13 @@ class MiniAdapter:
             state["stage"] = "probe"
             self.backend.probe(artifacts)
             with tempfile.TemporaryDirectory(prefix="mini-bench-") as temporary, before_cleanup(
-                row, artifacts, Path(temporary) / "exercise", state, roots
+                row, artifacts, Path(temporary).resolve(strict=True) / "exercise", state, roots
             ):
-                workspace = Path(temporary) / "exercise"
+                # Windows TEMP may use an 8.3 ancestor alias. Canonicalize the
+                # trusted, freshly created parent before the agent runs so
+                # prepare's resolved paths match the diagnostic inventory root.
+                # Never resolve an agent-created offending entry or link target.
+                workspace = Path(temporary).resolve(strict=True) / "exercise"
                 roots["workspace"] = workspace
                 state["stage"] = "prepare-original"
                 original = prepare_workspace(run["source_path"], artifacts / "original")

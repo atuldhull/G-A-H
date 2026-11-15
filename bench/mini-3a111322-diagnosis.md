@@ -101,6 +101,15 @@ refusal to admit incomplete attempts to the offline reporter. The synthetic
 special-file metadata case runs without privileged link creation on Windows;
 real OS cases retain explicit platform skips.
 
+Windows CI exposed an additional diagnostic issue: its TEMP ancestor can use an
+8.3 alias, while preparation returns canonical long paths. The initial diagnostic
+root then failed to match the rejected entry and inventory containment check.
+Canonicalizing only the trusted, newly created temporary parent before launching
+mini keeps these paths consistent. Agent-created links are still rejected and
+their targets are never resolved for diagnostics. The existing special-entry and
+real-symlink regressions caught this issue. This CI finding does not identify the
+cause of Atul's earlier attempt.
+
 This changes frozen v2 runtime files. **V2 is unchanged and now has intentional
 runtime drift**: strict validation rejects it; audit reports drift rather than
 waiving it. A reviewed successor must pin the diagnostic helper and updated

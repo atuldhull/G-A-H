@@ -45,6 +45,7 @@ def assert_rejected(harness, reason, kind):
         assert row["status"] == "incomplete" and not row["solved"]
         assert row["grading"] is None and row["independently_graded_solved"] is None
         assert row["evidence"]["final"] is None and row["evidence"]["grading_result"] is None
+        assert row["workspace_path"] == str(Path(row["workspace_path"]).resolve())
         assert not Path(row["workspace_path"]).exists()  # OS workspace cleaned.
         error = row["error"]
         assert error["type"] == "WorkspaceEntryError" and error["reason"] == reason
