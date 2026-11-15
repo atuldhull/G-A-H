@@ -20,6 +20,8 @@ def snapshot():
     for name in config["provenance"]["runtime_files_sha256_lf"]:
         raw = (canonical.REPO_ROOT / name).read_bytes().replace(b"\r\n", b"\n")
         config["provenance"]["runtime_files_sha256_lf"][name] = hashlib.sha256(raw).hexdigest()
+    # Synthetic snapshots track current prices too; published releases remain untouched.
+    config["evidence"]["canonical_native_prices_sha256"] = config["provenance"]["runtime_files_sha256_lf"]["prices.yaml"]
     return config
 
 
