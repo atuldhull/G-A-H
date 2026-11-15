@@ -47,7 +47,11 @@ Quota, setup and interrupted runs remain incomplete, never solved-task failures.
 
 ## Remaining gates and owners
 
-Missing artifact: Atul/Vivek's sanitized **v4 served-model/routing proof and reviewed closed/flushed complete session inventory** has not been supplied.
+Follow-up 2026-11-15: Atul supplied a mini capture, mini live binding and closed
+inventory. [The packet review](atul-unblock-review.md) validates their internal
+joins/pricing, but the “native” captures are mini, not Crocodile, and the
+exporter still rejects null served models. Global comparability remains blocked;
+the review documents a separate incomplete-only development pilot command.
 
 | Gate | Owner and smallest acceptance evidence |
 |---|---|

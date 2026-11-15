@@ -1,0 +1,347 @@
+{
+  "canonical_config_id": "026d0a1b238f4675011c268619c051b1ffd3102a264a85e712bf7721f49b1bb4",
+  "canonical_revision": "gemini-54-v4",
+  "closed_snapshot_predates_later_binding_probe": true,
+  "complete_cost_export": false,
+  "dollar_amounts_published": false,
+  "execution_authorized": false,
+  "exporter_null_served_model_rejections": 20,
+  "internal_checks_passed": true,
+  "inventory_aggregate_rows": 181,
+  "issues": [],
+  "kind": "sanitized-Atul-packet-review-not-a-benchmark-report",
+  "mini_live_binding": {
+    "capture_and_binding_are_distinct_sessions": true,
+    "join": "unique supplied session row + timestamp + tokens; not provider response ID",
+    "provider_response_id_distinct": true,
+    "request": {
+      "cached_read_tokens": 0,
+      "completion_tokens": 15,
+      "component_consistent": true,
+      "prompt_tokens": 59,
+      "request_id": "be5d149a-4306-4c3e-a4b2-9d60523d9c93",
+      "within_one_percent": {
+        "cost": true,
+        "input_cost": true,
+        "output_cost": true
+      }
+    },
+    "request_count": 1,
+    "request_id": "be5d149a-4306-4c3e-a4b2-9d60523d9c93",
+    "response_resolved_model": "gemini-3.5-flash-lite",
+    "session_id": "native-bind-b07b921f0004",
+    "unredacted_body_hash_not_independently_recomputable": true
+  },
+  "native_crocodile_binding_verified": false,
+  "native_gap": "Both captures explicitly identify mini LitellmModel and bash tool; missing native max_tokens/temperature and Agent/GatewayEgress journal/receipt linkage. Not Crocodile evidence.",
+  "physical_database_or_binary_independently_inspected": false,
+  "price_snapshot_sha256": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+  "raw_evidence_rewritten": false,
+  "report_eligible": false,
+  "schema_version": 1,
+  "served_null_semantics": "Reported by Atul; current exporter still rejects null. No source-backed resolver installed.",
+  "sessions": [
+    {
+      "elapsed_seconds_lower_bound": 7823,
+      "flush_interval_seconds": 5,
+      "receipt_and_runner_usage_match": true,
+      "reported_closed": true,
+      "request_count": 9,
+      "request_ids": [
+        "b8dc4c31-d2e5-431c-bb99-a8100d64d404",
+        "c04d6186-e223-4ed0-ba89-e5c2082fbb2a",
+        "2b6dfa15-09e2-4424-9ccb-86c5466e039a",
+        "34ecc0b0-3ff2-48d6-930d-92e304974808",
+        "039decac-6d2f-49e4-b93b-dd84370b825f",
+        "4c0aa468-4266-496f-b514-781102f3b305",
+        "e5975441-6cfa-4a91-817c-70e94b8e61e3",
+        "afb01cc9-67c5-4b00-9cdc-486716dcfcee",
+        "168bb9d7-e02c-4795-81a2-f3c2206198cc"
+      ],
+      "requests": [
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 43,
+          "component_consistent": true,
+          "prompt_tokens": 890,
+          "request_id": "b8dc4c31-d2e5-431c-bb99-a8100d64d404",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 38,
+          "component_consistent": true,
+          "prompt_tokens": 964,
+          "request_id": "c04d6186-e223-4ed0-ba89-e5c2082fbb2a",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 45,
+          "component_consistent": true,
+          "prompt_tokens": 1789,
+          "request_id": "2b6dfa15-09e2-4424-9ccb-86c5466e039a",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 939,
+          "component_consistent": true,
+          "prompt_tokens": 2177,
+          "request_id": "34ecc0b0-3ff2-48d6-930d-92e304974808",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 53,
+          "component_consistent": true,
+          "prompt_tokens": 3197,
+          "request_id": "039decac-6d2f-49e4-b93b-dd84370b825f",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 400,
+          "component_consistent": true,
+          "prompt_tokens": 4037,
+          "request_id": "4c0aa468-4266-496f-b514-781102f3b305",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 2002,
+          "completion_tokens": 28,
+          "component_consistent": true,
+          "prompt_tokens": 4453,
+          "request_id": "e5975441-6cfa-4a91-817c-70e94b8e61e3",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 1998,
+          "completion_tokens": 38,
+          "component_consistent": true,
+          "prompt_tokens": 4517,
+          "request_id": "afb01cc9-67c5-4b00-9cdc-486716dcfcee",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 4018,
+          "completion_tokens": 41,
+          "component_consistent": true,
+          "prompt_tokens": 6286,
+          "request_id": "168bb9d7-e02c-4795-81a2-f3c2206198cc",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-1",
+      "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+      "token_sums": {
+        "cached_read_tokens": 8018,
+        "completion_tokens": 1625,
+        "prompt_tokens": 28310
+      }
+    },
+    {
+      "elapsed_seconds_lower_bound": 7778,
+      "flush_interval_seconds": 5,
+      "receipt_and_runner_usage_match": true,
+      "reported_closed": true,
+      "request_count": 11,
+      "request_ids": [
+        "9266bd58-33f8-4ca7-a732-fe0945f395b1",
+        "e5270f1e-e75b-4454-b4b7-0e3d35827063",
+        "e07abf66-3c5f-4807-b678-248ecf62afc4",
+        "00591133-55bd-45d4-9cf3-24636dca70d8",
+        "aafacf5e-d4b3-4f4e-acda-161fc5afb872",
+        "81900b2a-d3a4-46e8-9d36-f5d1c50800d2",
+        "eb2f4d5f-a4e4-474e-a55b-27542d036922",
+        "03af6440-f6b9-481b-ae96-339f0a3e7383",
+        "d066919b-2af4-4d12-bb97-8c66a9cc2950",
+        "463e934b-c07b-483a-ac7c-5ee567f0fdd5",
+        "a2b4c3f3-c1f1-4a61-a058-fcfb46e64c9f"
+      ],
+      "requests": [
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 45,
+          "component_consistent": true,
+          "prompt_tokens": 890,
+          "request_id": "9266bd58-33f8-4ca7-a732-fe0945f395b1",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 39,
+          "component_consistent": true,
+          "prompt_tokens": 966,
+          "request_id": "e5270f1e-e75b-4454-b4b7-0e3d35827063",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 46,
+          "component_consistent": true,
+          "prompt_tokens": 1792,
+          "request_id": "e07abf66-3c5f-4807-b678-248ecf62afc4",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 57,
+          "component_consistent": true,
+          "prompt_tokens": 2182,
+          "request_id": "00591133-55bd-45d4-9cf3-24636dca70d8",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 324,
+          "component_consistent": true,
+          "prompt_tokens": 2380,
+          "request_id": "aafacf5e-d4b3-4f4e-acda-161fc5afb872",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 54,
+          "component_consistent": true,
+          "prompt_tokens": 2741,
+          "request_id": "81900b2a-d3a4-46e8-9d36-f5d1c50800d2",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 49,
+          "component_consistent": true,
+          "prompt_tokens": 3099,
+          "request_id": "eb2f4d5f-a4e4-474e-a55b-27542d036922",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 2187,
+          "component_consistent": true,
+          "prompt_tokens": 3306,
+          "request_id": "03af6440-f6b9-481b-ae96-339f0a3e7383",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 0,
+          "completion_tokens": 37,
+          "component_consistent": true,
+          "prompt_tokens": 5509,
+          "request_id": "d066919b-2af4-4d12-bb97-8c66a9cc2950",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 2001,
+          "completion_tokens": 40,
+          "component_consistent": true,
+          "prompt_tokens": 5582,
+          "request_id": "463e934b-c07b-483a-ac7c-5ee567f0fdd5",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        },
+        {
+          "cached_read_tokens": 4018,
+          "completion_tokens": 46,
+          "component_consistent": true,
+          "prompt_tokens": 7353,
+          "request_id": "a2b4c3f3-c1f1-4a61-a058-fcfb46e64c9f",
+          "within_one_percent": {
+            "cost": true,
+            "input_cost": true,
+            "output_cost": true
+          }
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-2",
+      "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+      "token_sums": {
+        "cached_read_tokens": 6019,
+        "completion_tokens": 2924,
+        "prompt_tokens": 35800
+      }
+    }
+  ],
+  "sources_sha256": {
+    "mini-kheapsort-closed-session-evidence.json": "f73e88f1788de5c337200f0fe18f21cde65f6e85e1a6fe1d1d770c6dbfb348a9",
+    "mini-native-binding-18080.json": "7ff09cf73f91f2e75ad8bf1e2c4a1245447238aad71a13edffcf568c5a403a92",
+    "mini-native-request-capture.json": "9c8c3cf6c72beea3f1c8c8afb4b9c2e5baa8019185576aa82bcae072dccb8f5d"
+  },
+  "v5_published": false
+}
