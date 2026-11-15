@@ -147,3 +147,14 @@ This improves the evidence status from "no native artifact supplied" to "supplie
 summary reviewed with these gaps". It does not establish complete native parity,
 clear mini attribution/completeness, authorize the 3-task live smoke or start
 official shards. No live gateway call or database operation was performed.
+
+## Later evidence addendum
+
+The [kheapsort follow-up review](mini-kheapsort-evidence.md) records two supplied
+two-run reproductions, all completed and independently graded solved, without
+the earlier preparation failure recurring. This improves reproduction evidence;
+the original attempt remains an incomplete final-preparation failure with unknown
+exact cause, pending cost attribution. Neither the original result nor frozen v3
+is rewritten. The further supplied inventory verifies the attributed pair's 9/11
+distinct request IDs and matching scalar usage, but not complete billing evidence.
+A recorded price discrepancy remains blocking; no original cost is erased.

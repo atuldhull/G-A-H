@@ -16,6 +16,14 @@ unknown. V3 pins this diagnostic update; strict validation still rejects drift
 against historical v2. V2 hashes and authorization flags have not been rewritten.
 Historical protocols remain in [v2](gemini-54-v2.md) and [v1](team-run-protocol.md).
 
+The [kheapsort follow-up evidence review](mini-kheapsort-evidence.md) records two
+completed/independently graded attempts in each supplied ZIP. The attributed
+pair's supplied inventory now verifies 9/11 unique requests and matching scalar
+usage/VK/session fields; billed model and complete cache/closed-session evidence
+remain unverified. A pricing discrepancy blocks costs pending Vivek/Atul review;
+raw tokens are retained for repricing. Historical `3a111322` stays incomplete; v3's
+comparability gate and immutable files remain unchanged.
+
 The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
 and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and
 validate against dry-run manifests with `python -m bench.canonical`. V1 remains
