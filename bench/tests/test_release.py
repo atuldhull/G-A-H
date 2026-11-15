@@ -218,3 +218,24 @@ def test_published_v3_integrity_and_audit_do_not_authorize_live_work(capsys):
     assert canonical.config_id(mutated) != canonical.config_id(config)
     with pytest.raises(ValueError, match="grading policy differs"):
         canonical.validate_config(mutated)
+
+
+def test_published_v4_integrity_retains_routing_completeness_and_authorization_gates(capsys):
+    config = canonical._json(canonical.V4_CONFIG)
+    assert canonical.config_id(config) == "026d0a1b238f4675011c268619c051b1ffd3102a264a85e712bf7721f49b1bb4"
+    assert hashlib.sha256(canonical.V4_CONFIG.read_bytes().replace(b"\r\n", b"\n")).hexdigest() == (
+        "357c0937e274500d226033b03b2d2fc199bbff169f22c8bea2793b6d29ac2eb7")
+    assert config["provenance"]["runtime_git_commit"] == "deaf328ab72c5149ba8e67a511a606b912aa4b1e"
+    assert config["evidence"]["canonical_native_prices_sha256"] == (
+        "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e")
+    result = canonical.validate_config(config, audit_current=True)
+    assert result["contract_valid"] and not result["paid_runs_authorized"] and not result["cross_shard_comparable"]
+    mini = config["outcomes"]["mini_replacement_inventory"]
+    assert mini["usage_rows_accepted"] == 20 and not mini["complete_cost_evidence"] and not mini["billed_model_verified"]
+    assert canonical.main(["--config", str(canonical.V4_CONFIG), "--audit-current", "--require-comparable"]) == 1
+    assert not json.loads(capsys.readouterr().out)["cross_shard_comparable"]
+    changed = deepcopy(config)
+    changed["evidence"]["logged_component_precision"]["binary64_ulps"] = 80
+    assert canonical.config_id(changed) != canonical.config_id(config)
+    with pytest.raises(ValueError, match="precision policy differs"):
+        canonical.validate_config(changed)

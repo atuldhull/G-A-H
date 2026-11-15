@@ -1,0 +1,369 @@
+{
+  "canonical_config_id": "026d0a1b238f4675011c268619c051b1ffd3102a264a85e712bf7721f49b1bb4",
+  "canonical_revision": "gemini-54-v4",
+  "closed_session_completeness_verified": false,
+  "complete_cost_evidence": false,
+  "component_precision": {
+    "absolute_cap_usd": "1e-12",
+    "binary64_ulps": 8,
+    "price_check": "separate-strictly-greater-than-1-percent",
+    "raw_evidence_rewritten": false,
+    "relative_cap": "1e-12",
+    "zero_nonzero_match": false
+  },
+  "counts": {
+    "null_model_rejected": 20,
+    "usage_accepted": 20,
+    "within_one_percent": 20
+  },
+  "execution_authorized": false,
+  "kind": "v4-inventory-readiness-audit-not-a-report",
+  "native_binding_verified_here": false,
+  "previous_documented_component_rejections_resolved": 14,
+  "price_snapshot_sha256": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+  "pricing_scope": "conditional requested Gemini route; null served model never resolved by assumption",
+  "raw_evidence_rewritten": false,
+  "report_eligible": false,
+  "runtime_checkpoint": "deaf328ab72c5149ba8e67a511a606b912aa4b1e",
+  "schema_version": 1,
+  "sessions": [
+    {
+      "closed_completeness_verified": false,
+      "request_count": 9,
+      "requests": [
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 43,
+            "uncached_input": 890
+          },
+          "price_check": "within_one_percent",
+          "request_id": "b8dc4c31-d2e5-431c-bb99-a8100d64d404",
+          "served_model": null,
+          "source_usage_sha256": "cfa3c28fd14c894eed075c08bef0bde563b308d8e14af0563d877916bf968143",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 38,
+            "uncached_input": 964
+          },
+          "price_check": "within_one_percent",
+          "request_id": "c04d6186-e223-4ed0-ba89-e5c2082fbb2a",
+          "served_model": null,
+          "source_usage_sha256": "de6b9c0c9a3238e2a9744d2c6a40f2b12352e7f3a15ef881b2bec8b96b7d073d",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 45,
+            "uncached_input": 1789
+          },
+          "price_check": "within_one_percent",
+          "request_id": "2b6dfa15-09e2-4424-9ccb-86c5466e039a",
+          "served_model": null,
+          "source_usage_sha256": "8f40ebdf0febc213afdf7413572ed048af1bd764bfde23fb0d43edc72fa822c3",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 939,
+            "uncached_input": 2177
+          },
+          "price_check": "within_one_percent",
+          "request_id": "34ecc0b0-3ff2-48d6-930d-92e304974808",
+          "served_model": null,
+          "source_usage_sha256": "a00d60b9ddd10f79b7ea0f134c7c573cd67190ed9e103d48e26b0899ab8216d7",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 53,
+            "uncached_input": 3197
+          },
+          "price_check": "within_one_percent",
+          "request_id": "039decac-6d2f-49e4-b93b-dd84370b825f",
+          "served_model": null,
+          "source_usage_sha256": "55dd18a1314aa85ab7a03fe86944f13c940e1352fc05c203bde4ae40bae360ff",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 400,
+            "uncached_input": 4037
+          },
+          "price_check": "within_one_percent",
+          "request_id": "4c0aa468-4266-496f-b514-781102f3b305",
+          "served_model": null,
+          "source_usage_sha256": "010be5f062f56f6b61f7602ecafd3079d4b158a05fa893c18e7bf91a54b4e85c",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 2002,
+            "cache_write_input": 0,
+            "output": 28,
+            "uncached_input": 2451
+          },
+          "price_check": "within_one_percent",
+          "request_id": "e5975441-6cfa-4a91-817c-70e94b8e61e3",
+          "served_model": null,
+          "source_usage_sha256": "8246dd0e18ab3e263570f90b5dec3f8cacc1d2d10b46da4a8f75674f67b95875",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 1998,
+            "cache_write_input": 0,
+            "output": 38,
+            "uncached_input": 2519
+          },
+          "price_check": "within_one_percent",
+          "request_id": "afb01cc9-67c5-4b00-9cdc-486716dcfcee",
+          "served_model": null,
+          "source_usage_sha256": "ade57e4b48aded24fbf854e15195d5b76ebe1812a72ed8234805de179759716c",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 4018,
+            "cache_write_input": 0,
+            "output": 41,
+            "uncached_input": 2268
+          },
+          "price_check": "within_one_percent",
+          "request_id": "168bb9d7-e02c-4795-81a2-f3c2206198cc",
+          "served_model": null,
+          "source_usage_sha256": "7a7cc651e438a2cdf8371abe6d170c6ca405451dc37e4acd028f7f161abd7781",
+          "token_usage_accepted": true
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-1",
+      "session_id": "mini-24877326f8de47f88029728cd8deb95c"
+    },
+    {
+      "closed_completeness_verified": false,
+      "request_count": 11,
+      "requests": [
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 45,
+            "uncached_input": 890
+          },
+          "price_check": "within_one_percent",
+          "request_id": "9266bd58-33f8-4ca7-a732-fe0945f395b1",
+          "served_model": null,
+          "source_usage_sha256": "5355f9694ed53ad457d0b23049476a70eafc2624a5ebf2d5e1c87a44e5de9355",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 39,
+            "uncached_input": 966
+          },
+          "price_check": "within_one_percent",
+          "request_id": "e5270f1e-e75b-4454-b4b7-0e3d35827063",
+          "served_model": null,
+          "source_usage_sha256": "cf01948d5d06b6b45c3eaf89ef0a40bd1479d75c1171a48001b6eb3e27dac8a5",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 46,
+            "uncached_input": 1792
+          },
+          "price_check": "within_one_percent",
+          "request_id": "e07abf66-3c5f-4807-b678-248ecf62afc4",
+          "served_model": null,
+          "source_usage_sha256": "4bbc5c04571569030e915ba09c0e8dc22cf5aefd3697385a872f0df507787c56",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 57,
+            "uncached_input": 2182
+          },
+          "price_check": "within_one_percent",
+          "request_id": "00591133-55bd-45d4-9cf3-24636dca70d8",
+          "served_model": null,
+          "source_usage_sha256": "bafd9de86cf65bd7f73288c41100b8c3b20cae6ed4b81ee9166d35a33cfb220e",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 324,
+            "uncached_input": 2380
+          },
+          "price_check": "within_one_percent",
+          "request_id": "aafacf5e-d4b3-4f4e-acda-161fc5afb872",
+          "served_model": null,
+          "source_usage_sha256": "eb2d2c8a8e74a901dc67c1bc65db6c3a34cd668d52b5148433cfda417f208b53",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 54,
+            "uncached_input": 2741
+          },
+          "price_check": "within_one_percent",
+          "request_id": "81900b2a-d3a4-46e8-9d36-f5d1c50800d2",
+          "served_model": null,
+          "source_usage_sha256": "ca86b6557c229c3bad9045048f6d85e192c922cd4e42f05fec6ea9b97dcbf24c",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 49,
+            "uncached_input": 3099
+          },
+          "price_check": "within_one_percent",
+          "request_id": "eb2f4d5f-a4e4-474e-a55b-27542d036922",
+          "served_model": null,
+          "source_usage_sha256": "c686a223905b9b54eddb94bd08698a44eca7ac1c00cb7a98df9ee5271ba62eb9",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 2187,
+            "uncached_input": 3306
+          },
+          "price_check": "within_one_percent",
+          "request_id": "03af6440-f6b9-481b-ae96-339f0a3e7383",
+          "served_model": null,
+          "source_usage_sha256": "2251f631ad4c27b0ed7d865508e3247eacd095a724ad3381ae57751254bb8f8a",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 0,
+            "cache_write_input": 0,
+            "output": 37,
+            "uncached_input": 5509
+          },
+          "price_check": "within_one_percent",
+          "request_id": "d066919b-2af4-4d12-bb97-8c66a9cc2950",
+          "served_model": null,
+          "source_usage_sha256": "55fac1fb0b686bab211e87db0026ec8ee92cbeaf43844406fcfdbc132d1b87ce",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 2001,
+            "cache_write_input": 0,
+            "output": 40,
+            "uncached_input": 3581
+          },
+          "price_check": "within_one_percent",
+          "request_id": "463e934b-c07b-483a-ac7c-5ee567f0fdd5",
+          "served_model": null,
+          "source_usage_sha256": "94c21d109f7e2c3d07683f62a09b9efd65d866adf6c6dbfd22c182050a4ca055",
+          "token_usage_accepted": true
+        },
+        {
+          "above_one_percent": false,
+          "complete_cost_evidence": false,
+          "model_issue": "missing_or_invalid_identifier",
+          "normalized_usage": {
+            "cache_read_input": 4018,
+            "cache_write_input": 0,
+            "output": 46,
+            "uncached_input": 3335
+          },
+          "price_check": "within_one_percent",
+          "request_id": "a2b4c3f3-c1f1-4a61-a058-fcfb46e64c9f",
+          "served_model": null,
+          "source_usage_sha256": "154e3e5c6119d592a064fcb4f233457cf546cc9ae290500d84a586e723da90d8",
+          "token_usage_accepted": true
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-2",
+      "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f"
+    }
+  ],
+  "source_artifact": "mini-kheapsort-bifrost-inventory (1).json",
+  "source_sha256": "cdffbd2b9cf7e815ce1984acaa8ba8fb65a85e02d854c81719d10bbd7213eff9"
+}

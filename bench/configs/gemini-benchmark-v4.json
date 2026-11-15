@@ -1,0 +1,789 @@
+{
+  "schema_version": 4,
+  "kind": "canonical-gemini-benchmark",
+  "revision": "gemini-54-v4",
+  "provenance": {
+    "runtime_git_commit": "deaf328ab72c5149ba8e67a511a606b912aa4b1e",
+    "main_git_commit": "af6974a3efb4977364f3a572509c41a9752e8ba4",
+    "config_identity": "sha256 of compact sorted ASCII JSON; raw file hash also retained per machine",
+    "publication_commit": "Record the exact config-containing Git commit in each shard attestation; not a self-referential field.",
+    "observed_environment_versions": {
+      "crocodile_platform": "native Windows",
+      "mini_platform": "Ubuntu WSL2",
+      "windows_python": "3.12.10",
+      "mini_python": "3.12.3",
+      "pytest": "9.2.0",
+      "mini_swe_agent": "2.4.6",
+      "litellm": "1.109.1",
+      "cross_machine_lock_verified": false
+    },
+    "runtime_file_hash_rule": "SHA-256 of Git blob text bytes / working text with CRLF converted to LF; no other normalization",
+    "runtime_files_sha256_lf": {
+      "bench/__init__.py": "7368e74a23585e3c252a2851c7f479bbacbdc5e351a1db5e3b956fac8e8c9ae2",
+      "bench/attest.py": "c7ca17c76cd956b501fb37c0f1408d60eff2fbdda2dc7f6ffdd90d6f96a2f038",
+      "bench/bifrost_export.py": "68b53d3385c4833d3aa36adb78eee4e206de9bf78523898f5f1703396baca5f7",
+      "bench/canonical.py": "864053be4899d9089696972c0b2f2780c2a852ce1199580315bea3de68d87148",
+      "bench/configs/crocodile-gemini-bench.json": "77743ad20d73a4e6ceabece1d6b1adaea34754d3ab9f80cbb15863b19130a090",
+      "bench/configs/mini-2.4.6.json": "cd610f87febf95a9348b1cbd885550fb561af7c62fc204ed2780a33e9744f6d0",
+      "bench/configs/mini-settings.ubuntu.json": "200f7a9d9cc48c5216d9ea45f5f285130a8393fdf09b0c4194e86362ac37d759",
+      "bench/grade.py": "855ad1b2aa43a075c473751fc8fc324747d819630b68d7cfd038ff61988abb40",
+      "bench/mini.py": "3d550ac1e5f69508d6c62c64aa2b3dd840f52116b2c3b26d40fee2813b601c2a",
+      "bench/mini_bridge.py": "4b251f779a268202a4660d9bbe9e7495f13bf224549a978ac483ef87fd470d0c",
+      "bench/mini_report.py": "2b326dcc399695e510b79f25bef56fb4013995416d4af12758cf4797cb64c3ee",
+      "bench/plan.py": "4fba01fd34bbf09be69d49ea876568b199d0dcf64f0230676f8ac0949df98347",
+      "bench/prepare.py": "cc01f032ba23c6064d0947941418770a45a8df5f14d5bcc64478ee880e90043e",
+      "bench/race.py": "d4e3d2976d683647d65276a76b549a80e850edadeb1cdd1845b5b7e722d32234",
+      "bench/release.py": "6d56782416a830ba502168e51da2fd3a751945e27df8ab1a443602245e803bf6",
+      "bench/report.py": "3d7142caebdf2aa964e3f6b697052a2a99ae09511f1a142d280785c1913384bc",
+      "bench/run.py": "63140f22b509a9974874c6f4c6b763b4494292c710cc01c64405ca79a7493c44",
+      "bifrost/config.json": "5a677191df1a4b80c2893acf6049620fe844d495537418c27e2d74a3dc6a1d60",
+      "crocodile/__init__.py": "fbe4e0eeaa955d35312d62fe3ba1f76565f99423295a38ff2b53799e21647717",
+      "crocodile/__main__.py": "738f43bad262c91091fb08503ef2024105375dfa3eee53baf456d98af214ac9a",
+      "crocodile/_stubs.py": "911bef44cb53f295ecd7639374e56793d8d958c43cb04825b31087a8f47f9dd7",
+      "crocodile/adapters.py": "7fcd5c38e72dba2e5920f43b281a2686bc5b13e2c8e2ca911180049020f3e66e",
+      "crocodile/agent_types.py": "94a6e57df12e4518b42e2647de0625239949568df4dd113ccdc083a9d268baa3",
+      "crocodile/cli.py": "dc1a196167ba77e31a9204ecace3df2ab407a06f506b0d46a354d80994699f59",
+      "crocodile/contracts.py": "f1aee8f1eef2a822b4452faed49f4984dfc833e228d56c2869b1a08115afd198",
+      "crocodile/engine/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crocodile/engine/gate.py": "d4ae4a3efb305a3d88038525fdca8892ea0c4797fb8e7c5047a2ad0a4bc7d861",
+      "crocodile/engine/ladder.py": "88e1e13b76e8140999fad549d696f0280be86917c0aaf2d61bd1cbe7c7ef7250",
+      "crocodile/engine/masking.py": "f9d2be37a8eb9faffbaa621597eb6ce13ccab7471f1ad28d530e8ca459732db1",
+      "crocodile/engine/readcache.py": "338ee850acc1db2737c348ab58d0a388deb7f6c16b05904dc312aa6654100e4a",
+      "crocodile/engine/rewind.py": "dd7fbef09b86d4ac9c9774c9d77d404b6452aace38ed27180a93b070817d6dbb",
+      "crocodile/engine/savings.py": "88879639a8e2137b4745de5a7017e23de050875f8df51969f0122361be5ddbe9",
+      "crocodile/engine/thrash.py": "dca9c7b02b058c641a7d725ffcc8f7b29bf85cce70cf3e3f54a36146c8c95eeb",
+      "crocodile/gateway/__init__.py": "eeb6ce1ae3314432e0ee771f82be77f40f2ae9d62dc4a55e50eaff534862f8a9",
+      "crocodile/gateway/budget.py": "c48b9f2731bbe827576de93bcf25aa931b1f5b8ba507b8d719cdcb484ed94cd8",
+      "crocodile/gateway/egress.py": "f96c8e0a2cf68600b5e79ce056114cdee344d4d877532f3d42bd992f49f24a5e",
+      "crocodile/gateway/fallback.py": "faf65802b6355c04f0dcdea0c1f6a05be10c3f24dec7c3e5f98df2f9a5872a17",
+      "crocodile/gateway/journal.py": "2090bc37a9e9156557c4f4ce4f26314f390894891d12c63b3e1bb97feedc2ef0",
+      "crocodile/gateway/local.py": "bc7de7981ec477bc5357ef9edf8f07f07eb8055604d6b52a1c203ee26ca30731",
+      "crocodile/gateway/prices.py": "e5e9a31050be8068e9de52d6978eb9bf9c9989ec6747af781d9d69d4d8ebcdb7",
+      "crocodile/gateway/tavily.py": "f2928c1238bbab7f201cc4d40897aac9ca6a64b8b701dcef65f8dd3d6c19f2f3",
+      "crocodile/loop.py": "4380fcfed8a7c9d2794b2e74f3fcc60fd0c3bd0f74d25a5d4b46afb4ff371005",
+      "crocodile/prompt.py": "296d29c47302a0c6fdc36a08379ea8c64113c1ea32127692cf0f8ea214963d4e",
+      "crocodile/runtime_security.py": "815362815923f3ab6ca208f0e910091d7b8947742eaec4575c6272f7613b2fb3",
+      "crocodile/security/__init__.py": "838ae433344169bcfaaf428c59c76f0288b41805a82b368e7e18ba2807f37c5a",
+      "crocodile/security/approvals.py": "e8df33f182f216f0a59259e2462b2692911e9d778e669759429027177f137943",
+      "crocodile/security/audit.py": "d23bda7ff3ea2e3485687d952e1c8787b69db18d4d5d30ea962456edbd36b4dc",
+      "crocodile/security/binding.py": "ba4bb991ae66a75b5d3031ff9360026f1ab460cdb4aae965febf4c65330bddad",
+      "crocodile/security/canaries.py": "c460f0c2144c89f183159e334be89bbe911db62df9e3f83d6954ac9c07fb68c7",
+      "crocodile/security/classification.py": "80254a1ebfb1d5964c8d5f00a88dcd3993b7f73bb42bed3da7b0bb2d6ae6f4f7",
+      "crocodile/security/cmd.py": "02d67f0168c45d41557f2bdffc4bee2eb18f04451a3dead0aea46e5105fa6b48",
+      "crocodile/security/confidential.py": "9a296bfaf2892f0bce6c8c025c5b673fa02a6102e236c536570af77453fd4984",
+      "crocodile/security/consent.py": "af9fceacecc147d0bd0743cee79bc58d84d5de4e9ed9e901c4021c1d4a7efbd0",
+      "crocodile/security/doctor.py": "5e137de69f58ab69eec16b88786370917ffdc9f23d5b434aba91d947529b947e",
+      "crocodile/security/executables.py": "1ccee72e2d9a44cdffd2499299dce93670dc3040788c5556e37bd6b4e42ea4ec",
+      "crocodile/security/git.py": "90b0448330628172e96009d8db9008d3c5e9ea495db6d865e9366584a085f147",
+      "crocodile/security/integrity.py": "fe115107666caa7b24531d58973528fc3c0fd97e662263b727c5e1b705f1fe3c",
+      "crocodile/security/outputs.py": "3aca631308b18b66a69ee297b7ba76dd57b1dd33e6bb03bb2a74f2dc5aa18e7c",
+      "crocodile/security/paths.py": "ec9233b24ff6dd95619b8c2941c71b85344a6bc128679f8a1bd13381f4bd693c",
+      "crocodile/security/policy.py": "c9bc2cd74b441ceea4cc5162ec0f4166412937ea5ef87d06247f7ba991c8322b",
+      "crocodile/security/procs.py": "43b7c3482f2e1be2f721b408dc2d8066c3abf335b4fe5754b31c8595233e7d3c",
+      "crocodile/security/provenance.py": "ce52942a3cc60356115ee8f8257f2a43e91d32c40e28a613bb6b54c70b16647b",
+      "crocodile/security/secrets.py": "afbfe813d41d79daea3d2eca8510d512e7c90e1f8192884a78544632d81bb5be",
+      "crocodile/security/session.py": "79d048f8f1197851fd2ac2794e492f79c57193a10e69f2bdbaeebfc2a1d3a34d",
+      "crocodile/security/surfaces.py": "e90bf2cee2ffe47f14d25dc07b691625bbce0658f347bcb04fd3203cdbe6d450",
+      "crocodile/security/types.py": "bc94930b22689f68ed9add5196f7ab828417f9621b0cee87187a7df87f5c1c76",
+      "crocodile/security/undo.py": "9f92d68bb6bddafd36721e19647bebce4642b937fcda2db368ce6d6053b56647",
+      "crocodile/security/windows_job.py": "9e687ea36ef0de1301b3887049d7eb8c3be38e47a12e7676177e5533ec2c0074",
+      "crocodile/services.py": "7464f1a0d0912e60fb95ad14122eb98d6e92172f12a178e0233c003bf2c909b4",
+      "crocodile/state.py": "264fb8af9ddfdbea89e8ff3dc5869575b39504998eb8f982c7d1eda0755bccac",
+      "crocodile/tools/__init__.py": "a8818768f6fed6c72d1f3a19bf9eb98eadce36ea540d00899e6a9e8ac8db12a8",
+      "crocodile/tools/base.py": "429142fdeda934a381533cf1ecf570b4a56ee8b85ce88d69fc5d7bc4952e7aa7",
+      "crocodile/tools/cmd.py": "6b53f2a1b55f7155b771765f845addacf0e7a70b3cb8bdb58347c34940d97019",
+      "crocodile/tools/edit.py": "f03563cb0af13008a26f6b80bde057d80dcb48ab68e87e056b1fa884455ef8f0",
+      "crocodile/tools/fs.py": "bae5017afbd35b6dc867f0662121e1c01b2a1d97bdf908c195ead1a7af271661",
+      "crocodile/tools/tests.py": "24b718fda4172c6c52a05b0cefe0c0c900bcbda1a55284f6de62e98d78a81d8e",
+      "crocodile/tools/web.py": "c35b34951df6ec1b3176940fcd8fa73d52599935bb2de66f5cd069972682ce0b",
+      "crocodile/ui/__init__.py": "7abd894627cb22be93cb0a93e08efcd043326df222eeabf45e30a1203ad13686",
+      "crocodile/ui/quote.py": "990aa1e58360dddb8c989452e7386996db9a09cede9c35b5b46e9aac94c3a215",
+      "crocodile/ui/receipt.py": "224969b85e9cccb58f6c6d0a03553201344806f3d6611289596c06ce71ae597a",
+      "crocodile/ui/session.py": "b81db37b3998c120a03ab4e6c51c8fbb6bd0e15e9171c4de2ceea1714c9fe5da",
+      "crocodile/ui/status.py": "f1bf67be7783966f88a4ae9fcf1e69639dfcde027f37b842a00374671d560676",
+      "crocodile/ui_bridge.py": "844e18b53e2a9e533204ad522c56c95419a954204aa5c8b506871527b994a756",
+      "prices.yaml": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+      "pyproject.toml": "5effe89289ebd5b9fb21908bd357ac2bf8cd2ddaad5a9a53edf0b419f3a692b3",
+      "scripts/build_bench_inputs.py": "96d2a4aa25ec2bf872feced47f6a86468c4e44ad37a389db5b79b4576ec329b0",
+      "bench/failure_evidence.py": "1f7be7948a5806f4b5e7ff79e07e51a1a8fac31eb20aa56eba231f9940532a8b"
+    },
+    "inspected_person2_fixes": [
+      {
+        "commit": "61678834e08d887496cf45774dd97bdf1e4b59b9",
+        "on_main": true,
+        "observation": "Integrated through main, never directly from person-2; follow-up preserves fail-closed integrity verification."
+      },
+      {
+        "commit": "5f09a228e991cda82f3c413a3be0bfdb7a9473e8",
+        "on_main": true,
+        "observation": "Integrated through main, never directly from person-2; follow-up preserves fail-closed integrity verification."
+      }
+    ],
+    "main_integration_commit": "9605ac526779b015f8ceb5a11a3eb771be5bac90",
+    "release_date": "2026-11-15",
+    "previous_config_id": "c0d48d86fe8169947e9997dd5fa33f642fa6d53afbc2f54756ce6ea1dd049ee1",
+    "previous_config_sha256_lf": "b3320171326ce1712add548bc8148d838762f219090765a9bf8946ed2a1326ba",
+    "inspected_person1_fixes": [
+      {
+        "commit": "2f8b048",
+        "on_main": true,
+        "observation": "Initial test consent refused plus permitted GREEN edit and finish now returns UNVERIFIED (tests not approved). Real Agent/UI RT-2 regression verifies zero pytest children, zero test runs and TESTS NOT RUN (no consent)."
+      }
+    ],
+    "corrected_price_commit": "af6974a3efb4977364f3a572509c41a9752e8ba4",
+    "corrected_price_git_blob": "5d9f09f632b85bab7afb446372023d335cd44677"
+  },
+  "datasets": {
+    "upstreams": {
+      "polyglot": {
+        "url": "https://github.com/Aider-AI/polyglot-benchmark",
+        "commit": "7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f"
+      },
+      "quixbugs": {
+        "url": "https://github.com/jkoppel/QuixBugs",
+        "commit": "4257f44b0ff1181dedaedee6a447e133219fcebf"
+      }
+    },
+    "tasks_sha256": "3181a82f9c34fcc732761a2ba27157b7a80bb6ea51fc6c73be34bc83a01dcf18",
+    "oracles_sha256": "38cb911edfdbb09f5fd33df793f9bb89e7922524494c5e791b05a27edc9cc537",
+    "source_digest_rule": "SHA-256 of compact ASCII JSON sorted [relative POSIX path, raw file SHA-256] pairs; exclude .meta directories, __pycache__, .pytest_cache, *.pyc, *.pyo; reject links/junctions; do not normalize source bytes",
+    "task_text_rule": "LF-only UTF-8 prompts from b92ae4d builder; identical appended test command; bench.plan SHA-256 checked against mini worker raw bytes; no newline normalization at execution.",
+    "quixbugs_selection": "Builder rule: JSON-testcase programs, no slow marker, buggy tests finish within 30 seconds, first 20 alphabetically; expected index hash is authoritative",
+    "builder_path": "scripts/build_bench_inputs.py",
+    "tasks": {
+      "polyglot/affine-cipher": {
+        "task_text_sha256": "d8cf65b5a664398b013349c905129f5111cc742e969c4a8f5e2d80ccd70af55c",
+        "source_sha256": "b934a4ff33e0e0ecfa093c528de026c2dae4d5ed331445263e83b5326fb64f45"
+      },
+      "polyglot/beer-song": {
+        "task_text_sha256": "103c761a4c72a69af5b20f0cfd25c514ed848f4b74c382257092be125a953e12",
+        "source_sha256": "f8c818a603cc5711d723ed169b8dbc44542f452556fa51aa59ff0f7660aa6875"
+      },
+      "polyglot/book-store": {
+        "task_text_sha256": "725c1fe7d8c68af95b9d71d4acca5695cc9542a94f63636cdfb478aa90657a98",
+        "source_sha256": "9f12f3f235cdaca4ad65acf681f5904054bd937815410ccc90fdee09286b361d"
+      },
+      "polyglot/bottle-song": {
+        "task_text_sha256": "843ba565dbedf186a0beb46aba6f4f3ee54169b578431690c17899d930ea1d9d",
+        "source_sha256": "701710cd26339aedc3eab335bb194f7918352ffbc0a5da85513ea5f306b3ffb9"
+      },
+      "polyglot/bowling": {
+        "task_text_sha256": "c6509c4e4e83efc5b2ad6ee1425f1c7f1d8f50bbaf71e826c54a6d8196c77ca2",
+        "source_sha256": "dfe8f383ea3e456b37f852584c2b7a5979d088835988b96e47c175291b67c146"
+      },
+      "polyglot/connect": {
+        "task_text_sha256": "6a49be19fb3de369fa5ce25c55601f8b7dc29c61df3aa24e151d6a813a5402d6",
+        "source_sha256": "eecbe224cf7db3948aab7ec7d77463ee7fa3088266d5fd237b93c995cd24c362"
+      },
+      "polyglot/dominoes": {
+        "task_text_sha256": "9e39b535252c5888a94788739a5c8e1ab312b2a46280e48423e2a80da40088aa",
+        "source_sha256": "4bdec31a28219380cc874908c4d6e12a9ff62049031e6e3e483d259685209218"
+      },
+      "polyglot/dot-dsl": {
+        "task_text_sha256": "261416fabf8790f3a4409e66d4fbdb63faf4cf70fa285e702bf76683e8b283f2",
+        "source_sha256": "c5905e56d69c72cb58d7700be256c2ce7a5ab9ce87f5cbc6e9606e15bf5990b8"
+      },
+      "polyglot/food-chain": {
+        "task_text_sha256": "276435cb4237855be7507ce08a3441c5c586e7c4136b7d3c3eccf53184c4d0a5",
+        "source_sha256": "78835e2da38c1fb36461c3f508f4617ba25b5578c7be1f554a186ee86bf22557"
+      },
+      "polyglot/forth": {
+        "task_text_sha256": "0f5a541f3a4c5fa828fb07e9f9a565921b5279f89ec8498041c67a3bf3a2192b",
+        "source_sha256": "77923bb3cbee27fadbf3e0fb9038ee9b87a4d3ac9b8ba07ca89f8c114a5a3adf"
+      },
+      "polyglot/go-counting": {
+        "task_text_sha256": "0687608c32da466fbcda1e870e6f72c8ff69370917e34d40d5422611deb3bdbf",
+        "source_sha256": "92f498fcb0ace62fae48b9e5c2becc5ed6f7ad6ce1d582084a63594581016575"
+      },
+      "polyglot/grade-school": {
+        "task_text_sha256": "a30cb69813dfbad57259ffab59f2ecaa13d4d8f02b3ba0376edfcc23bd94ff32",
+        "source_sha256": "df78f5567eaa95c41f42860e4ce95ac6cd24e7a55dcc107fd4b3513cb559e744"
+      },
+      "polyglot/grep": {
+        "task_text_sha256": "1151be4566c5eff7ec450906f94b94e7cd1d627b71a79b0378d5ac6588f1f62a",
+        "source_sha256": "35c6b8c0a18455c6f7b58490b89c7702a2ebce39f66cf5fe5ababfe213c14749"
+      },
+      "polyglot/hangman": {
+        "task_text_sha256": "71912ca26b79453651a9df0e58a341ce4d1f3261d8214de126ff33688db97b1c",
+        "source_sha256": "8d115313df41d281da41b48bb3522bb201469187073ba743c932f38e91b980cc"
+      },
+      "polyglot/list-ops": {
+        "task_text_sha256": "27d865279e3c122ff15226c6de87266876a4cbe7d3a89d2565273441ec2f2daf",
+        "source_sha256": "12746194b609b140b831d94dbd9efa49977f20112824bf88063d36ec0516b532"
+      },
+      "polyglot/paasio": {
+        "task_text_sha256": "8f8e3960dbfe5e83390e357f20c89e43ff450417aed1617a68aef0b687e8e7c3",
+        "source_sha256": "871232fd1a6b3ad1a061d7070033b66a4b8b1e43236e163aaeef01e5e84861ea"
+      },
+      "polyglot/phone-number": {
+        "task_text_sha256": "dd2eed9374429c69d806856dc3303310fd34e210ce9c1da99d5f04a38e03fe5a",
+        "source_sha256": "b792a770864ee2724f1c0917816ae8f5387d5b768f68fd73091a9efde31503a4"
+      },
+      "polyglot/pig-latin": {
+        "task_text_sha256": "0e6c05cf19f89f6fe3f86c2d1c0bd0caf7b803813925155621cc3d62301d5232",
+        "source_sha256": "ec4c838f1f390bfc4bc54defb4f71616700decc5f94c9900195f33c7c409b511"
+      },
+      "polyglot/poker": {
+        "task_text_sha256": "bd861103de00621c5b65dcf9fb739ce7973af252b4791849746de1fc011754c5",
+        "source_sha256": "006bb2e1488b5bf8dc330fb8aa9e5a8c7a70428400855fc60f69e1da19b65f14"
+      },
+      "polyglot/pov": {
+        "task_text_sha256": "916cc6c8163673aad385fa505ecc15b829004752609023a86bd179aea79d63b9",
+        "source_sha256": "41388182425403de42036ed4760e5b7120419ca929ac4ca109292a64fb98393f"
+      },
+      "polyglot/proverb": {
+        "task_text_sha256": "0da21891c1691d06925341113b377ef738e867a92f0bc474f137568b0aafd781",
+        "source_sha256": "f8841669b2af914ae989cdb3d141754729cefc4cbf4c2706c801f12ac2a31e2c"
+      },
+      "polyglot/react": {
+        "task_text_sha256": "e322873e2eb8d48224377edc8a3473b414977cbb44868d1038bfef0f85ad5968",
+        "source_sha256": "13d2af8d06d25c7350bffadffc5966f8258063fa9ac97b567ce46a927e271db9"
+      },
+      "polyglot/rest-api": {
+        "task_text_sha256": "3088842aaf6dc147118471bf5eae4e62b04904c9b205e21b5f9f806f9afb1598",
+        "source_sha256": "c481bd78e55d5da34983adfcc62f29580fa09868cd14972e86d0d1c564b6ef8d"
+      },
+      "polyglot/robot-name": {
+        "task_text_sha256": "14d91a6f4f3510a916f96e01bc0a1094ca12e410eb33e6770b32089408460729",
+        "source_sha256": "d03a355dc06c63291377d2156d8d97ea3b116277cdd4ec67cd9d4775fd9c3498"
+      },
+      "polyglot/scale-generator": {
+        "task_text_sha256": "2d9e01d6eaf16ca18b3ece5d2d9cb629af27c1b6ad4edbdc56c03d84a1203a03",
+        "source_sha256": "035a362a6660156b00d587ef70da2703562b0707d5a3d43eea4059f60051dfa0"
+      },
+      "polyglot/sgf-parsing": {
+        "task_text_sha256": "4ebbfdd291b569dbd523771f29ec6521989fb3c1e36dd52f50f3518232dd94c7",
+        "source_sha256": "bfdeadb37ed9f9d4f66a90589c4c093ecd8716f96763c8ca13dd866e3cc47772"
+      },
+      "polyglot/simple-linked-list": {
+        "task_text_sha256": "315fef9e26e5163e57cc068a4c65b577d63fa3cad195b50871240f7edc4f107f",
+        "source_sha256": "71d3068d77d0740d7d23e6ae707c8c910af5c3dcdec5d666975fcb1a0842b956"
+      },
+      "polyglot/transpose": {
+        "task_text_sha256": "cdbe4a0030ea89f67cab6ac1a1032b3a755310e2dc57d5a00658f05009814c35",
+        "source_sha256": "088e5255b30a0088f12d49496ef5fd45edf511bb8c8ab6876b3163e120ae3550"
+      },
+      "polyglot/tree-building": {
+        "task_text_sha256": "234bb5320955591e8a685cf5c29402c98289f6d17ada55bf1ccd468cb2e003bb",
+        "source_sha256": "64440f94239affd22596afab3e4e1ffd69b735afab418f382229e299f07f76bb"
+      },
+      "polyglot/two-bucket": {
+        "task_text_sha256": "17658ccf242f2e101e5e1053c536a97d29f863c84f2f20c9b7d9614f16f54387",
+        "source_sha256": "0fdb10864c20be68f029e2cbad48e54ca6a9e0e6665f3ce5782fb5ecc3bd56b2"
+      },
+      "polyglot/variable-length-quantity": {
+        "task_text_sha256": "d21cce635c6c3b67876f455c65c9b7007017d2b4fda0ea8d6a608e6a1dd955ff",
+        "source_sha256": "44640d687399545d80551bba4bee927e29533a5709da070ba5de454e6420e42a"
+      },
+      "polyglot/wordy": {
+        "task_text_sha256": "088b4ce819edfb5a383ea72b117e673fc1380313b68d49ec887ef2aea13d4ecf",
+        "source_sha256": "9c4f09c35317ab2ed6b30dfa83c596dae9252f0388cd7821f14475969e0e55ee"
+      },
+      "polyglot/zebra-puzzle": {
+        "task_text_sha256": "4c789b85075ef363b1298d3acf726087e44d1ce22171209bfe524a1a2859c702",
+        "source_sha256": "29988f66b9595fccf77c5f82a3c6499a7e7087320e8680403c2ddf46ee5b6a93"
+      },
+      "polyglot/zipper": {
+        "task_text_sha256": "03a8eb6f8a4e7a00f2b8617cb8ab853e82e019606ff1b78a3bbc70de78caad4b",
+        "source_sha256": "fa59125a4a8d9fdcd1aa791707f78727aebfb97990d9ff4d855527ad6edfaecc"
+      },
+      "quixbugs/bucketsort": {
+        "task_text_sha256": "a5e84c85043dfe53b6733bf78d4c97259ba4535a0b7a0715f61bedc3bbe026c0",
+        "source_sha256": "6b52e328ca1ff04df8fa4f4601f4ba4403d9412a3baec2cc48b01fa8c85f5601"
+      },
+      "quixbugs/find_in_sorted": {
+        "task_text_sha256": "7612e7ba1566672c027df14e915d56ad634604521f480bf7ca480b920e54d27a",
+        "source_sha256": "97e4d9f8bcbb1218973e05a04dbbb4d3a5205382db9708f39e2973906818fcb6"
+      },
+      "quixbugs/flatten": {
+        "task_text_sha256": "a6192972c7947691862f0024f1579d1bb0133216d9a2b0a7ce28839ab09de9b7",
+        "source_sha256": "3541338d8ffcb64fade0af9bb1130500d7970bf5821b59588c7b84a8668a1a69"
+      },
+      "quixbugs/gcd": {
+        "task_text_sha256": "692509a81ec53358e19e878582b02207c4715e61803da085b2c2f87042ddf535",
+        "source_sha256": "a98c122b907c2e40548f53026029749e1582006deb438a95debf3a42e9e1984e"
+      },
+      "quixbugs/get_factors": {
+        "task_text_sha256": "5bb199e2598702e4280b8c59092615fb09551d68ed11571da96280319b304887",
+        "source_sha256": "872e4e33619965eb5738e29f1436e67347019d607b2f3778845606b8ff00099d"
+      },
+      "quixbugs/hanoi": {
+        "task_text_sha256": "5ed5435db9b5fb9f2d7f2fe4d4a1ca5df60816bb376282c3ba1349d61ffbca7b",
+        "source_sha256": "35cae393e70029e89e8535e136331e85ac80e97156d4f4a9ec90230bf8efd480"
+      },
+      "quixbugs/is_valid_parenthesization": {
+        "task_text_sha256": "1995766592c6a560fa00346e139772d2ea13de8525616db16e8d57719cb5b798",
+        "source_sha256": "2b74f7b30ccbd75295be208488ecce32ec2657a9e06afd2079c8f2d3e62919cb"
+      },
+      "quixbugs/kheapsort": {
+        "task_text_sha256": "f3fdb713943558b4164b9a425d251ebc6382ee8f49b7a63ad6ffcf815c174e5f",
+        "source_sha256": "cf1ea180d2e31c0464c83d672c66f51027161bbbe17c8e77cca1f4788dbb5767"
+      },
+      "quixbugs/kth": {
+        "task_text_sha256": "bdcb04865e7493a2d21ae829b6001ea1a4649d122f6304f278bc3725d534834a",
+        "source_sha256": "2f024102f2c129e31c95b58c0cbd0c597cddb6f146cb801f19fb0bec579a550a"
+      },
+      "quixbugs/lcs_length": {
+        "task_text_sha256": "5e6ac76229e28e7348c3f277c8ba3f8ba969f6d1d4246757c79db7a069e61c44",
+        "source_sha256": "7c80c8852f528c6cd3b87d81546b5a62ad2f5e47228b8c5e3c41dfb616c15f6f"
+      },
+      "quixbugs/levenshtein": {
+        "task_text_sha256": "cad7e97c4cec093cc04d0935b2a77b00d7fcefd6f45b841f4818ad637d972ef1",
+        "source_sha256": "5a99ccb7934bf1459158cc86bbc2b0449ff78384525f08a73891e71a47267dd4"
+      },
+      "quixbugs/lis": {
+        "task_text_sha256": "c8864320e1d010112826295c975d1b85404421465e49bfd5872c5e5dbf247e71",
+        "source_sha256": "0357cecea658829f5b2e806e7cfcb45d9816405d776a6f42c22c054559b1ab95"
+      },
+      "quixbugs/longest_common_subsequence": {
+        "task_text_sha256": "c3d1fbedb36603f35a3c7b110fdcb88839545f3691130714733aeda3b2a7fc0c",
+        "source_sha256": "e0a016d69e04560d18767f7788216be24aca9c69d73cb1edbb35d0d4b00b34d6"
+      },
+      "quixbugs/max_sublist_sum": {
+        "task_text_sha256": "293f2a6f04f25afdb2529ed6c7fda0aeb1cf295ea49c18eab1fa2e1e6b4344b7",
+        "source_sha256": "2f444a1252c2db67301b7876208bbbae2eb4fe2fd2fd8a2a9b176d0f857a1a0b"
+      },
+      "quixbugs/mergesort": {
+        "task_text_sha256": "051321ed5fcdb57700d8a3d83e1474ef0956dad76bd81c745119256d9b6b84e4",
+        "source_sha256": "c0caffabc1fbcf4f5ef97d95f6a6f610a9957bbdbf6c3c23bbc5fbe359b5073a"
+      },
+      "quixbugs/next_palindrome": {
+        "task_text_sha256": "4efb63072f7f802b88e2d811f1e9e421f09785f668718c7f91d52bc4f99d0351",
+        "source_sha256": "b0f4bcc21575a4db42c11b68f34b923587682e3c47bb6b10449b83825e1f7b5a"
+      },
+      "quixbugs/next_permutation": {
+        "task_text_sha256": "e1f2947e3abd14139b9cc2799c06cce3e37060e69cbfc6c69d49cd8e3697c791",
+        "source_sha256": "58dcf44764fd32054570bd4cdc0eea8284aaa97fc2869d5aecb11f1fa35f1532"
+      },
+      "quixbugs/pascal": {
+        "task_text_sha256": "4815024fdf53971fbae4e22f75e762c0d69513a81a00ae2654005180233ca1f3",
+        "source_sha256": "48a8f4496f620cc4f4b54c539ffb15c2fdd2ab60c33baa0aeca250800d675b7e"
+      },
+      "quixbugs/possible_change": {
+        "task_text_sha256": "84345492867793a630b07f8e2b870866d51d5ca60b5feda5ae636ba65b3b3aa5",
+        "source_sha256": "90145a1bf9b620225b1b23d1d627112fe43fa2eb9741951bd7ab8d5b75a95197"
+      },
+      "quixbugs/powerset": {
+        "task_text_sha256": "a0a6942beeba7e4725db31b45565bf9f5d56f138b2c06f5f5c83834f479694ee",
+        "source_sha256": "ace602a9034774e666d1a027064c51b3555c0df1a63a9af8d1eea90d4714f66b"
+      }
+    }
+  },
+  "plan": {
+    "evaluation_policy": {
+      "model": "gemini/gemini-3.5-flash-lite",
+      "thinking": "provider-default",
+      "effort": "provider-default",
+      "gateway": "Bifrost",
+      "semantic_cache": false,
+      "prompt_caching": true,
+      "gateway_url": "http://127.0.0.1:18080",
+      "virtual_key_id": "vk-bench",
+      "virtual_key_name": "bench",
+      "measured_model_fallbacks": [],
+      "measured_escalation": false,
+      "mini_swe_agent_version": "2.4.6",
+      "parallel_runs": 4,
+      "grading_timeout_seconds": 180
+    },
+    "full_plan_id": "da56c686fe979620275686e46042696330d6d91a37c20c9409063111561188f6",
+    "task_order": [
+      "polyglot/affine-cipher",
+      "polyglot/beer-song",
+      "polyglot/book-store",
+      "polyglot/bottle-song",
+      "polyglot/bowling",
+      "polyglot/connect",
+      "polyglot/dominoes",
+      "polyglot/dot-dsl",
+      "polyglot/food-chain",
+      "polyglot/forth",
+      "polyglot/go-counting",
+      "polyglot/grade-school",
+      "polyglot/grep",
+      "polyglot/hangman",
+      "polyglot/list-ops",
+      "polyglot/paasio",
+      "polyglot/phone-number",
+      "polyglot/pig-latin",
+      "polyglot/poker",
+      "polyglot/pov",
+      "polyglot/proverb",
+      "polyglot/react",
+      "polyglot/rest-api",
+      "polyglot/robot-name",
+      "polyglot/scale-generator",
+      "polyglot/sgf-parsing",
+      "polyglot/simple-linked-list",
+      "polyglot/transpose",
+      "polyglot/tree-building",
+      "polyglot/two-bucket",
+      "polyglot/variable-length-quantity",
+      "polyglot/wordy",
+      "polyglot/zebra-puzzle",
+      "polyglot/zipper",
+      "quixbugs/bucketsort",
+      "quixbugs/find_in_sorted",
+      "quixbugs/flatten",
+      "quixbugs/gcd",
+      "quixbugs/get_factors",
+      "quixbugs/hanoi",
+      "quixbugs/is_valid_parenthesization",
+      "quixbugs/kheapsort",
+      "quixbugs/kth",
+      "quixbugs/lcs_length",
+      "quixbugs/levenshtein",
+      "quixbugs/lis",
+      "quixbugs/longest_common_subsequence",
+      "quixbugs/max_sublist_sum",
+      "quixbugs/mergesort",
+      "quixbugs/next_palindrome",
+      "quixbugs/next_permutation",
+      "quixbugs/pascal",
+      "quixbugs/possible_change",
+      "quixbugs/powerset"
+    ],
+    "shard_ranges": [
+      [
+        1,
+        14
+      ],
+      [
+        15,
+        28
+      ],
+      [
+        29,
+        41
+      ],
+      [
+        42,
+        54
+      ]
+    ],
+    "shard_task_counts": [
+      14,
+      14,
+      13,
+      13
+    ],
+    "shard_run_counts": [
+      70,
+      70,
+      65,
+      65
+    ],
+    "run_order_per_task": [
+      [
+        "crocodile",
+        1
+      ],
+      [
+        "crocodile",
+        2
+      ],
+      [
+        "mini-swe-agent",
+        1
+      ],
+      [
+        "mini-swe-agent",
+        2
+      ],
+      [
+        "all-off-twin",
+        1
+      ]
+    ],
+    "total_runs": 270,
+    "limit_policy": "No --limit in comparable full shards; development truncation cannot enter the pool"
+  },
+  "gateway": {
+    "version": "2.5.1",
+    "endpoint": "http://127.0.0.1:18080",
+    "mini_api_base": "http://127.0.0.1:18080/v1",
+    "virtual_key_id": "vk-bench",
+    "virtual_key_name": "bench",
+    "credential_env_name": "CROCODILE_BENCH_VK",
+    "credential_rule": "Resolve securely per process; never record the value. Same logical VK identity must be proved from live evidence.",
+    "shared_budget_usd": 15,
+    "physical_version_vk_and_cap_verified": false,
+    "live_evidence": {
+      "status": "reported-verified-on-Atul-machine",
+      "independently_verified_here": false,
+      "source": "User release instruction: gateway/header/log evidence verified on Atul machine",
+      "artifact_reference": null,
+      "scope": [
+        "Bifrost connectivity",
+        "mini session-header forwarding",
+        "matching request log row"
+      ],
+      "limitation": "Sanitized artifacts and local authorized database path/flush procedure not supplied here; do not infer complete-session cost coverage.",
+      "supplied_native_summary": {
+        "sha256": "60b814525fb7d458f3d0332ed590b5a51cb034f83c17560ce8d165cb62312412",
+        "review": "25 supplied rows / 9 native sessions; bench VK name and requested Flash-Lite basename consistent. No stable VK ID, request IDs, served model, fallback/sampling or closed-session inventory. Not physical database verification; no mini session row.",
+        "diagnosis": "bench/mini-3a111322-diagnosis.md"
+      },
+      "reviewed_mini_inventory": {
+        "sha256": "cdffbd2b9cf7e815ce1984acaa8ba8fb65a85e02d854c81719d10bbd7213eff9",
+        "session_request_counts": [
+          9,
+          11
+        ],
+        "usage_rows_accepted": 20,
+        "price_comparisons_within_one_percent": 20,
+        "served_model_null_rows": 20,
+        "closed_session_completeness_verified": false,
+        "physical_database_verified_here": false,
+        "review": "bench/mini-kheapsort-price-reconciliation.md; v4 audit preserves raw evidence and does not authorize a cost report."
+      }
+    }
+  },
+  "agents": {
+    "crocodile": {
+      "wire_model": "gemini/gemini-3.5-flash-lite",
+      "fallbacks": [],
+      "measured_escalation": false,
+      "thinking": "provider-default",
+      "sampling": "native-0.0-or-0.7",
+      "flags": null,
+      "requested_max_output_tokens": 4096,
+      "chains": {
+        "cheap": {
+          "chain": [
+            "gemini/gemini-3.5-flash-lite"
+          ]
+        },
+        "strong": {
+          "chain": [
+            "gemini/gemini-3.5-flash-lite"
+          ]
+        }
+      },
+      "prompt_cache": "ephemeral marks on system and last two user/tool messages; enabled by cache flag",
+      "sampling_rule": "crocodile.loop: temperature 0.0, 0.7 after a rung switch or rewind; no claim of sampling parity with mini."
+    },
+    "mini-swe-agent": {
+      "wire_model": "gemini/gemini-3.5-flash-lite",
+      "fallbacks": [],
+      "measured_escalation": false,
+      "thinking": "provider-default",
+      "sampling": "omit",
+      "model_argument": "openai/gemini/gemini-3.5-flash-lite",
+      "version": "2.4.6",
+      "template_git_blob": "8b72f71f8092ae805ec43221dbeaeefc2340cd3e",
+      "litellm_version": "1.109.1",
+      "prompt_cache": "set_cache_control: default_end",
+      "cost_tracking": "ignore_errors",
+      "retry_policy": "Upstream helper up to 10 attempts per model query; transport retries unverified; all attempts must be attributed",
+      "command_timeout_seconds": 30,
+      "requested_max_output_tokens": null
+    },
+    "all-off-twin": {
+      "wire_model": "gemini/gemini-3.5-flash-lite",
+      "fallbacks": [],
+      "measured_escalation": false,
+      "thinking": "provider-default",
+      "sampling": "native-0.0-or-0.7",
+      "flags": [],
+      "requested_max_output_tokens": 4096,
+      "chains": {
+        "cheap": {
+          "chain": [
+            "gemini/gemini-3.5-flash-lite"
+          ]
+        },
+        "strong": {
+          "chain": [
+            "gemini/gemini-3.5-flash-lite"
+          ]
+        }
+      },
+      "prompt_cache": "disabled by empty flags; no cache lever",
+      "sampling_rule": "crocodile.loop: temperature 0.0, 0.7 after a rung switch or rewind; no claim of sampling parity with mini."
+    }
+  },
+  "limits": {
+    "steps": 30,
+    "wall_seconds": 600,
+    "hard_deadline_enforced": false,
+    "native_enforcement": "Agent step loop; event/return deadline checks only, timer starts after preparation",
+    "mini_enforcement": "30 model-call steps; 600-second worker/group watchdog; 650-second host wait plus 15-second cancel; escaped descendants not contained",
+    "timeout_grading_rule": "Grading is separate and does not turn a timed-out attempt into a completed solve"
+  },
+  "grading": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q"
+    ],
+    "timeout_seconds": 180,
+    "fresh_copy": true,
+    "restore_original_tests": true,
+    "rules": "bench/grade.py _protected plus explicit per-task test_paths; configs/helpers/data restored; added protected files removed; caches removed",
+    "test_edit_rule": "Record added/removed/changed protected paths separately; never trust agent claimed solved; passing restored tests plus a test-edit flag is retained as a red flag"
+  },
+  "evidence": {
+    "required": [
+      "exact publication Git SHA and canonical config ID before first request",
+      "actual Windows/WSL Python, pytest, mini, LiteLLM versions and full dependency snapshots",
+      "immutable source/prompt/oracle evidence, plan.json byte hash, oracles.json, mini-settings.json without values",
+      "events.jsonl and results.jsonl retaining every attempt and prior_attempt_ids",
+      "original/final trees, sanitized receipts/security events, command/config/version records",
+      "fresh grading result.json, stdout.txt, stderr.txt and test-edit lists",
+      "raw Agent/mini session IDs and UTC request windows, actual models, usage/steps/cap evidence",
+      "logical gateway origin and stable bench VK identity, closed/flushed complete request inventory",
+      "read-only Bifrost evidence bundle: evidence.jsonl, prices.yaml, costs.jsonl, diagnostics.json, manifest.json",
+      "Reviewed disposition of mini attempt 3a111322: supplied row/receipt localize final-copy failure against inspected control flow, but missing traceback/deleted tree leave exact cause unknown. Future failures retain sanitized stage/path/frame metadata and inventory; retain incomplete status until an evidence-backed resolution or explicit setup-only classification is reviewed."
+    ],
+    "cost_authority": "All Bifrost requests times pinned prices.yaml; include unsolved/error/retry costs; receipts only cross-check with >1% discrepancy flag",
+    "canonical_native_prices_sha256": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+    "price_snapshot_rule": "Use the runtime Git blob prices.yaml verbatim, not a CRLF-converted working copy; exporter/combiner require identical raw native price-file hashes. Rate validity remains unreviewed.",
+    "missing_usage": "incomplete, never zero",
+    "id_rule": "Qualify raw session/request IDs by logical gateway, not exporting machine; reject overlaps/conflicts",
+    "schema_status": "Conversation-supplied v2.5.1 mapping plus Atul sanitized inventories reviewed. Corrected 20-request inventory has consistent scalar/nested token counts and explicit zero writes; served_model is null in all rows and physical routing/null semantics, closed/flushed completeness and gateway origin/VK stability remain independently unverified here.",
+    "exporter_support": "Reviewed ordinary/cache-read success, explicit zero writes, no retry/fallback relationship, verified served model and one unbounded price tier. Bounded component representation noise is separate from 1% price/receipt comparison; raw evidence unchanged. Null served model and absent completeness review remain incomplete.",
+    "logged_component_precision": {
+      "binary64_ulps": 8,
+      "absolute_cap_usd": "1e-12",
+      "relative_cap": "1e-12",
+      "zero_nonzero_match": false,
+      "raw_evidence_rewritten": false,
+      "price_check": "separate-strictly-greater-than-1-percent"
+    },
+    "price_scope": "Current main official Standard Gemini 3.5 Flash-Lite rates: uncached input 0.30/M, output including thinking 2.50/M, cached input 0.03/M. Gemini provider only; google/* is unchanged and must not be silently substituted. Export exact Git price blob bytes, not Windows CRLF working bytes."
+  },
+  "outcomes": {
+    "completed": "Operationally completed, independently graded; graded failure is a measured zero only with complete eligible execution and cost evidence",
+    "blocked_mini": "status=blocked, error.type=MissingMiniRunner at the exact planned slot; preserve two slots; no Crocodile substitution",
+    "setup_quota_auth": "status=incomplete with specific error type; solved=false is a transport field, not an eligible measured task failure",
+    "timeout_interrupt": "incomplete/interrupted; preserve available evidence and all attempts; no solved credit after timeout",
+    "resume": "Do not rerun completed IDs, including graded failures; retry incomplete only explicitly with fresh attempt/session IDs and all prior costs; never delete locks or truncate records automatically",
+    "mini_attempt_3a111322": {
+      "task_id": "quixbugs/kheapsort",
+      "reported_steps": 26,
+      "reported_exit_status": "Submitted",
+      "reported_returncode": 0,
+      "reported_host_error": "ValueError",
+      "reported_phase": "mini-setup-or-grading",
+      "classification": "incomplete, not a measured task failure; final-tree preparation boundary identified against inspected code, exact original raise/file unknown",
+      "artifacts_available_here": true,
+      "supplied_zip_sha256": "4f486c64623570af8ddee35802dc9b9d86482536007f5e30ae1ec20169d04d8a",
+      "traceback_available": false,
+      "workspace_available": false,
+      "grading_available": false,
+      "session_header_supplied": false,
+      "diagnosis": "bench/mini-3a111322-diagnosis.md"
+    },
+    "reported_native_429s": "Two later lcs_length native sessions are infrastructure-incomplete, not task losses; supplied summary status is error with no HTTP code. Retain earlier successful requests and eventual complete costs. They do not explain the mini kheapsort final-copy exception.",
+    "mini_replacement_inventory": {
+      "source_sha256": "cdffbd2b9cf7e815ce1984acaa8ba8fb65a85e02d854c81719d10bbd7213eff9",
+      "run_ids": [
+        "quixbugs/kheapsort/mini-swe-agent/run-1",
+        "quixbugs/kheapsort/mini-swe-agent/run-2"
+      ],
+      "usage_rows_accepted": 20,
+      "prior_component_roundoff_rejections_resolved": 14,
+      "price_comparisons_within_one_percent": 20,
+      "billed_model_verified": false,
+      "complete_cost_evidence": false,
+      "canonical_attestation_supplied": false,
+      "disposition": "Diagnostic historical runs, independently graded solved in supplied artifacts, but not automatically a v4-attested or cost-complete cohort."
+    }
+  },
+  "pooling": {
+    "acceptance": "V4 requires exact reviewed input/runtime/price/policy identity and complete independent grading/cost evidence. Corrected arithmetic and bounded roundoff do not establish served model or closed inventories. Earlier v1/v2/v3 cohorts require contemporaneous provenance and explicit compatibility review, including execution-budget effects of changed prices; repricing alone does not establish runtime or policy parity. All attempts/costs retained. Four accepted limitations remain visible, not gates.",
+    "required_earlier_evidence": [
+      "same canonical config ID or contemporaneous artifacts proving every frozen value, reviewed before any new comparable revision",
+      "exact runtime Git snapshot or identical pinned runtime-file hashes; same dependency/environment profile with reviewed OS differences",
+      "exact dataset commits, JSON hashes, prompt/source hashes, full-plan ID, assigned positions and five run IDs per task",
+      "Same actual gateway version, bench VK/origin, served model, no measured fallback/escalation; same per-agent thinking/sampling/cache/output-cap settings including accepted limitations, no claim of parity.",
+      "all assigned runs and earlier attempts; independent original-test grading; no setup/quota gaps counted as task failures",
+      "complete request/session inventories and cost evidence with same native price hash, including failed calls and retries",
+      "no duplicate task/run/session/request attribution; cross-shard union exactly 54 tasks and 270 eligible runs"
+    ],
+    "incompatible": [
+      "Haiku/8080 plans",
+      "Gemini Flash escalation or different fallback/sampling policy",
+      "different selected tasks/order or prompt/source bytes",
+      "missing mini slots or unresolved session attribution",
+      "missing original tests or only agent claimed solved",
+      "selecting only the cheapest/successful retry",
+      "Unresolved setup/grading exceptions or missing cost evidence counted as measured failures"
+    ]
+  },
+  "readiness": {
+    "paid_runs_authorized": false,
+    "cross_shard_comparable": false,
+    "unresolved": [
+      {
+        "id": "mini-attempt-3a111322",
+        "owner": "Person 4 / Atul / benchmark reviewer",
+        "reason": "Preserve original ungraded final-preparation failure and unknown exact cause. Later two-run reproductions did not recur. Historical null-attestation runs and missing original/earlier cost linkage need an explicit reviewed disposition/compatibility decision; no retroactive solve, task loss or zero cost."
+      },
+      {
+        "id": "native-policy-binding",
+        "owner": "Person 1 crocodile/adapters.py; Person 2 gateway; operators",
+        "reason": "Require actual native request/log evidence for approved single Flash-Lite chains/endpoint, stable same bench VK identity, billed model and no fallback. Profile/source intent and mini inventory do not establish native binding. Preserve accepted sampling difference without claiming parity."
+      },
+      {
+        "id": "per-machine-execution-and-cost-evidence",
+        "owner": "Person 2 Bifrost routing/log schema; shard operators; Person 4 exporter",
+        "reason": "All 20 corrected mini usage rows now pass bounded consistency and price comparisons, but served_model remains null and closed/flush/retention/origin review is missing. Require reviewed actual billed-model/routing/null semantics, closed/flushed complete request inventories, exact VK/session joins, valid sealed state and per-machine environment/config attestations. Current evidence cannot authorize complete costs or live smoke."
+      }
+    ]
+  },
+  "known_limitations": [
+    {
+      "id": "hard-stop-containment",
+      "accepted_by": "Atul",
+      "comparability_gate": false,
+      "description": "30 steps and 600-second policy retained; native cooperative deadline and mini process-group/host watchdog are not verified hard-stop/escaped-descendant containment."
+    },
+    {
+      "id": "mini-output-cap",
+      "accepted_by": "Atul",
+      "comparability_gate": false,
+      "description": "Native requests max_tokens=4096; mini omits an explicit cap. Provider effective mini output cap is unverified."
+    },
+    {
+      "id": "cache-parity",
+      "accepted_by": "Atul",
+      "comparability_gate": false,
+      "description": "Native cache lever and mini default_end differ; all-off intentionally disables cache. Actual Gemini cache parity is not established; record actual cache usage and fail closed on unsupported billing categories."
+    },
+    {
+      "id": "sampling-difference",
+      "accepted_by": "Atul",
+      "comparability_gate": false,
+      "description": "Native temperature 0.0 or 0.7 after rung switch/rewind versus mini omitted/provider-default sampling; record difference without asserting matched sampling."
+    }
+  ],
+  "changes_from_v3": [
+    {
+      "area": "corrected prices",
+      "detail": "Integrates main af6974a via 9605ac5. Exact native price hash 8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e replaces the old placeholder hash. Gemini Standard input/output/cached-read rates corrected; google/* unchanged."
+    },
+    {
+      "area": "component precision",
+      "detail": "Exporter uses the smallest of 8 binary64 ULPs, 1e-12 USD and 1e-12 relative, with no epsilon floor or zero/nonzero matching. No raw evidence mutation. Material mismatches, missing usage, retries and ambiguous model/routing remain incomplete."
+    },
+    {
+      "area": "price check unchanged",
+      "detail": "Existing abs(logged-computed)>computed/100 discrepancy rule is separate and unchanged. Exact token/rate calculations remain authoritative; component tolerance cannot become a 1% consistency allowance."
+    },
+    {
+      "area": "tests and evidence",
+      "detail": "Fourteen synthetic roundoff shapes, tolerance boundaries, material sub-1% component errors and missing/ambiguous evidence tested. All 20 unchanged corrected-inventory usage rows now parse; all 20 null served models still reject and closed completeness remains unverified."
+    },
+    {
+      "area": "runtime and release",
+      "detail": "Pinned runtime checkpoint includes bounded exporter fix and explicit blocked v4 schema validation; current main plus diagnostic runtime retained. V3 file/fingerprint untouched; regenerate full/four-shard/smoke plans and clean attestations under v4."
+    },
+    {
+      "area": "unchanged experiment and blockers",
+      "detail": "Same LF task/oracle hashes, dataset commits, sorted 54-task order/full-plan identity, 2+2+1 run order, shard ranges, models/chains, flags, caps and independent grading. Four accepted limitations preserved. No paid authorization or cross-shard comparability claimed."
+    }
+  ]
+}

@@ -1,20 +1,27 @@
 # Benchmark preparation, grading, planning, and offline reporting
 
-Current release: [Gemini 54 v3 protocol](gemini-54-v3.md) and immutable
-[v3 config](configs/gemini-benchmark-v3.json), pinned to integrated main's RT-2
-fix and the latest mini diagnostic runtime. The verified LF inputs produce
+Current release: [Gemini 54 v4 protocol](gemini-54-v4.md) and immutable
+[v4 config](configs/gemini-benchmark-v4.json), pinned to main's corrected price
+snapshot and bounded exporter component precision. The verified LF inputs produce
 54 tasks / 270 slots (70/70/65/65); `bench.release --include-smoke` also prepares
 the 3-task/15-slot smoke and original oracle subset without execution.
-**Shard launch remains blocked pending the evidence gates in the v3 protocol.**
-V3 retains Atul's acceptance of hard-stop containment, mini output cap, cache parity and
+**Shard launch remains blocked pending the evidence gates in the v4 protocol.**
+V4 retains Atul's acceptance of hard-stop containment, mini output cap, cache parity and
 sampling difference as limitations. Atul-machine gateway evidence is not local
-verification. Use an explicit `--config` for v3; historical defaults remain v1.
+verification. Use an explicit `--config` for v4; historical defaults remain v1.
+
+V4 strict validation exits 0 with no runtime/price drift; comparability exits 1.
+All 20 corrected mini usage rows now pass bounded component consistency while
+all 20 null served-model identities still reject. Independent closed-session
+completeness is missing. V3 files/fingerprints and all raw evidence remain
+historical; no earlier result gains cost eligibility through this publication.
 
 The [3a111322 diagnosis and safe failure-evidence fix](mini-3a111322-diagnosis.md)
 review the newly supplied artifacts. The exact original offending entry remains
 unknown. V3 pins this diagnostic update; strict validation still rejects drift
 against historical v2. V2 hashes and authorization flags have not been rewritten.
-Historical protocols remain in [v2](gemini-54-v2.md) and [v1](team-run-protocol.md).
+Historical protocols remain in [v3](gemini-54-v3.md), [v2](gemini-54-v2.md)
+and [v1](team-run-protocol.md).
 
 The [kheapsort follow-up evidence review](mini-kheapsort-evidence.md) records two
 completed/independently graded attempts in each supplied ZIP. The attributed

@@ -174,3 +174,12 @@ re-pinned current source hashes but kept its old evidence price hash. The fixtur
 now links its evidence hash to its synthetic current-price pin. Published config
 golden hashes and strict runtime checks are unchanged; no production adapter or
 grading rule was altered.
+
+## Subsequent v4 precision fix
+
+[V4](gemini-54-v4.md) implements a separately bounded component-roundoff policy
+and pins the corrected main price snapshot. Its new audit accepts all 20 usage
+rows without rewriting source values, resolving the 14 exact-equality rejections
+described above. The 1% price rule is unchanged. All 20 null served-model identities
+still reject, and closed-session completeness remains unverified. This original
+reconciliation and its source inventory remain historical evidence.
