@@ -9,13 +9,17 @@ from pathlib import Path
 from bench.plan import AGENTS, EVALUATION_POLICY, SHARD_RANGES, TEST_PREFIX, _object, _relative, build_plan
 from bench.prepare import _inventory
 from bench.run import _validate
-from bench.bifrost_export import COMPONENT_ULPS, COMPONENT_ABSOLUTE_CAP, COMPONENT_RELATIVE_CAP
+from bench.bifrost_export import (
+    COMPONENT_ULPS, COMPONENT_ABSOLUTE_CAP, COMPONENT_RELATIVE_CAP,
+    NULL_MODEL_RULE, NULL_ROUTE_FIELDS, ZERO_ROUTE_FIELDS,
+)
 
 
 DEFAULT_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v1.json"
 V2_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v2.json"
 V3_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v3.json"
 V4_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v4.json"
+V5_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v5.json"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACCEPTED_LIMITATIONS = {"hard-stop-containment", "mini-output-cap", "cache-parity", "sampling-difference"}
 TOP_FIELDS = {
@@ -87,7 +91,8 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
     try:
         _need(isinstance(config, dict), "Invalid canonical config fields")
         revision = config.get("revision")
-        versions = {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3, "gemini-54-v4": 4}
+        versions = {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3, "gemini-54-v4": 4,
+                    "gemini-54-v5": 5}
         modern = revision in versions and versions[revision] >= 2
         change_field = f"changes_from_v{versions[revision] - 1}" if modern else "changes_from_v1"
         fields = TOP_FIELDS | {change_field, "known_limitations"} if modern else TOP_FIELDS
@@ -114,7 +119,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
                           for item in limitations), "Accepted limitations must not become comparability gates")
             _need(not ACCEPTED_LIMITATIONS.intersection(g["id"] for g in gaps),
                   "Accepted limitation listed as a release blocker")
-            _need("mini-attempt-3a111322" in {g["id"] for g in gaps},
+            _need(versions[revision] >= 5 or "mini-attempt-3a111322" in {g["id"] for g in gaps},
                   "Unresolved mini attempt cannot be cleared without a new reviewed release")
             _need(isinstance(config[change_field], list) and config[change_field],
                   "Release requires a change record")
@@ -182,11 +187,11 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         sources = config["provenance"]["runtime_files_sha256_lf"]
         _need({"bench/run.py", "bench/mini_bridge.py", "bench/grade.py", "bench/bifrost_export.py",
                "crocodile/adapters.py", "prices.yaml"} <= sources.keys(), "Missing required runtime pins")
-        if revision in {"gemini-54-v3", "gemini-54-v4"}:
+        if versions[revision] >= 3:
             _need({"bench/mini.py", "bench/prepare.py", "bench/failure_evidence.py",
                    "bench/canonical.py", "bench/attest.py"} <= sources.keys(),
                   f"Missing v{versions[revision]} diagnostic/runtime pins")
-        if revision == "gemini-54-v4":
+        if versions[revision] >= 4:
             policy = config["evidence"]["logged_component_precision"]
             _need(policy == {"binary64_ulps": COMPONENT_ULPS, "absolute_cap_usd": "1e-12",
                              "relative_cap": "1e-12", "zero_nonzero_match": False,
@@ -194,6 +199,33 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
                   and Fraction(policy["absolute_cap_usd"]) == COMPONENT_ABSOLUTE_CAP
                   and Fraction(policy["relative_cap"]) == COMPONENT_RELATIVE_CAP,
                   "V4 component precision policy differs from exporter")
+        if versions[revision] >= 5:
+            evidence = config["evidence"]
+            _need(evidence["null_served_model_rule"] == {
+                "revision": NULL_MODEL_RULE, "required_null_columns": list(NULL_ROUTE_FIELDS),
+                "required_integer_zero_columns": list(ZERO_ROUTE_FIELDS),
+                "per_request_routing_join_required": True, "blanket_null_inference": False,
+            }, "V5 null-model policy differs from exporter")
+            _need(sources["prices.yaml"] == "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+                  "V5 approved price snapshot differs")
+            expected = {"bench/evidence/croc-native-pilot-v4-review.json", "bench/evidence/croc-native-routing-proof.json"}
+            pins = evidence["reviewed_artifacts_sha256_lf"]
+            _need(isinstance(pins, dict) and set(pins) == expected, "V5 evidence pins missing")
+            for name, digest in pins.items():
+                _need(_sha((root / name).read_bytes().replace(b"\r\n", b"\n")) == digest,
+                      "V5 reviewed evidence changed")
+            review = _json(root / "bench/evidence/croc-native-pilot-v4-review.json")
+            _need(review["native_call_count"] == review["native_call_price_reconciliations"] == 4
+                  and review["pilot"]["attempts"] == 18 and review["pilot"]["final_grades_solved"] == 15
+                  and review["pilot"]["all_18_pilot_rows_incomplete"] is True
+                  and review["pilot"]["pooled_report_eligible"] is False
+                  and review["pilot"]["authoritative_cost_complete"] is False,
+                  "V5 cannot promote historical pilot evidence")
+            _need(config["pooling"]["pre_v5_cohorts_report_eligible"] is False
+                  and evidence["historical_pilot_report_eligible"] is False,
+                  "V5 historical pilot must stay nonreportable")
+            _need({g["id"] for g in gaps} == {"post-restart-per-machine-cost-inventory"},
+                  "V5 requires reviewed post-restart per-machine cost evidence")
         _need(config["evidence"]["canonical_native_prices_sha256"] == sources["prices.yaml"],
               "Canonical price snapshot differs")
         drift = []

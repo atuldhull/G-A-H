@@ -20,6 +20,9 @@ COLUMNS = (
     "provider", "model", "served_model", "prompt_tokens", "completion_tokens",
     "total_tokens", "cached_read_tokens", "token_usage", "cost", "status", "timestamp",
 )
+NULL_MODEL_RULE = "bifrost-2.5.1-null-served-model-v1"
+NULL_ROUTE_FIELDS = ("alias", "canonical_model_name", "server_side_fallback_model", "routing_rule_id")
+ZERO_ROUTE_FIELDS = ("fallback_index", "number_of_retries")
 REVIEW_FLAGS = (
     "vk_binding_verified", "session_finished", "log_flush_verified",
     "request_inventory_complete", "retention_verified", "quiescent_snapshot_verified",
@@ -209,12 +212,51 @@ def _usage(row):
         raise Incomplete("missing_or_invalid_usage") from None
 
 
-def _model(row):
-    provider, served = _text(row["provider"]), _text(row["served_model"])
+def _model(row, routing_proof=None):
+    provider = _text(row["provider"])
+    if row["served_model"] is None:
+        # These additional SQL fields were observed in Atul's supplied packet.
+        # Response routing_info is a reviewed per-request sidecar, not an
+        # invented logs.db column or a blanket inference from configuration.
+        try:
+            if (any(row[k] is not None for k in NULL_ROUTE_FIELDS)
+                    or any(type(row[k]) is not int or row[k] != 0 for k in ZERO_ROUTE_FIELDS)):
+                raise Incomplete("null_served_model_ambiguous_routing")
+            proof = routing_proof
+            if (not isinstance(proof, dict)
+                    or any(proof[k] != row[source] for k, source in (
+                        ("request_id", "id"), ("session_id", "session_id"),
+                        ("virtual_key_name", "virtual_key_name"), ("provider", "provider")))):
+                raise Incomplete("null_served_model_request_join_missing")
+            info = proof["routing_info"]
+            requested = _text(row["model"])
+            if (info["provider"] != provider or info["requested_provider"] != provider
+                    or info["requested_model"] != requested or info["model"] != requested
+                    or proof["resolved_model_used"] != requested):
+                raise Incomplete("null_served_model_route_mismatch")
+            served = requested
+        except (KeyError, TypeError):
+            raise Incomplete("null_served_model_evidence_incomplete") from None
+    else:
+        served = _text(row["served_model"])
     model = served if "/" in served else provider + "/" + served
     if not model.startswith(provider + "/"):
         raise Incomplete("inconsistent_served_provider")
     return model
+
+
+def _routing_proofs(selection):
+    evidence = selection.get("routing_evidence")
+    if evidence is None:
+        return {}
+    if (not isinstance(evidence, dict) or set(evidence) != {"schema_version", "source_sha256", "requests"}
+            or type(evidence["schema_version"]) is not int or evidence["schema_version"] != 1
+            or not isinstance(evidence["source_sha256"], str) or len(evidence["source_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in evidence["source_sha256"])
+            or not isinstance(evidence["requests"], dict)
+            or not set(evidence["requests"]) <= set(selection["request_ids"])):
+        raise Incomplete("invalid_per_request_routing_evidence")
+    return evidence["requests"]
 
 
 def _selection(selection):
@@ -258,8 +300,9 @@ def _read(db, selection):
         if kind != ("table",) or not set(COLUMNS) <= {c[0] for c in columns}:
             raise Incomplete("supplied_mapping_not_present")
         connection.row_factory = sqlite3.Row
+        extras = [name for name in (*NULL_ROUTE_FIELDS, *ZERO_ROUTE_FIELDS) if name in {c[0] for c in columns}]
         selected = connection.execute(
-            "SELECT " + ",".join(COLUMNS) + " FROM logs WHERE session_id COLLATE BINARY = ? "
+            "SELECT " + ",".join((*COLUMNS, *extras)) + " FROM logs WHERE session_id COLLATE BINARY = ? "
             "AND virtual_key_id COLLATE BINARY = ? AND virtual_key_name COLLATE BINARY = ?",
             (selection["session_id"], selection["virtual_key_id"], selection["virtual_key_name"]),
         ).fetchall()
@@ -302,6 +345,7 @@ def export_session(db, prices_path, selection, receipt):
               "schema_evidence": "conversation-supplied-redacted-v2.5.1-field-mapping"}
     try:
         _selection(selection)
+        routing_proofs = _routing_proofs(selection)
         if not isinstance(receipt, dict):
             raise Incomplete("invalid_agent_receipt")
         if receipt.get("session") != selection["session_id"]:
@@ -338,7 +382,11 @@ def export_session(db, prices_path, selection, receipt):
             timestamp = datetime.fromisoformat(_text(row["timestamp"]).replace("Z", "+00:00"))
             if timestamp.tzinfo is None or timestamp.astimezone(timezone.utc).date().isoformat() != selection["date"]:
                 raise Incomplete("timestamp_scope_unverified")
-            model, usage = _model(row), _usage(row)
+            model, usage = _model(row, routing_proofs.get(key)), _usage(row)
+            metadata = next(item for item in result["requests"] if item["raw_request_id"] == key)
+            metadata.update(resolved_model=model,
+                            model_resolution=NULL_MODEL_RULE if row["served_model"] is None else "explicit-served-model",
+                            routing_evidence_source_sha256=selection.get("routing_evidence", {}).get("source_sha256"))
             rates = _rates(prices, model)
             requested = _text(row["model"])
             requested = requested if "/" in requested else row["provider"] + "/" + requested

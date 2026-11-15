@@ -181,3 +181,40 @@ IDs as an independent complete inventory. TTLs, retry/fallback billing, other
 terminal statuses, retention and late/failure usage remain unverified. Tiered
 pricing/report schema support is also pending. Current expected benchmark-model
 costs cannot be declared complete merely because the narrow synthetic tests pass.
+# Reviewed null served-model resolution (v5)
+
+`bifrost-2.5.1-null-served-model-v1` is a per-request rule, not a blanket
+substitution. Explicit non-null `served_model` retains the existing path. For a
+null value the exporter additionally reads only the observed optional SQL
+columns `alias`, `canonical_model_name`, `server_side_fallback_model`,
+`routing_rule_id`, `fallback_index`, `number_of_retries`. Missing columns fail
+closed for that row; no physical SQL type or additional response column is
+invented. All four nullable fields must be present and null, and both counters
+must be integer zero.
+
+The selection JSON may supply `routing_evidence` with exactly `schema_version`
+(integer 1), `source_sha256` (actual reviewed source artifact SHA-256) and
+`requests` (map by the exact selected Bifrost request IDs). Each proof records
+`request_id`, `session_id`, `virtual_key_name`, `provider`, `routing_info` and
+`resolved_model_used`. The first four must match the selected database row;
+the existing exact session/VK-ID/VK-name selection and independent completeness
+review remain mandatory. `routing_info.provider` and `requested_provider` must
+match the logged provider; its `requested_model` and `model`, the separate
+`resolved_model_used`, and the logged `model` must be identical. Missing, mixed,
+retried, aliased or mismatched evidence remains incomplete.
+
+[The four native proofs](evidence/croc-native-routing-proof.json) demonstrate
+this sidecar shape. When embedding it in one session selection, filter its
+request map to that selection's exact IDs; proofs outside the reviewed
+inventory reject. Response routing info is supplied by the reviewed sidecar,
+not guessed as a `logs.db` column. A hash/reference is provenance metadata,
+not independent authentication; a reviewer must actually check the joins.
+
+Raw rows and `served_model: null` remain unchanged. Diagnostics add
+`resolved_model`, `model_resolution` and `routing_evidence_source_sha256`.
+The cost calculation still checks usage/cache categories, component precision,
+exact official rates and the separate 1% discrepancy rule. No cache-write TTL,
+unknown price, retry completion or missing usage becomes supported by this rule.
+Historical v4 pilots stay incomplete and excluded from pooled results even when
+some individual requests can now be resolved. See the v5 release for the
+remaining post-restart/session-completeness requirement.

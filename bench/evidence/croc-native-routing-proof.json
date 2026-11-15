@@ -1,0 +1,58 @@
+{
+  "requests": {
+    "0767f7bf-e922-41ad-9fce-9c2ddd58ebd0": {
+      "provider": "gemini",
+      "request_id": "0767f7bf-e922-41ad-9fce-9c2ddd58ebd0",
+      "resolved_model_used": "gemini-3.5-flash-lite",
+      "routing_info": {
+        "model": "gemini-3.5-flash-lite",
+        "provider": "gemini",
+        "requested_model": "gemini-3.5-flash-lite",
+        "requested_provider": "gemini"
+      },
+      "session_id": "20261115-190658-8184a6",
+      "virtual_key_name": "bench"
+    },
+    "4329daf1-5a1a-429d-a80e-5cda148588f7": {
+      "provider": "gemini",
+      "request_id": "4329daf1-5a1a-429d-a80e-5cda148588f7",
+      "resolved_model_used": "gemini-3.5-flash-lite",
+      "routing_info": {
+        "model": "gemini-3.5-flash-lite",
+        "provider": "gemini",
+        "requested_model": "gemini-3.5-flash-lite",
+        "requested_provider": "gemini"
+      },
+      "session_id": "20261115-190716-7a3684",
+      "virtual_key_name": "bench"
+    },
+    "609096d0-48ea-42c2-8261-ce78a7b10b4b": {
+      "provider": "gemini",
+      "request_id": "609096d0-48ea-42c2-8261-ce78a7b10b4b",
+      "resolved_model_used": "gemini-3.5-flash-lite",
+      "routing_info": {
+        "model": "gemini-3.5-flash-lite",
+        "provider": "gemini",
+        "requested_model": "gemini-3.5-flash-lite",
+        "requested_provider": "gemini"
+      },
+      "session_id": "20261115-190658-8184a6",
+      "virtual_key_name": "bench"
+    },
+    "891e99b9-c095-4d78-ac70-14406c5df872": {
+      "provider": "gemini",
+      "request_id": "891e99b9-c095-4d78-ac70-14406c5df872",
+      "resolved_model_used": "gemini-3.5-flash-lite",
+      "routing_info": {
+        "model": "gemini-3.5-flash-lite",
+        "provider": "gemini",
+        "requested_model": "gemini-3.5-flash-lite",
+        "requested_provider": "gemini"
+      },
+      "session_id": "20261115-190716-7a3684",
+      "virtual_key_name": "bench"
+    }
+  },
+  "schema_version": 1,
+  "source_sha256": "a5ee19904f8091d49abbbac952a47c3516e38dc917bcfab7c3f02fc628ef734d"
+}
