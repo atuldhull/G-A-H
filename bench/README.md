@@ -20,9 +20,18 @@ The [kheapsort follow-up evidence review](mini-kheapsort-evidence.md) records tw
 completed/independently graded attempts in each supplied ZIP. The attributed
 pair's supplied inventory now verifies 9/11 unique requests and matching scalar
 usage/VK/session fields; billed model and complete cache/closed-session evidence
-remain unverified. A pricing discrepancy blocks costs pending Vivek/Atul review;
-raw tokens are retained for repricing. Historical `3a111322` stays incomplete; v3's
+remain unverified. The earlier review recorded a pricing discrepancy and retained
+raw tokens for repricing; the replacement review below updates that finding.
+Historical `3a111322` stays incomplete; v3's
 comparability gate and immutable files remain unchanged.
+
+The [replacement inventory / corrected-rate review](mini-kheapsort-price-reconciliation.md)
+verifies main's `af6974a` price snapshot and all 20 request comparisons within 1%.
+The earlier arithmetic discrepancy is resolved for the requested Gemini route;
+billed-model mapping, closed-session completeness and exporter rounding remain
+open. Main's changed price hash now causes strict v3 exit 2 (audit-comparability
+exit 1). A reviewed supported successor with new price/runtime attestations is
+required; v3 is historical and unchanged.
 
 The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
 and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and

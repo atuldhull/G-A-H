@@ -306,3 +306,12 @@ booleans to remain false, and `bench.attest` requires both readiness/comparabili
 before dispatch. There is no supported evidence-note override for v3. This
 documentation introduces no successor authorization mechanism, gate bypass,
 cleared boolean, official shard run, model request or database operation.
+
+## Later replacement inventory and main price correction
+
+The [replacement review](mini-kheapsort-price-reconciliation.md) preserves this
+original inventory/finding and separately verifies current main's corrected
+price snapshot. Its 20 request-level comparisons now agree within 1% for the
+requested route. Billed-model mapping and closed-session completeness remain
+unverified, and exact component-rounding rejection remains documented. Main's
+new price pin makes historical v3 drift; v3 itself is not rewritten or authorized.

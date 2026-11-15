@@ -1,0 +1,829 @@
+{
+  "authoritative_billing_complete": false,
+  "billing_amounts_omitted": true,
+  "closed_inventory_independently_verified": false,
+  "comparison_rule": "abs(logged-computed) > computed/100; exactly 1 percent is within, using existing exporter _compare and exact Fraction arithmetic",
+  "execution_authorized": false,
+  "kind": "replacement-inventory-reconciliation-documentation",
+  "not_reporter_input": true,
+  "previous_source_sha256": "a0a21239ec5f0cb74d29693ca0834cdc42eb01dca491653e23e9eea38c632902",
+  "price_snapshot": {
+    "git_commit": "af6974a3efb4977364f3a572509c41a9752e8ba4",
+    "prices_yaml_git_blob": "5d9f09f632b85bab7afb446372023d335cd44677",
+    "prices_yaml_raw_sha256": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e"
+  },
+  "prior_inventory_and_v3_preserved": true,
+  "report_eligible": false,
+  "request_reconciliation": {
+    "above_one_percent": 0,
+    "included_requests": 20,
+    "input_within_one_percent": 20,
+    "output_within_one_percent": 20,
+    "within_one_percent": 20
+  },
+  "schema_version": 1,
+  "sessions": [
+    {
+      "request_count": 9,
+      "requests": [
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 43,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "b8dc4c31-d2e5-431c-bb99-a8100d64d404",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 890,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:13:49.7848721+00:00",
+          "token_usage": {
+            "completion_tokens": 43,
+            "prompt_tokens": 890,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 890
+            },
+            "total_tokens": 933
+          },
+          "total_tokens": 933,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 38,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "c04d6186-e223-4ed0-ba89-e5c2082fbb2a",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 964,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:13:52.445018+00:00",
+          "token_usage": {
+            "completion_tokens": 38,
+            "prompt_tokens": 964,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 964
+            },
+            "total_tokens": 1002
+          },
+          "total_tokens": 1002,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 45,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "2b6dfa15-09e2-4424-9ccb-86c5466e039a",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 1789,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:13:55.1446427+00:00",
+          "token_usage": {
+            "completion_tokens": 45,
+            "prompt_tokens": 1789,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 1789
+            },
+            "total_tokens": 1834
+          },
+          "total_tokens": 1834,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 939,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "34ecc0b0-3ff2-48d6-930d-92e304974808",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 2177,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:13:56.5465578+00:00",
+          "token_usage": {
+            "completion_tokens": 939,
+            "prompt_tokens": 2177,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 2177
+            },
+            "total_tokens": 3116
+          },
+          "total_tokens": 3116,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 53,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "039decac-6d2f-49e4-b93b-dd84370b825f",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 3197,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:13:59.9666621+00:00",
+          "token_usage": {
+            "completion_tokens": 53,
+            "prompt_tokens": 3197,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 3197
+            },
+            "total_tokens": 3250
+          },
+          "total_tokens": 3250,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 400,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "4c0aa468-4266-496f-b514-781102f3b305",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 4037,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:04.9494561+00:00",
+          "token_usage": {
+            "completion_tokens": 400,
+            "prompt_tokens": 4037,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 4037
+            },
+            "total_tokens": 4437
+          },
+          "total_tokens": 4437,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 2002,
+          "completion_tokens": 28,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "e5975441-6cfa-4a91-817c-70e94b8e61e3",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 4453,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:08.3542137+00:00",
+          "token_usage": {
+            "completion_tokens": 28,
+            "prompt_tokens": 4453,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_read_tokens": 2002,
+              "cached_tokens": 2002,
+              "text_tokens": 4453
+            },
+            "total_tokens": 4481
+          },
+          "total_tokens": 4481,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 1998,
+          "completion_tokens": 38,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "afb01cc9-67c5-4b00-9cdc-486716dcfcee",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 4517,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:14:10.4767242+00:00",
+          "token_usage": {
+            "completion_tokens": 38,
+            "prompt_tokens": 4517,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_read_tokens": 1998,
+              "cached_tokens": 1998,
+              "text_tokens": 4517
+            },
+            "total_tokens": 4555
+          },
+          "total_tokens": 4555,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 4018,
+          "completion_tokens": 41,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "168bb9d7-e02c-4795-81a2-f3c2206198cc",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 6286,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:12.0178065+00:00",
+          "token_usage": {
+            "completion_tokens": 41,
+            "prompt_tokens": 6286,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_read_tokens": 4018,
+              "cached_tokens": 4018,
+              "text_tokens": 6286
+            },
+            "total_tokens": 6327
+          },
+          "total_tokens": 6327,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-1",
+      "session_id": "mini-24877326f8de47f88029728cd8deb95c",
+      "source_other_requests_in_window_claim": 0,
+      "token_sums": {
+        "cached_read_tokens": 8018,
+        "completion_tokens": 1625,
+        "prompt_tokens": 28310,
+        "total_tokens": 29935
+      }
+    },
+    {
+      "request_count": 11,
+      "requests": [
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 45,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "9266bd58-33f8-4ca7-a732-fe0945f395b1",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 890,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:27.8309853+00:00",
+          "token_usage": {
+            "completion_tokens": 45,
+            "prompt_tokens": 890,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 890
+            },
+            "total_tokens": 935
+          },
+          "total_tokens": 935,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 39,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "e5270f1e-e75b-4454-b4b7-0e3d35827063",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 966,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:32.6935696+00:00",
+          "token_usage": {
+            "completion_tokens": 39,
+            "prompt_tokens": 966,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 966
+            },
+            "total_tokens": 1005
+          },
+          "total_tokens": 1005,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 46,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "e07abf66-3c5f-4807-b678-248ecf62afc4",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 1792,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:35.0492312+00:00",
+          "token_usage": {
+            "completion_tokens": 46,
+            "prompt_tokens": 1792,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 1792
+            },
+            "total_tokens": 1838
+          },
+          "total_tokens": 1838,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 57,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "00591133-55bd-45d4-9cf3-24636dca70d8",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 2182,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:36.5807481+00:00",
+          "token_usage": {
+            "completion_tokens": 57,
+            "prompt_tokens": 2182,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 2182
+            },
+            "total_tokens": 2239
+          },
+          "total_tokens": 2239,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 324,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "aafacf5e-d4b3-4f4e-acda-161fc5afb872",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 2380,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:38.1203276+00:00",
+          "token_usage": {
+            "completion_tokens": 324,
+            "prompt_tokens": 2380,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 2380
+            },
+            "total_tokens": 2704
+          },
+          "total_tokens": 2704,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 54,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "81900b2a-d3a4-46e8-9d36-f5d1c50800d2",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 2741,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:14:40.0548175+00:00",
+          "token_usage": {
+            "completion_tokens": 54,
+            "prompt_tokens": 2741,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 2741
+            },
+            "total_tokens": 2795
+          },
+          "total_tokens": 2795,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 49,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "eb2f4d5f-a4e4-474e-a55b-27542d036922",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 3099,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:41.5355743+00:00",
+          "token_usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 3099,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 3099
+            },
+            "total_tokens": 3148
+          },
+          "total_tokens": 3148,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 2187,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "03af6440-f6b9-481b-ae96-339f0a3e7383",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 3306,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:14:46.7842342+00:00",
+          "token_usage": {
+            "completion_tokens": 2187,
+            "prompt_tokens": 3306,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 3306
+            },
+            "total_tokens": 5493
+          },
+          "total_tokens": 5493,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 0,
+          "completion_tokens": 37,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "d066919b-2af4-4d12-bb97-8c66a9cc2950",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 5509,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:52.9908545+00:00",
+          "token_usage": {
+            "completion_tokens": 37,
+            "prompt_tokens": 5509,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0,
+              "text_tokens": 5509
+            },
+            "total_tokens": 5546
+          },
+          "total_tokens": 5546,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 2001,
+          "completion_tokens": 40,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "463e934b-c07b-483a-ac7c-5ee567f0fdd5",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 5582,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": null,
+          "timestamp": "2026-11-15 10:14:55.6325967+00:00",
+          "token_usage": {
+            "completion_tokens": 40,
+            "prompt_tokens": 5582,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_read_tokens": 2001,
+              "cached_tokens": 2001,
+              "text_tokens": 5582
+            },
+            "total_tokens": 5622
+          },
+          "total_tokens": 5622,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        },
+        {
+          "billed_model_verified": false,
+          "cached_read_tokens": 4018,
+          "completion_tokens": 46,
+          "content_hidden": 0,
+          "fallback_index": 0,
+          "id": "a2b4c3f3-c1f1-4a61-a058-fcfb46e64c9f",
+          "model": "gemini-3.5-flash-lite",
+          "number_of_retries": 0,
+          "parent_request_id": null,
+          "prompt_tokens": 7353,
+          "provider": "gemini",
+          "reconciliation_above_one_percent": {
+            "input": false,
+            "output": false,
+            "total": false
+          },
+          "served_model": null,
+          "server_side_fallback_model": null,
+          "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+          "status": "success",
+          "stream": 0,
+          "strict_usage_rejection": "inconsistent_logged_cost",
+          "timestamp": "2026-11-15 10:14:57.146547+00:00",
+          "token_usage": {
+            "completion_tokens": 46,
+            "prompt_tokens": 7353,
+            "prompt_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_read_tokens": 4018,
+              "cached_tokens": 4018,
+              "text_tokens": 7353
+            },
+            "total_tokens": 7399
+          },
+          "total_tokens": 7399,
+          "virtual_key_id": "vk-bench",
+          "virtual_key_name": "bench"
+        }
+      ],
+      "run_id": "quixbugs/kheapsort/mini-swe-agent/run-2",
+      "session_id": "mini-51b92bfe4ea34390b90e76d031e9c67f",
+      "source_other_requests_in_window_claim": 0,
+      "token_sums": {
+        "cached_read_tokens": 6019,
+        "completion_tokens": 2924,
+        "prompt_tokens": 35800,
+        "total_tokens": 38724
+      }
+    }
+  ],
+  "source_artifact": "mini-kheapsort-bifrost-inventory (1).json",
+  "source_sha256": "cdffbd2b9cf7e815ce1984acaa8ba8fb65a85e02d854c81719d10bbd7213eff9",
+  "verified_price_policy": {
+    "cached_read_input": "0.03",
+    "output_including_thinking": "2.50",
+    "scope": "requested gemini/gemini-3.5-flash-lite Standard; actual served identity unresolved",
+    "uncached_input": "0.30",
+    "unit": "USD per million tokens"
+  }
+}
