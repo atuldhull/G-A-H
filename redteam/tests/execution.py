@@ -239,7 +239,9 @@ def git_config_case(tmp_path, monkeypatch, processes):
                       "p.write_bytes(p.read_bytes()+b'\\n[filter \\\"planted\\\"]\\nclean = python hook_canary.py\\n')\n"
                       "Path('.gitattributes').write_text('* filter=planted\\n')\n")
             argv = [sys.executable, "-I", "-c", script]
-            processes.scripts.add(tuple(argv))
+            # Owner executable pinning resolves symlinks (python -> python3.12
+            # on Ubuntu). Keep the allowlist exact after that normalization.
+            processes.scripts.add((str(Path(argv[0]).resolve()), *argv[1:]))
             monkeypatch.setattr(approvals, "_console_answer", confirm)
             with pytest.raises(IntegrityViolation, match="session aborted"):
                 cmd.run(argv, root, timeout=10, session=sec, action=Action("shell", argv=argv))
