@@ -44,7 +44,9 @@ def fake_mini(tmp_path, monkeypatch):
             _save(artifacts / "command.json", ["wsl.exe", "--distribution", "Synthetic-Ubuntu", "--exec", "fake-python"])
             workspace = Path(spec["workspace"])
             assert not any(path.name == ".meta" for path in workspace.rglob("*"))
-            assert Path(spec["task_file"]).read_text() == harness.plan["runs"][2]["task_text"]
+            task_bytes = Path(spec["task_file"]).read_bytes()
+            assert task_bytes.decode("utf-8") == harness.plan["runs"][2]["task_text"]
+            assert hashlib.sha256(task_bytes).hexdigest() == spec["task_text_sha256"]
             assert spec["config"]["agent"]["step_limit"] == 30
             assert spec["config"]["agent"]["wall_time_limit_seconds"] == 600
             if self.mode == "success":
@@ -235,7 +237,8 @@ def test_report_row_requires_complete_cost_evidence_and_matches_existing_schema(
         report_row(retry, planned, bundle)
 
 
-def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypatch):
+@pytest.mark.parametrize("task_text", ["Synthetic task", "Synthetic\r\nCRLF\rCR\nLF: \u03bb\n"])
+def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypatch, task_text):
     key = "SYNTHETIC-NOT-A-REAL-CREDENTIAL"
     config_dir = tmp_path / "installed-config"
     config_dir.mkdir()
@@ -257,6 +260,7 @@ def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypat
             self.messages, self.n_calls = [], 0
 
         def run(self, task):
+            assert task == task_text
             self.n_calls = 1
             self.messages = [{"role": "user", "content": key}, {"role": "exit", "extra": {"exit_status": "Submitted"}}]
             self.save(None)
@@ -278,9 +282,10 @@ def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypat
     monkeypatch.setattr(mini_bridge.logging, "disable", lambda _: None)
     monkeypatch.setattr(os, "environ", {"FAKE_BENCH_VK": key, "HOME": str(tmp_path), "OTHER_API_KEY": key})
     task, receipt = tmp_path / "task.txt", tmp_path / "receipt.json"
-    task.write_text("Synthetic task")
+    task.write_bytes(task_text.encode("utf-8"))
     config = deepcopy(mini.MiniAdapter(mini.Settings("fake", "/python")).config)
     assert mini_bridge.worker({"credential_env": "FAKE_BENCH_VK", "config": config, "workspace": str(tmp_path),
+                               "task_text_sha256": hashlib.sha256(task.read_bytes()).hexdigest(),
                                "task_file": str(task), "receipt": str(receipt), "api_base": "http://127.0.0.1:18080/v1",
                                "session_header": "synthetic-session"}) == 0
     assert options["model_kwargs"]["extra_headers"]["x-bf-vk"] == key
@@ -288,6 +293,19 @@ def test_worker_never_serializes_credentials_or_conversation(tmp_path, monkeypat
     assert options["observation_template"] == "synthetic-default-observation"
     assert key not in receipt.read_text()
     assert "messages" not in json.loads(receipt.read_text())
+
+
+def test_task_digest_mismatch_stops_before_probe_or_model_imports(tmp_path, monkeypatch):
+    task, receipt = tmp_path / "task.txt", tmp_path / "receipt.json"
+    task.write_bytes(b"Synthetic\r\ntext")
+
+    def forbidden(*args):
+        pytest.fail("Invalid task must be rejected before readiness or any model setup")
+
+    monkeypatch.setattr(mini_bridge, "probe", forbidden)
+    assert mini_bridge.worker({"task_file": str(task), "task_text_sha256": "0" * 64,
+                               "receipt": str(receipt)}) == 2
+    assert json.loads(receipt.read_text())["exit_status"] == "TaskTextMismatch"
 
 
 def test_bridge_preflight_version_and_missing_wsl_are_specific(monkeypatch):

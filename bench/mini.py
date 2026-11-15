@@ -167,13 +167,14 @@ class MiniAdapter:
                 row["workspace_path"] = str(workspace)
                 row["evidence"]["original"] = str(original)
                 task_path = artifacts / "task.txt"
-                task_path.write_text(run["task_text"], encoding="utf-8", newline="\n")
+                task_path.write_bytes(run["task_text"].encode("utf-8"))
                 config = artifacts / "config.json"
                 _save(config, self.identity())
                 row["evidence"]["mini_config"] = str(config)
                 paths = {"workspace": workspace, "task_file": task_path, "receipt": artifacts / "mini-receipt.json",
                          "control": artifacts / "control.json", "process_result": artifacts / "process.json"}
                 spec = {**{key: self.backend.path(value) for key, value in paths.items()},
+                        "task_text_sha256": run["task_text_sha256"],
                         "attempt_id": row["attempt_id"], "credential_env": self.settings.credential_env,
                         "api_base": self.settings.api_base, "session_header": row["session_id"], "config": self.config}
                 row["attribution"]["window_start"] = _utc()
@@ -217,6 +218,7 @@ class MiniAdapter:
                 elif (outcome.get("returncode") != 0 or status not in {"Submitted", "LimitsExceeded", "RepeatedFormatError"}
                       or receipt.get("mini_version") != VERSION or receipt.get("template_git_blob") != TEMPLATE_BLOB):
                     reasons = {"AuthenticationError": "MissingOrInvalidBenchCredential", "MissingBenchCredential": "MissingBenchCredential",
+                               "TaskTextMismatch": "MiniTaskTextMismatch",
                                "RateLimitError": "QuotaOrRateLimit", "PermissionDeniedError": "BenchCredentialDenied",
                                "MiniTemplateMismatch": "MiniTemplateMismatch", "Interrupted": "MiniInterrupted",
                                "ModuleNotFoundError": "MiniDependencyMissing", "ImportError": "MiniDependencyMissing",

@@ -1,5 +1,24 @@
 # Benchmark preparation, grading, planning, and offline reporting
 
+Current release: [Gemini 54 v2 protocol](gemini-54-v2.md) and immutable
+[v2 config](configs/gemini-benchmark-v2.json). The verified LF inputs produce
+54 tasks / 270 slots (70/70/65/65). `python -m bench.release --help` prepares
+validated plans, exact oracle subsets and key-free settings without execution.
+**Shard launch remains blocked pending Atul's unresolved mini grading exception.**
+V2 explicitly accepts hard-stop containment, mini output cap, cache parity and
+sampling difference as limitations. Atul-machine gateway evidence is not local
+verification. Use an explicit `--config` for v2; historical defaults remain v1.
+
+The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
+and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and
+validate against dry-run manifests with `python -m bench.canonical`. V1 remains
+blocked for paid execution and comparable pooling; static validation is not a
+live-readiness claim.
+
+[Current smoke readiness](smoke-readiness.md) lists the prioritized owner blockers,
+merged integrity changes, exact prompt-byte/attestation fixes and the prepared
+three-task/15-slot plan. Historical v1 is never edited to bless a newer runtime.
+
 The [in-process runner](runner.md) now connects planned Crocodile/all-off attempts
 to the merged Agent and independent grader, with durable resume evidence. Mini
 and authoritative cost attribution remain explicitly incomplete. No live

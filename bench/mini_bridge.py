@@ -66,6 +66,14 @@ def usage_summary(messages):
 
 
 def worker(spec):
+    try:
+        task_bytes = Path(spec["task_file"]).read_bytes()
+        task_text = task_bytes.decode("utf-8")
+        if hashlib.sha256(task_bytes).hexdigest() != spec["task_text_sha256"]:
+            raise ValueError("Task text digest mismatch")
+    except (KeyError, OSError, UnicodeError, ValueError):
+        save(spec["receipt"], {"exit_status": "TaskTextMismatch", "steps": None, "usage": None})
+        return 2
     readiness = probe(spec["credential_env"])
     if not readiness["ready"]:
         save(spec["receipt"], {"exit_status": readiness["reason"], "steps": None, "usage": None})
@@ -115,6 +123,7 @@ def worker(spec):
                     def save(self, path, *extra):
                         last = self.messages[-1].get("extra", {}) if self.messages else {}
                         result = {"mini_version": VERSION, "template_git_blob": blob,
+                                  "task_text_sha256": spec["task_text_sha256"],
                                   "litellm_version": version("litellm"), "steps": self.n_calls,
                                   "exit_status": last.get("exit_status", ""),
                                   "usage": usage_summary(self.messages)}
@@ -125,7 +134,7 @@ def worker(spec):
                 # Mini's built-in mini.yaml includes interactive-only keys. The
                 # default agent's Pydantic config ignores those; no templates change.
                 try:
-                    agent.run(Path(spec["task_file"]).read_text(encoding="utf-8"))
+                    agent.run(task_text)
                 except KeyboardInterrupt:
                     save(spec["receipt"], {"exit_status": "Interrupted", "steps": agent.n_calls,
                                            "usage": usage_summary(agent.messages)})
