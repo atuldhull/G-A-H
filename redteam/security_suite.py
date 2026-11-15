@@ -3,7 +3,7 @@
 import pytest
 
 from crocodile import services
-from redteam.cases import CASES, owner_case, readme_cli_case, undo_cli_case
+from redteam.cases import CASES, integrity_case, owner_case, readme_cli_case, undo_cli_case
 from redteam.harness import Blocked, Exercise
 from redteam.inventory import CASES as INVENTORY
 
@@ -31,7 +31,11 @@ def test_security_case(case, exercise, capsys, request):
         request.node.user_properties.append(("evidence", exercise.snapshot()))
 
 
-@pytest.mark.parametrize("flow", [readme_cli_case, undo_cli_case], ids=["readme-denial", "shadow-undo"])
+@pytest.mark.parametrize(
+    "flow",
+    [readme_cli_case, undo_cli_case, integrity_case],
+    ids=["readme-denial", "shadow-undo", "integrity-abort"],
+)
 def test_cli_flow(flow, exercise, request):
     try:
         flow(exercise)

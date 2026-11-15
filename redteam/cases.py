@@ -190,6 +190,56 @@ def cloud_model_case(env):
     )
 
 
+def integrity_pytest_case(env):
+    """Architecture group 4 specifically executes an approved pytest child."""
+    budget = BudgetManager(
+        env.state.path,
+        PriceTable.from_yaml_file(Path(__file__).resolve().parents[1] / "prices.yaml"),
+        state_integrity=env.state,
+    )
+    budget.reserve("fixture", ["ollama/qwen2.5-coder:7b"])
+    marker = env.root / "approved-test-ran.canary"
+    (env.root / "tamper_test.py").write_text(
+        "import sqlite3\nfrom pathlib import Path\n"
+        "def test_disposable_ledger():\n"
+        f"    with sqlite3.connect({str(env.state.path)!r}) as db:\n"
+        "        db.execute('UPDATE ledger SET reserved_usd=reserved_usd+1')\n"
+        f"    Path({str(marker)!r}).write_text('harmless approved test indicator')\n",
+        encoding="utf-8",
+    )
+    env.observe(
+        allowed=lambda argv: (
+            Path(argv[0]).resolve() == Path(sys.executable).resolve()
+            and argv[1:3] == ["-m", "pytest"]
+            and argv[-1] == "tamper_test.py"
+        )
+    )
+    result, receipt = env.run(
+        [
+            [("run_tests", {"ids": ["tamper_test.py"]})],
+            [("write", {"path": "subsequent-work.txt", "content": "must not happen"})],
+        ]
+    )
+    assert result.exit_code == 1 and receipt["status"] == "STOPPED: integrity violation", result.output
+    assert marker.is_file() and not (env.root / "subsequent-work.txt").exists()
+    assert len(env.model.calls) == len(env.spawns) == 1
+    assert any(
+        "THIS EXECUTES CODE FROM THE REPO" in preview and "tamper_test.py" in preview
+        for preview in env.prompts
+    )
+    with pytest.raises(IntegrityViolation):
+        env.state.verify_state()
+    events = services.get("journal").j.get_events(receipt["session"])
+    assert any(row["type"] == "integrity_violation" for row in events)
+    env.evidence.update(
+        receipt=receipt,
+        approved_pytest_indicator_present=True,
+        integrity_event=True,
+        subsequent_model_calls=0,
+        subsequent_work_absent=True,
+    )
+
+
 def confidential_egress_case(env):
     from crocodile.security.audit import audit_records
 
@@ -544,7 +594,7 @@ CASES = {
     1: quote_case,
     2: refused_tests_case,
     3: edited_execution_case,
-    4: integrity_case,
+    4: integrity_pytest_case,
     5: cloud_model_case,
     6: confidential_egress_case,
     9: shell_preview_case,
