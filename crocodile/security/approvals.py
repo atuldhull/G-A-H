@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .binding import BoundAction, bind
+from .contract_adapter import normalize_action
 from .policy import decide, risk
 from .secrets import secret_scan
 from .session import ApprovalSession
@@ -113,6 +114,7 @@ def _preview(
 
 def ask(action: Action, *, session: ApprovalSession | None = None) -> Decision:
     """Confirm exact inputs; pass a session to retain a consumable permit."""
+    action = normalize_action(action)
     session = session if session is not None else ApprovalSession()
     try:
         bound = bind(action, session)
@@ -220,6 +222,7 @@ def validate_before_execution(
     Part 1 applies writes using the returned resolved paths, then calls
     session.record_edit with the REPLACE sides after a successful edit.
     """
+    action = normalize_action(action)
     permit = session._permits.pop(decision.token, None)
     if decision.verdict != "allow" or permit is None:
         raise ApprovalDenied("no unconsumed approval in this session")

@@ -41,6 +41,13 @@ def _syntax(root: Path, touched: list[str]) -> tuple[bool, str]:
 
 
 def _lint(ctx, touched: list[str]) -> tuple[bool, str]:
+    # The disposable bench profile allows edits and pytest only. Syntax is
+    # checked above; optional external lint must not widen that authorization.
+    security = getattr(ctx.session, "security", None)
+    if security is not None and security.p3.bench_auto:
+        services.get("journal").append(ctx.session, "verification_skipped",
+            {"check": "external static lint", "reason": "bench permits only registered pytest commands"})
+        return True, "optional external lint omitted by bench approval policy"
     root = ctx.root
     py = [r for r in touched if r.endswith(".py") and (root / r).is_file()]
     exe = shutil.which("ruff")

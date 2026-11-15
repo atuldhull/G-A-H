@@ -457,8 +457,12 @@ def main(argv=None):
     mode.add_argument("--public", action="store_true")
     parser.add_argument("--canary-source")
     args = parser.parse_args(argv)
-    store = SecurityStore(resolve_state_path(args.state_db))
     try:
+        from .integrity import IntegrityViolation, StateIntegrity
+
+        state = StateIntegrity(resolve_state_path(args.state_db))
+        state.verify_state()
+        store = SecurityStore(state.path, integrity=state)
         if args.command == "init":
             if not args.confidential and not args.public:
                 parser.error("init requires --confidential or --public")
@@ -478,7 +482,7 @@ def main(argv=None):
         for alert in result.alerts:
             print("RED: " + escape(alert))
         return 0
-    except (ClassificationError, ApprovalDenied, OSError, ValueError) as error:
+    except (ClassificationError, ApprovalDenied, IntegrityViolation, OSError, ValueError) as error:
         print("REFUSED: " + escape(str(error)))
         return 1
 

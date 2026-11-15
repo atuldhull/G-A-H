@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from ..credentials import VK_LOCAL, CredentialStore
+from ..gateway_settings import gateway_url
 from ..shared_state import resolve_state_path
 from .approvals import escape
 from .executables import resolve_pinned
@@ -298,7 +299,7 @@ def diagnose(
     )
 
     def gateway():
-        _loopback(config["bifrost"]["base_url"], 8080)
+        _loopback(gateway_url(config), 8080)
         probe = evidence["gateway"]
         if (
             probe["reachable"] is not True

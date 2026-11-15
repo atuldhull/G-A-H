@@ -28,7 +28,7 @@ from .journal_contract import SESSION_STARTED
 from .state import TaskState
 from .tools import SCHEMAS, TOOLS, RunCtx, dispatch
 from .tools.base import SKIP_DIRS, ToolError
-from .tools.tests import TestRunner
+from .tools.tests import TestRunner, test_argv
 
 ALL_FLAGS = {
     "cache",
@@ -237,6 +237,11 @@ class Agent:
             self.schemas = sorted(self.schemas + [_web.SCHEMA], key=lambda s: s["function"]["name"])
         self.ctx = RunCtx(self.s, Spill(sdir), ReadCache(), Thrash())
         self.ctx.tests = TestRunner(self.ctx, oracle)
+        if self.security.p3.bench_auto:
+            commands = [test_argv(list(oracle or []))]
+            if full_suite:
+                commands.append(test_argv([]))
+            self.security.p3.authorize_bench_tests(commands)
         if full_suite:
             self.ctx.tests.full_targets = []
         self.ctx.oracle_files = {o.split("::")[0].replace("\\", "/") for o in (oracle or [])}

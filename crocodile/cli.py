@@ -183,14 +183,33 @@ def quote(
 
 @app.command()
 def init(
-    fresh: bool = typer.Option(False, "--fresh",
-                               help="Rename an existing UNSEALED state DB aside (never deleted) and enroll anew."),
+    fresh: bool = typer.Option(False, "--fresh"),
+    repo: Path | None = typer.Option(None, "--repo"),
+    confidential: bool = typer.Option(False, "--confidential"),
+    public: bool = typer.Option(False, "--public"),
+    canary_source: str | None = typer.Option(None, "--canary-source"),
 ):
-    """One-time trusted enrollment: create the shared state DB and seal it (HMAC key in Credential Manager).
+    """Enroll state; optionally classify a repository using typed console confirmation."""
+    if confidential and public:
+        raise typer.BadParameter("choose --confidential or --public")
+    if (confidential or public) and repo is None:
+        raise typer.BadParameter("classification requires --repo")
+    if repo is not None and not (confidential or public):
+        raise typer.BadParameter("--repo requires --confidential or --public")
+    if canary_source is not None and not confidential:
+        raise typer.BadParameter("--canary-source requires --confidential")
+    path = _enroll_state(fresh)
+    if confidential or public:
+        from .security.confidential import main as classify
+        args = ["init", "--repo", str(repo), "--state-db", str(path),
+                "--confidential" if confidential else "--public"]
+        if canary_source is not None:
+            args += ["--canary-source", canary_source]
+        raise typer.Exit(classify(args))
 
-    Refuses an already sealed DB (no re-enrollment, no repair) and never adopts an existing
-    unsealed DB unless --fresh moves it aside first.
-    """
+
+def _enroll_state(fresh=False):
+    """Never repair an existing seal or silently adopt unsealed state."""
     import sqlite3
     import time
 
@@ -209,9 +228,14 @@ def init(
         finally:
             con.close()             # always release: Windows cannot rename an open file
         if sealed:
+            try:
+                StateIntegrity(path).verify_state()
+            except IntegrityViolation as error:
+                typer.echo(f"Refusing: {error}", err=True)
+                raise typer.Exit(1) from None
             typer.echo(f"Already enrolled: {path} (sealed).")
             _write_default_settings(path.parent)
-            raise typer.Exit(0)
+            return path
         if not fresh:
             typer.echo(f"Refusing: {path} exists but is not sealed (untrusted state). "
                        "Re-run with --fresh to move it aside and enroll a new one.", err=True)
@@ -239,6 +263,7 @@ def init(
         db.close()
     typer.echo(f"Enrolled and sealed: {path}")
     _write_default_settings(path.parent)
+    return path
 
 
 def _write_default_settings(folder: Path) -> None:
@@ -251,7 +276,7 @@ def _write_default_settings(folder: Path) -> None:
     ctx = int(os.environ.get("OLLAMA_CONTEXT_LENGTH") or 32768)
     files = {
         "config.yaml": {
-            "bifrost_url": bifrost_url(),
+            "bifrost": {"base_url": bifrost_url()},
             "models": {"cheap": {"chain": chain_for("cheap")}, "strong": {"chain": chain_for("strong")},
                        "local": {"chain": local, "ctx_window": max(32768, ctx)}},
             "confidential": {"local_model_allowlist": [m.split("/", 1)[1] for m in local if m.startswith("ollama/")],

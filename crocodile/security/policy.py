@@ -4,6 +4,7 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 
 from .binding import BoundAction, bind
+from .contract_adapter import normalize_action
 from .secrets import secret_scan
 from .session import ApprovalSession
 from .surfaces import changes_execution
@@ -63,7 +64,9 @@ def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decisi
     if session.bench_auto and (
         session.mode != "public"
         or network
-        or action.kind not in ("write", "shell", "test_consent")
+        or action.kind not in ("write", "test_consent")
+        or (action.kind == "write" and bound.steered_by)
+        or (action.kind == "test_consent" and tuple(action.argv or ()) not in (session._bench_tests or ()))
     ):
         return Decision(
             "deny",
@@ -91,6 +94,8 @@ def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decisi
     irreversible = action.kind == "git" and any(
         arg in ("push", "--hard", "-fdx", "-D") for arg in args
     )
+    if session.bench_auto and action.kind == "write" and red_path:
+        return Decision("deny", reasons=["bench auto forbids red edits"])
     if (
         bound.steered_by
         or red_path
@@ -112,6 +117,7 @@ def risk(action: Action, bound: BoundAction, session: ApprovalSession) -> Decisi
 
 def decide(action: Action, *, session: ApprovalSession | None = None) -> Decision:
     """Schema/hard failure, confidentiality, provenance, then consent or ASK."""
+    action = normalize_action(action)
     session = session if session is not None else ApprovalSession()
     try:
         bound = bind(action, session)

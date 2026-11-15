@@ -69,8 +69,8 @@ def chain_for(tier: str) -> list[str]:
 
 def bifrost_url() -> str:
     """Env CROCODILE_BIFROST_URL > config.yaml bifrost_url > http://127.0.0.1:8080."""
-    return os.environ.get("CROCODILE_BIFROST_URL") or str(user_settings().get("bifrost_url")
-                                                          or "http://127.0.0.1:8080")
+    from .gateway_settings import gateway_url
+    return os.environ.get("CROCODILE_BIFROST_URL") or gateway_url(user_settings())
 
 
 def limits_path() -> Path:

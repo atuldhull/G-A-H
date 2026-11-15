@@ -72,6 +72,9 @@ with tempfile.TemporaryDirectory(prefix="crocodile-bench-", dir=scratch) as work
         integrity=integrity, confidentiality=detector,
     )
     try:
+        security_session.authorize_bench_tests([
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+        ])
         # Part 4 prepares the public task into this root AFTER session creation.
         prepare_task(destination=security_session.repo_root)
         action = Action(
@@ -99,8 +102,12 @@ Parallel trials must also obey Phase 6's shared-state watch rules: coordinate
 authorized writers while a child is watched. Do not disable the watch or split
 the global budget into independent budgets just to avoid integrity conflicts.
 
-Eligible local writes, shell actions and exact test-consent actions automatically
-receive ordinary single-use permits. Hard denials happen first. Known network
+Eligible non-red local edits and harness-registered exact pytest commands receive
+ordinary single-use permits. Arbitrary shell commands, Git mutations, web requests,
+red edits and unregistered/changed test argv are denied. Agent startup registers
+only the trusted oracle command and, when explicitly requested, the full-suite
+command before any model work. The optional external Ruff rung is omitted in
+bench mode; syntax checks and approved pytest verification still run. Hard denials happen first. Known network
 sinks and Git mutation approvals are not auto-approved; a confidential session
 cannot use bench auto. Fixed Git reads still use the existing hardened Git API.
 Tests must use `Action('test_consent', ...)`, disable the pytest cache provider,
@@ -149,3 +156,7 @@ The isolated 3.12 test runtime was downloaded from the official
 and kept outside the checkout. The installed system interpreter was unchanged.
 This is a pinned-minor-version test, not a recommendation to downgrade production
 Python to that patch release. No teammate runtime or shared contracts were edited.
+
+Registration is a trusted startup API, never a tool/model field. When using Agent,
+let Agent register its fixed commands; do not register a second set. Shared Action,
+Decision and CmdResult compatibility is covered by the completion regressions.

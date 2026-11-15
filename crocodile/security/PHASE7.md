@@ -1,5 +1,8 @@
 # Part 3 Phase 7: verification and handoff
 
+Current integration results are recorded in [redteam verification](../../redteam/verification.md)
+and [completion audit](../../docs/PART3-COMPLETION.md). The observations below are historical.
+
 Historical snapshot: the state-path, credential-name and session-event handoffs
 listed below were subsequently implemented on 15 November 2026. See the
 [shared-contract decision and verification](../../docs/SHARED-STATE-CREDENTIAL-JOURNAL.md).

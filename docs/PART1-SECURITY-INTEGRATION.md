@@ -9,9 +9,9 @@ Keep this database and session storage outside the target repository.
 
 Root commands delegate to their owner implementations: `quote`, `audit`, `undo`,
 `doctor`, and `redteam`. `audit` requires explicit `--allow-model` values and returns
-0 for PASS, 1 for FAIL, or 2 for incomplete evidence. Part 4 currently supplies only
-a redteam case inventory: `redteam` returns 2; `redteam --inventory` returns 0 for
-the inventory itself. Neither path claims that security assertions ran.
+0 for PASS, 1 for FAIL, or 2 for incomplete evidence. `redteam` executes the fixed
+trusted security suite and writes per-case verdicts; `--inventory` only lists cases.
+Skipped architecture cases are blocked, not passes. See redteam/verification.md.
 
 File reads and search hits enter the provenance index before truncation with their
 original path and line number. Tool output, cache entries, spill reads, journal
@@ -39,7 +39,7 @@ still use the hardened runner and policy hard denials. Ordinary sessions use the
 console, including typed confirmation for red actions. Put Python and virtual
 environments outside the target repository; executable pinning rejects in-repo tools.
 
-The optional budget integrity guard verifies and reseals inside each existing
+The mandatory budget integrity guard verifies and reseals inside each existing
 `BEGIN IMMEDIATE` transaction for reservation, settlement, cancellation and heartbeat.
 The gateway adapter attaches the same integrity manager used by the agent. Pricing,
 balance arithmetic, limits and routing remain owned by Part 2. State tampering aborts
@@ -47,10 +47,10 @@ the session before another model/tool request.
 
 Verification uses synthetic credentials, scripted model responses, real SQLite,
 real console-permit logic and disposable command/Git/file fixtures. Live Bifrost,
-Ollama and Tavily checks require teammate services and credentials. Part 4's executable
-security assertions and feature-freeze recording remain teammate handoffs.
+Ollama and Tavily checks require teammate services and credentials. The executable security suite is connected and verified in CI; live provider
+evidence remains distinct from synthetic fixtures. Part 4 owns submission and recordings.
 
-## Verification record — 2026-11-14
+## Historical verification record — 2026-11-14
 
 Native Windows Python 3.12.10, with the interpreter and dependencies outside the
 target repository. No live provider credentials were used.
@@ -74,3 +74,18 @@ Total: 333 unique passed tests across these runs, plus 160 subtests; 15 explicit
 Part 4 security skips. This is fixture verification, not a live confidential-egress
 audit or completion of Part 4's redteam assertions. Feature freeze was not declared,
 so demo recordings were not made.
+
+
+## Part 3 completion audit fixes
+
+`init --repo PATH --confidential [--canary-source FILE]` and `init --repo PATH
+--public` delegate to typed console classification with the same verified state
+integrity manager. Classification and canary registration update their HMAC inside
+the transaction. Unsigned writes to sealed classification state are refused.
+Existing seals are verified before init reports success; tampering is never repaired.
+
+The canonical gateway setting is `bifrost.base_url`. Runtime, doctor and probes
+share a resolver accepting legacy `bifrost_url`; conflicting values fail closed.
+Init preserves existing settings. Shared Action is adapted through the local
+network extension; Decision/CmdResult/Mode reuse the shared definitions. No shared
+contract fields were changed without owner agreement.

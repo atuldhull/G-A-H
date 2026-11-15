@@ -23,9 +23,15 @@ class BenchSessionTests(unittest.TestCase):
         self.session = ApprovalSession.for_bench(
             self.root, parent=self.base, events=self.events, user_task="fix the task"
         )
+        self.test_file = self.root / "test_fixture.py"
+        self.test_file.write_text("def test_fixture():\n    assert True\n")
         self.action = Action(
-            "shell", argv=[sys.executable, "-I", "-c", "print('bench fixture')"]
+            "test_consent",
+            argv=[sys.executable, "-m", "pytest", "-q", "-s", "-p", "no:cacheprovider", "test_fixture.py"],
         )
+
+        self.session.authorize_bench_tests([self.action.argv,
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"]])
 
     def tearDown(self):
         if not self.session._bench_closed:
@@ -36,10 +42,7 @@ class BenchSessionTests(unittest.TestCase):
                 self.temporary.cleanup()
                 return
             except OSError as error:
-                if (
-                    getattr(error, "winerror", None) != 32
-                    or time.monotonic() >= deadline
-                ):
+                if getattr(error, "winerror", None) != 32 or time.monotonic() >= deadline:
                     raise
                 time.sleep(0.05)
 
@@ -60,28 +63,27 @@ class BenchSessionTests(unittest.TestCase):
         self.assertTrue((self.root / "source.py").exists())
 
     def test_hardened_command_runs_without_console_and_logs_bench(self):
-        script = "import os; print(os.environ.get('BENCH_FIXTURE_SECRET', 'absent')); print(os.environ['PYTEST_DISABLE_PLUGIN_AUTOLOAD'])"
+        self.test_file.write_text(
+            "import os\ndef test_fixture():\n    assert 'BENCH_FIXTURE_SECRET' not in os.environ\n    assert os.environ['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] == '1'\n"
+        )
         with (
             patch.dict(os.environ, {"BENCH_FIXTURE_SECRET": "synthetic-only"}),
             patch.object(approvals, "_console_answer") as console,
             patch.object(procs, "run", wraps=procs.run) as runner,
         ):
             result = cmd.run(
-                [sys.executable, "-I", "-c", script],
+                self.action.argv,
                 self.root,
-                timeout=20,
+                timeout=60,
                 session=self.session,
+                action=self.action,
             )
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.splitlines(), ["absent", "1"])
+        self.assertIn("1 passed", result.stdout)
         console.assert_not_called()
         runner.assert_called_once()
         self.assertTrue(callable(runner.call_args.kwargs["before_spawn"]))
-        approved = [
-            event
-            for event in self.events
-            if event["event"] == "approval" and event.get("approved")
-        ]
+        approved = [event for event in self.events if event["event"] == "approval" and event.get("approved")]
         self.assertEqual(approved[-1]["by"], "bench")
         self.assertEqual(approved[-1]["argv"][0], str(Path(sys.executable).resolve()))
         self.assertEqual(len(approved[-1]["action_digest"]), 64)
@@ -90,26 +92,18 @@ class BenchSessionTests(unittest.TestCase):
     def test_bench_permits_are_exact_single_use_and_session_bound(self):
         with patch.object(approvals, "_console_answer") as console:
             decision = approvals.ask(self.action, session=self.session)
-            self.assertEqual(
-                approvals.decide(self.action, session=self.session).verdict, "allow"
-            )
+            self.assertEqual(approvals.decide(self.action, session=self.session).verdict, "allow")
         console.assert_not_called()
         normal = ApprovalSession(self.root)
         with self.assertRaises(approvals.ApprovalDenied):
             approvals.validate_before_execution(self.action, decision, session=normal)
         approvals.validate_before_execution(self.action, decision, session=self.session)
         with self.assertRaises(approvals.ApprovalDenied):
-            approvals.validate_before_execution(
-                self.action, decision, session=self.session
-            )
+            approvals.validate_before_execution(self.action, decision, session=self.session)
         next_decision = approvals.ask(self.action, session=self.session)
-        changed = replace(
-            self.action, argv=[sys.executable, "-I", "-c", "print('changed')"]
-        )
+        changed = replace(self.action, argv=[sys.executable, "-I", "-c", "print('changed')"])
         with self.assertRaises(approvals.ApprovalChanged):
-            approvals.validate_before_execution(
-                changed, next_decision, session=self.session
-            )
+            approvals.validate_before_execution(changed, next_decision, session=self.session)
 
     def test_pytest_exact_argv_and_config_changes_invalidate_old_permits(self):
         action = Action(
@@ -121,16 +115,11 @@ class BenchSessionTests(unittest.TestCase):
             self.assertEqual((decision.verdict, decision.level), ("allow", "red"))
             (self.root / "pytest.ini").write_text("[pytest]\naddopts = -q\n")
             with self.assertRaises(approvals.ApprovalChanged):
-                approvals.validate_before_execution(
-                    action, decision, session=self.session
-                )
+                approvals.validate_before_execution(action, decision, session=self.session)
             fresh = approvals.ask(action, session=self.session)
             self.assertEqual(fresh.verdict, "allow")
             self.assertTrue(
-                any(
-                    item["path"].endswith("pytest.ini")
-                    for item in self.events[-1]["config_hashes"]
-                )
+                any(item["path"].endswith("pytest.ini") for item in self.events[-1]["config_hashes"])
             )
             with self.assertRaises(approvals.ApprovalChanged):
                 approvals.validate_before_execution(
@@ -144,14 +133,10 @@ class BenchSessionTests(unittest.TestCase):
         decision = approvals.ask(self.action, session=self.session)
         self.session.record_edit(["import subprocess"])
         with self.assertRaises(approvals.ApprovalDenied):
-            approvals.validate_before_execution(
-                self.action, decision, session=self.session
-            )
+            approvals.validate_before_execution(self.action, decision, session=self.session)
 
     def test_local_steered_action_keeps_source_and_red_level_in_bench_event(self):
-        self.session.provenance.add(
-            "\n" * 39 + self.action.argv[-1], Source("file", "README.md", 1)
-        )
+        self.session.provenance.add("\n" * 39 + self.action.argv[-1], Source("file", "README.md", 1))
         with patch.object(approvals, "_console_answer") as console:
             decision = approvals.ask(self.action, session=self.session)
         self.assertEqual((decision.verdict, decision.level), ("allow", "red"))
@@ -164,12 +149,8 @@ class BenchSessionTests(unittest.TestCase):
         exe = self.root / "planted.exe"
         exe.write_bytes(b"synthetic, never executed")
         cases = (
-            Action(
-                "write", paths=[".git/config"], diff="change", replacements=["change"]
-            ),
-            Action(
-                "write", paths=["../outside"], diff="change", replacements=["change"]
-            ),
+            Action("write", paths=[".git/config"], diff="change", replacements=["change"]),
+            Action("write", paths=["../outside"], diff="change", replacements=["change"]),
             Action("network", url="https://example.invalid"),
             Action("shell", argv=[sys.executable, "https://example.invalid"]),
             Action("shell", argv=[str(exe)]),
@@ -178,26 +159,36 @@ class BenchSessionTests(unittest.TestCase):
         with patch.object(approvals, "_console_answer") as console:
             for action in cases:
                 with self.subTest(kind=action.kind, argv=action.argv):
-                    self.assertEqual(
-                        approvals.ask(action, session=self.session).verdict, "deny"
-                    )
+                    self.assertEqual(approvals.ask(action, session=self.session).verdict, "deny")
         console.assert_not_called()
+
+    def test_arbitrary_commands_and_red_edits_are_denied(self):
+        cases = [
+            Action("shell", argv=[sys.executable, "-c", "print('harmless')"]),
+            Action("write", paths=["tests/test_new.py"], diff="+pass", replacements=["pass"]),
+        ]
+        with patch.object(approvals, "_console_answer") as console:
+            for action in cases:
+                self.assertEqual(approvals.ask(action, session=self.session).verdict, "deny")
+        console.assert_not_called()
+
+    def test_unregistered_test_argv_and_registration_expansion_are_denied(self):
+        changed = replace(self.action, argv=[*self.action.argv, "-v"])
+        self.assertEqual(approvals.ask(changed, session=self.session).verdict, "deny")
+        with self.assertRaises(ValueError):
+            self.session.authorize_bench_tests([changed.argv])
 
     def test_confidential_promotion_refuses_auto_approval(self):
         self.session.mode = "confidential"
         with patch.object(approvals, "_console_answer") as console:
-            self.assertEqual(
-                approvals.ask(self.action, session=self.session).verdict, "deny"
-            )
+            self.assertEqual(approvals.ask(self.action, session=self.session).verdict, "deny")
         console.assert_not_called()
 
     def test_replaced_root_aborts_instead_of_reusing_bench_authority(self):
         self.root.rename(self.base / "original")
         self.root.mkdir()
         with patch.object(approvals, "_console_answer") as console:
-            self.assertEqual(
-                approvals.ask(self.action, session=self.session).verdict, "deny"
-            )
+            self.assertEqual(approvals.ask(self.action, session=self.session).verdict, "deny")
         console.assert_not_called()
         self.assertTrue(self.session._aborted)
         self.assertTrue(any(e["event"] == "integrity_violation" for e in self.events))
@@ -207,20 +198,18 @@ class BenchSessionTests(unittest.TestCase):
         self.session.close_bench()
         self.assertFalse(self.session.bench_auto)
         with self.assertRaises(approvals.ApprovalDenied):
-            approvals.validate_before_execution(
-                self.action, decision, session=self.session
-            )
+            approvals.validate_before_execution(self.action, decision, session=self.session)
         with patch.object(approvals, "_console_answer") as console:
-            self.assertEqual(
-                approvals.ask(self.action, session=self.session).verdict, "deny"
-            )
+            self.assertEqual(approvals.ask(self.action, session=self.session).verdict, "deny")
         console.assert_not_called()
 
     def test_bench_command_watch_still_aborts_on_metadata_tampering(self):
         (self.root / ".git").mkdir()
         config = self.root / ".git" / "config"
         config.write_text("before")
-        script = "from pathlib import Path; Path('.git/config').write_text('tampered')"
+        self.test_file.write_text(
+            "from pathlib import Path\ndef test_fixture():\n    Path('.git/config').write_text('tampered')\n"
+        )
         from crocodile.security.integrity import IntegrityViolation
 
         with (
@@ -228,10 +217,11 @@ class BenchSessionTests(unittest.TestCase):
             self.assertRaises(IntegrityViolation),
         ):
             cmd.run(
-                [sys.executable, "-I", "-c", script],
+                self.action.argv,
                 self.root,
-                timeout=20,
+                timeout=60,
                 session=self.session,
+                action=self.action,
             )
         console.assert_not_called()
         self.assertTrue(self.session._aborted)

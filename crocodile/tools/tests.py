@@ -107,6 +107,22 @@ def parse(raw: str, exit_code: int, root: Path) -> TestReport:
     return rep
 
 
+def test_argv(targets):
+    """The fixed command shared with trusted bench startup authorization."""
+    return [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-q",
+        "-rA",
+        "--tb=short",
+        "--no-header",
+        "-p",
+        "no:cacheprovider",
+        *targets,
+    ]
+
+
 class TestRunner:
     def __init__(self, ctx: RunCtx, oracle_ids: list[str] | None = None):
         self.ctx = ctx
@@ -145,21 +161,12 @@ class TestRunner:
 
     def run(self, ids: list[str] | None = None, timeout: int = 90) -> TestReport:
         targets = list(self.oracle_ids) if ids is None else list(ids)  # [] = whole suite
-        argv = [
-            sys.executable,
-            "-m",
-            "pytest",
-            "-q",
-            "-rA",
-            "--tb=short",
-            "--no-header",
-            "-p",
-            "no:cacheprovider",
-            *targets,
-        ]
+        argv = test_argv(targets)
         self._consent(argv)
         r = services.get("cmd").run(argv, self.ctx.root, timeout=timeout, session=self.ctx.session)
-        if r.exit_code == 126 and (r.stderr or "").startswith(("denied by policy", "test consent no longer valid")):
+        if r.exit_code == 126 and (r.stderr or "").startswith(
+            ("denied by policy", "test consent no longer valid")
+        ):
             # Policy refused to run the tests (consent refused or voided): not a test failure.
             self._approved.clear()
             raise ToolError(f"tests not run: {r.stderr.strip()[:200]}")

@@ -325,6 +325,10 @@ class SecurityStore:
         try:
             with self._open(write=True) as db:
                 db.execute("BEGIN IMMEDIATE")
+                if self.integrity is None and db.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"
+                ).fetchone() and db.execute("SELECT 1 FROM meta WHERE k='hmac'").fetchone():
+                    raise ClassificationError("sealed classification writes require attached state integrity")
                 with (
                     self.integrity.authorized_write(db)
                     if self.integrity is not None

@@ -11,6 +11,7 @@ import sys
 import uuid
 from pathlib import Path
 
+from ..gateway_settings import gateway_url
 from .egress import EgressClient, network_scope
 from .network_policy import NetworkPolicy
 from .records import read_gateway_records
@@ -92,7 +93,7 @@ def collect_evidence(
     A gateway export is needed to prove zero upstream calls for the local-VK
     refusal. A 4xx status alone never fabricates that evidence.
     """
-    gateway = config["bifrost"]["base_url"]
+    gateway = gateway_url(config)
     ollama = config["confidential"]["ollama_host"]
     policy = NetworkPolicy(gateways=(gateway,), ollama=(ollama,))
     owns_client = client is None

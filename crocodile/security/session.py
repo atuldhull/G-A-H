@@ -33,10 +33,21 @@ class ApprovalSession:
     _exe_pins: dict = field(default_factory=dict, init=False, repr=False)
     _git_disabled: bool = field(default=False, init=False, repr=False)
     _output_counter: int = field(default=0, init=False, repr=False)
-    _bench_root: tuple[Path, int, int] | None = field(
-        default=None, init=False, repr=False
-    )
+    _bench_root: tuple[Path, int, int] | None = field(default=None, init=False, repr=False)
     _bench_closed: bool = field(default=False, init=False, repr=False)
+    _bench_tests: frozenset[tuple[str, ...]] | None = field(default=None, init=False, repr=False)
+
+    def authorize_bench_tests(self, commands):
+        """Trusted harness startup only: freeze exact test argv before model work."""
+        self.ensure_active()
+        if not self.bench_auto or self._bench_tests is not None:
+            raise ValueError("bench test commands can only be registered once at startup")
+        if any(
+            not isinstance(argv, list) or not argv or any(not isinstance(arg, str) for arg in argv)
+            for argv in commands
+        ):
+            raise ValueError("bench test commands require explicit argv lists")
+        self._bench_tests = frozenset(tuple(argv) for argv in commands)
 
     def __post_init__(self):
         self.repo_root = Path(self.repo_root).resolve(strict=True)
@@ -63,19 +74,12 @@ class ApprovalSession:
         This does not attest OS isolation or make arbitrary child code safe.
         """
         raw = Path(repo_root).absolute()
-        if any(
-            p.is_symlink() or getattr(p, "is_junction", lambda: False)()
-            for p in (raw, *raw.parents)
-        ):
+        if any(p.is_symlink() or getattr(p, "is_junction", lambda: False)() for p in (raw, *raw.parents)):
             raise ValueError("bench workspace must not traverse links")
         root = raw.resolve(strict=True)
-        scratch = Path(parent if parent is not None else tempfile.gettempdir()).resolve(
-            strict=True
-        )
+        scratch = Path(parent if parent is not None else tempfile.gettempdir()).resolve(strict=True)
         if root.parent != scratch or not root.is_dir() or any(root.iterdir()):
-            raise ValueError(
-                "bench requires an empty direct child of its trusted scratch parent"
-            )
+            raise ValueError("bench requires an empty direct child of its trusted scratch parent")
         session = cls(
             repo_root=root,
             user_task=user_task,
@@ -114,9 +118,7 @@ class ApprovalSession:
             self._consent = None
             self._edited_code = True
             self._permits.clear()
-            self.events.append(
-                {"event": "test_consent_invalidated", "reason": "edited code"}
-            )
+            self.events.append({"event": "test_consent_invalidated", "reason": "edited code"})
 
     def ensure_active(self):
         from .integrity import IntegrityViolation
@@ -163,9 +165,7 @@ class ApprovalSession:
                     "session_aborted": True,
                 }
             )
-        raise IntegrityViolation(
-            "INTEGRITY VIOLATION: session aborted; inspect state before restarting"
-        )
+        raise IntegrityViolation("INTEGRITY VIOLATION: session aborted; inspect state before restarting")
 
     def verify_integrity(self):
         from .integrity import verify_state
@@ -180,33 +180,21 @@ class ApprovalSession:
         from .integrity import IntegrityViolation, WatchSet
 
         self.verify_integrity()
-        config_dir = (
-            self.integrity.path.parent
-            if self.integrity is not None
-            else default_state_path().parent
-        )
-        watcher = WatchSet(
-            self.repo_root, config_dir=config_dir, state=self.integrity, extra=extra
-        )
+        config_dir = self.integrity.path.parent if self.integrity is not None else default_state_path().parent
+        watcher = WatchSet(self.repo_root, config_dir=config_dir, state=self.integrity, extra=extra)
 
         def snapshot():
             try:
                 return watcher.snapshot()
             except (IntegrityViolation, OSError, ValueError):
-                self.abort_integrity(
-                    "watch-set", "readable trusted paths", "invalid or unavailable"
-                )
+                self.abort_integrity("watch-set", "readable trusted paths", "invalid or unavailable")
 
         baseline = snapshot()
 
         def check():
             self.ensure_active()
             current = snapshot()
-            changed = sorted(
-                k
-                for k in baseline.keys() | current.keys()
-                if baseline.get(k) != current.get(k)
-            )
+            changed = sorted(k for k in baseline.keys() | current.keys() if baseline.get(k) != current.get(k))
             if changed:
                 # Do not leak arbitrary path names/values into journal consumers.
                 from .approvals import escape
@@ -234,6 +222,4 @@ class ApprovalSession:
             self._consent = None
             self._permits.clear()
             self.events.append({"event": "mode_changed", "mode": "confidential"})
-        self.events.extend(
-            {"event": "confidential_alert", "message": alert} for alert in result.alerts
-        )
+        self.events.extend({"event": "confidential_alert", "message": alert} for alert in result.alerts)

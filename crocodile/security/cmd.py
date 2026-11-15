@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import approvals, procs
 from .binding import bind
+from .contract_adapter import normalize_action
 from .outputs import prepare_command_result
 from .types import Action, CmdResult, Decision
 
@@ -35,6 +36,7 @@ def run(
         raise TypeError("timeout must be a positive finite number")
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout must be a positive finite number")
+    action = normalize_action(action)
     args = argv.copy()
     if Path(args[0]).stem.lower() == "git" or (
         action is not None and action.kind == "git"
