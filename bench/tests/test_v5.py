@@ -69,3 +69,15 @@ def test_v5_rejects_unsupported_resolution_or_historical_promotion(v5, mutation)
         v5["readiness"]["paid_runs_authorized"] = True
     with pytest.raises(ValueError):
         canonical.validate_config(v5)
+
+
+def test_published_v5_is_immutable_and_remains_blocked_without_mutating_v4():
+    c = canonical._json(canonical.V5_CONFIG)
+    assert canonical.config_id(c) == "93c2acc67e2dfe9229b05c142296361b95de36d042876a4991100f2fd9a78c83"
+    assert hashlib.sha256(canonical.V5_CONFIG.read_bytes().replace(b"\r\n", b"\n")).hexdigest() == (
+        "0d338d3913ac855993aecf85f6127c2be36302789500dd13f77a0d0fcd808b4c")
+    result = canonical.validate_config(c, audit_current=True)
+    assert not result["cross_shard_comparable"] and not result["paid_runs_authorized"]
+    assert result["runtime_git_commit"] == "e442377be017edf58638f24f2c4da2a1deac8556"
+    assert canonical.config_id(canonical._json(canonical.V4_CONFIG)) == (
+        "026d0a1b238f4675011c268619c051b1ffd3102a264a85e712bf7721f49b1bb4")
