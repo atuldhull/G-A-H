@@ -3,16 +3,19 @@
 import argparse
 import hashlib
 import json
+from fractions import Fraction
 from pathlib import Path
 
 from bench.plan import AGENTS, EVALUATION_POLICY, SHARD_RANGES, TEST_PREFIX, _object, _relative, build_plan
 from bench.prepare import _inventory
 from bench.run import _validate
+from bench.bifrost_export import COMPONENT_ULPS, COMPONENT_ABSOLUTE_CAP, COMPONENT_RELATIVE_CAP
 
 
 DEFAULT_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v1.json"
 V2_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v2.json"
 V3_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v3.json"
+V4_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v4.json"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACCEPTED_LIMITATIONS = {"hard-stop-containment", "mini-output-cap", "cache-parity", "sampling-difference"}
 TOP_FIELDS = {
@@ -84,14 +87,15 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
     try:
         _need(isinstance(config, dict), "Invalid canonical config fields")
         revision = config.get("revision")
-        modern = revision in {"gemini-54-v2", "gemini-54-v3"}
-        change_field = "changes_from_v2" if revision == "gemini-54-v3" else "changes_from_v1"
+        versions = {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3, "gemini-54-v4": 4}
+        modern = revision in versions and versions[revision] >= 2
+        change_field = f"changes_from_v{versions[revision] - 1}" if modern else "changes_from_v1"
         fields = TOP_FIELDS | {change_field, "known_limitations"} if modern else TOP_FIELDS
         _need(set(config) == fields, "Invalid canonical config fields")
         _need(type(config["schema_version"]) is int
-              and config["schema_version"] == {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3}.get(revision)
+              and config["schema_version"] == versions.get(revision)
               and config["kind"] == "canonical-gemini-benchmark"
-              and revision in {"gemini-54-v1", "gemini-54-v2", "gemini-54-v3"}, "Unsupported canonical revision")
+              and revision in versions, "Unsupported canonical revision")
         _key_free(config)
         ready = config["readiness"]
         _need(ready["paid_runs_authorized"] is False and ready["cross_shard_comparable"] is False,
@@ -178,9 +182,18 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         sources = config["provenance"]["runtime_files_sha256_lf"]
         _need({"bench/run.py", "bench/mini_bridge.py", "bench/grade.py", "bench/bifrost_export.py",
                "crocodile/adapters.py", "prices.yaml"} <= sources.keys(), "Missing required runtime pins")
-        if revision == "gemini-54-v3":
+        if revision in {"gemini-54-v3", "gemini-54-v4"}:
             _need({"bench/mini.py", "bench/prepare.py", "bench/failure_evidence.py",
-                   "bench/canonical.py", "bench/attest.py"} <= sources.keys(), "Missing v3 diagnostic/runtime pins")
+                   "bench/canonical.py", "bench/attest.py"} <= sources.keys(),
+                  f"Missing v{versions[revision]} diagnostic/runtime pins")
+        if revision == "gemini-54-v4":
+            policy = config["evidence"]["logged_component_precision"]
+            _need(policy == {"binary64_ulps": COMPONENT_ULPS, "absolute_cap_usd": "1e-12",
+                             "relative_cap": "1e-12", "zero_nonzero_match": False,
+                             "raw_evidence_rewritten": False, "price_check": "separate-strictly-greater-than-1-percent"}
+                  and Fraction(policy["absolute_cap_usd"]) == COMPONENT_ABSOLUTE_CAP
+                  and Fraction(policy["relative_cap"]) == COMPONENT_RELATIVE_CAP,
+                  "V4 component precision policy differs from exporter")
         _need(config["evidence"]["canonical_native_prices_sha256"] == sources["prices.yaml"],
               "Canonical price snapshot differs")
         drift = []

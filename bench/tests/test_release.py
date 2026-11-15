@@ -168,10 +168,17 @@ def test_actual_mutation_of_v2_is_detected():
     assert canonical.config_id(mutated) != "700089ad8472546868ea39edee3f8e43b5b9ff87204cfaabf9268a0d616a0494"
 
 
-def test_v3_requires_diagnostic_runtime_pins_and_keeps_unsupported_evidence_blocked(bundle):
+@pytest.mark.parametrize("revision", [3, 4])
+def test_successor_requires_diagnostic_runtime_pins_and_keeps_evidence_blocked(bundle, revision):
     config, _, data, _, _, _ = bundle
-    config.update(schema_version=3, revision="gemini-54-v3", changes_from_v2=["Synthetic diagnostic snapshot"])
+    config.update(schema_version=revision, revision=f"gemini-54-v{revision}")
+    config[f"changes_from_v{revision - 1}"] = ["Synthetic diagnostic snapshot"]
     config.pop("changes_from_v1")
+    if revision == 4:
+        config["evidence"]["logged_component_precision"] = {
+            "binary64_ulps": 8, "absolute_cap_usd": "1e-12", "relative_cap": "1e-12",
+            "zero_nonzero_match": False, "raw_evidence_rewritten": False,
+            "price_check": "separate-strictly-greater-than-1-percent"}
     name = "bench/failure_evidence.py"
     for relative in (name, "bench/canonical.py", "bench/attest.py"):
         config["provenance"]["runtime_files_sha256_lf"][relative] = hashlib.sha256(
@@ -180,8 +187,16 @@ def test_v3_requires_diagnostic_runtime_pins_and_keeps_unsupported_evidence_bloc
     assert result["static_valid"] and result["dataset_validated"]
     assert not result["cross_shard_comparable"] and not result["paid_runs_authorized"]
     assert len(result["known_limitations"]) == 4 and result["unresolved"]
+    if revision == 4:
+        for key, value in [("binary64_ulps", 9), ("absolute_cap_usd", "1e-10"),
+                           ("relative_cap", "1e-10"), ("zero_nonzero_match", True),
+                           ("raw_evidence_rewritten", True), ("price_check", "shared-1-percent")]:
+            changed = deepcopy(config)
+            changed["evidence"]["logged_component_precision"][key] = value
+            with pytest.raises(ValueError, match="precision policy differs"):
+                canonical.validate_config(changed)
     config["provenance"]["runtime_files_sha256_lf"].pop(name)
-    with pytest.raises(ValueError, match="Missing v3 diagnostic/runtime pins"):
+    with pytest.raises(ValueError, match=f"Missing v{revision} diagnostic/runtime pins"):
         canonical.validate_config(config)
 
 

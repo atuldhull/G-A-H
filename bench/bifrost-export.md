@@ -37,6 +37,15 @@ consistently and agree with a supplied scalar cost. Missing Bifrost cost fields
 do not replace token-derived pricing; receipt and stored Bifrost cost are never
 the authoritative charge. Invalid or contradictory supplied cost fields fail.
 
+Component consistency allows only binary64 representation noise: the smallest
+of **8 ULPs** at the larger compared magnitude, **1e-12 USD absolute**, and
+**1e-12 relative**. There is no epsilon floor, zero/nonzero costs cannot match,
+and overflow/underflow cannot create a tolerance. Both input-plus-output versus
+JSON total and scalar versus JSON total use this bound; material mismatches
+remain incomplete even below 1%. Raw SQLite/JSON evidence is never rewritten.
+This precision policy is independent of the unchanged **1% price/receipt
+discrepancy rule**; authoritative pricing still uses exact token/rate arithmetic.
+
 Supported complete costs are **ordinary success and cache-read success, with
 explicit zero cache writes**, no retry/fallback relationship and a known served
 model with a single unbounded native price tier. Bare served model names are

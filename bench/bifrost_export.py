@@ -7,6 +7,7 @@ from decimal import Decimal
 from fractions import Fraction
 import hashlib
 import json
+import math
 from pathlib import Path
 import sqlite3
 
@@ -25,6 +26,10 @@ REVIEW_FLAGS = (
     "gateway_origin_verified",
 )
 CONVENTION = "prompt-includes-cache;total=prompt+completion"
+# Representation noise only: SQLite REAL / JSON binary64 renderings, not prices.
+COMPONENT_ULPS = 8
+COMPONENT_ABSOLUTE_CAP = Fraction(1, 10**12)  # USD, no absolute epsilon floor.
+COMPONENT_RELATIVE_CAP = Fraction(1, 10**12)
 
 
 class Incomplete(ValueError):
@@ -148,6 +153,28 @@ def _rates(prices, model):
         raise Incomplete("missing_model_rate") from None
 
 
+def _same_logged_cost(left, right):
+    """Bound binary64 rendering noise independently of the 1% price check.
+
+    Use the smallest of eight ULPs at the larger magnitude, 1e-12 USD and
+    1e-12 relative. Zero never equals a nonzero charge. No evidence is rounded.
+    """
+    if left == right:
+        return True
+    if left <= 0 or right <= 0:
+        return False
+    scale = max(left, right)
+    try:
+        binary = float(scale)
+    except OverflowError:
+        return False
+    if not math.isfinite(binary) or binary == 0:
+        return False
+    tolerance = min(Fraction.from_float(math.ulp(binary)) * COMPONENT_ULPS,
+                    COMPONENT_ABSOLUTE_CAP, scale * COMPONENT_RELATIVE_CAP)
+    return abs(left - right) <= tolerance
+
+
 def _usage(row):
     try:
         raw = row["token_usage"]
@@ -170,9 +197,9 @@ def _usage(row):
         if costs is not None:
             incoming, outgoing, logged = (_money(costs[key]) for key in
                                           ("input_cost", "output_cost", "total_cost"))
-            if incoming + outgoing != logged:
+            if not _same_logged_cost(incoming + outgoing, logged):
                 raise Incomplete("inconsistent_logged_cost")
-            if row["cost"] is not None and _money(row["cost"]) != logged:
+            if row["cost"] is not None and not _same_logged_cost(_money(row["cost"]), logged):
                 raise Incomplete("inconsistent_logged_cost")
         return {"uncached_input": prompt - read - write, "cache_read_input": read,
                 "cache_write_input": write, "output": output}
