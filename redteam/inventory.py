@@ -7,10 +7,9 @@ from pathlib import Path
 
 REVIEW = "reviewed-with-corrections-person-3"
 REVIEW_PACKET = "d67ae28df0b066e8a9ffbced0adcca65fe65e0b4"
-LIVE_GROUPS = frozenset({3, 7, 8, 9, 10, 11, 12, 13, 14})
+LIVE_GROUPS = frozenset({2, 3, 7, 8, 9, 10, 11, 12, 13, 14})
 BLOCKERS = {
     1: "Part 1 root quote CLI adapter with pre-setup spawn/transport guards not connected",
-    2: "KNOWN OWNER FAILURE: Part 1 loop.Agent._run reports STOPPED: model finished but tests fail after refused baseline, approved GREEN edit and zero test runs; unverified receipt fix required (redteam/findings.md)",
     4: "Parts 2/3 real protected ledger/grants mutation, integrity abort and no-next-request adapter not connected",
     5: "Parts 2/3 check_local_model plus root doctor FAIL and zero-transport adapter not connected",
     6: "Parts 1/2 confidential forced-tool refusal and complete session-scoped egress/Tavily observer not connected",
@@ -119,7 +118,7 @@ class Case:
             "platform_requirements": (
                 "Windows; real junction creation and actual 8.3 alias support" if self.group == 12 else
                 "Both actual available/pinned bash and cmd interpreters" if self.group == 9 else None),
-            "known_finding": "RT-2-receipt-tests-not-run" if self.group == 2 else None,
+            "known_finding": "RT-2-fixed-by-2f8b048-regression-enabled" if self.group == 2 else None,
         }
 
 

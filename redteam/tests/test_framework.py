@@ -192,9 +192,9 @@ def test_review_corrections_are_applied_without_enabling_unsupported_groups(tmp_
     assert "RED" in CASES[2].expected
     assert "before prompting" in CASES[7].expected
     assert "without a marker" in CASES[12].expected
-    assert LIVE_GROUPS == {3, 7, 8, 9, 10, 11, 12, 13, 14}
+    assert LIVE_GROUPS == {2, 3, 7, 8, 9, 10, 11, 12, 13, 14}
     assert "root run CLI" in CASES[14].blocked_reason(Path(__file__).resolve().parents[2])
     report = inventory(Path(__file__).resolve().parents[2])
     assert "8.3" in report["cases"][11]["platform_requirements"]
     assert "bash" in report["cases"][8]["platform_requirements"]
-    assert report["cases"][1]["known_finding"] == "RT-2-receipt-tests-not-run"
+    assert report["cases"][1]["known_finding"] == "RT-2-fixed-by-2f8b048-regression-enabled"

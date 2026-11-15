@@ -1,5 +1,16 @@
 # RT-2: tests-not-run receipt is mislabeled as test failure
 
+## Resolution and regression
+
+Atul's `2f8b048` reached main `bdcce1f`, integrated into person-4 at
+`5fba38daf7d0bc2cf25646588dcc991944f42f28`. Group 2 is enabled again.
+The real-Agent regression now asserts zero pytest children, `test_runs == 0`,
+unsolved status `UNVERIFIED (tests not approved)`, and the real UI bridge/renderer
+headline `TESTS NOT RUN (no consent)`. The original observation below is historical;
+the blocked instructions in it no longer describe current collection.
+
+## Historical observation
+
 Observed locally on native Windows Python 3.12.10 against owner code at
 `ccfa7ed52d27d00bc35915c6d4f0557151d5cf9a`. No production module was changed.
 

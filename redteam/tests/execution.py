@@ -156,7 +156,13 @@ def consent_case(tmp_path, monkeypatch, processes, *, renewed):
         assert "_no_test_consent" in agent.s.flags
         assert "tests not run" in str(agent.history).lower()
         assert any(p.startswith("GREEN approval") and "diff:" in p for p in prompts), prompts
-        assert receipt.status.startswith("UNVERIFIED"), receipt.to_json()
+        assert receipt.status == "UNVERIFIED (tests not approved)", receipt.to_json()
+        from crocodile import ui_bridge
+        from crocodile.ui import render_receipt
+        display = ui_bridge.receipt(agent)
+        assert display.test_outcome.tests_run is False
+        assert display.test_outcome.consent_granted is False
+        assert render_receipt(display, ascii_only=True).startswith("TESTS NOT RUN (no consent)\n")
     assert any(e["event"] == "approval" and e.get("kind") == "write" and e["approved"] for e in journal.events)
     assert replay.calls <= 3
 
