@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -105,6 +106,17 @@ class Exercise:
         services.override("egress", self.model)
         self.prompts, self.cli, self.spawns = [], [], []
         self.evidence = {}
+        self.network_attempts = []
+
+        def refuse_network(*_args, **_kwargs):
+            self.network_attempts.append("attempt intercepted before network I/O")
+            raise AssertionError("Unexpected network attempt in synthetic fixture")
+
+        patch.setattr(socket, "create_connection", refuse_network)
+        patch.setattr(socket, "getaddrinfo", refuse_network)
+        for operation in ("connect", "connect_ex", "sendto", "sendmsg"):
+            if hasattr(socket.socket, operation):
+                patch.setattr(socket.socket, operation, refuse_network)
         self.answer = confirm
         patch.setattr(approvals, "_console_answer", self.console)
 
@@ -234,6 +246,7 @@ class Exercise:
             "console_transcript": self.prompts,
             "process_argv": self.spawns,
             "scripted_model_calls": len(self.model.calls),
+            "network_attempts": self.network_attempts,
             **self.evidence,
         }
 
