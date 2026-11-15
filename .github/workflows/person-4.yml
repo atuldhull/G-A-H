@@ -39,7 +39,7 @@ jobs:
 
       - name: Install test and lint tools
         id: dependencies
-        run: python -m pip install pytest==9.1.1 ruff==0.17.5
+        run: python -m pip install -e . pytest==9.1.1 ruff==0.17.5
 
       - name: Ruff on Person 4 Python files
         # Explicit initial correctness baseline; no implicit style-rule expansion.
@@ -53,6 +53,6 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: python -m pytest -q -ra -p no:cacheprovider redteam/tests/test_framework.py
 
-      - name: Show blocked live security cases (skips are not security passes)
+      - name: Run connected security cases (skips are blocked, not security passes)
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: python -m pytest -v -ra -p no:cacheprovider redteam/tests/test_security_cases.py

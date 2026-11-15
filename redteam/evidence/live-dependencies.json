@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-11-15T07:18:36.373140+00:00",
+  "status": "blocked",
+  "checks": [
+    {
+      "dependency": "bifrost",
+      "endpoint": "http://127.0.0.1:8080/health",
+      "reachable": false,
+      "error_type": "ConnectTimeout"
+    },
+    {
+      "dependency": "ollama",
+      "endpoint": "http://127.0.0.1:11434/api/tags",
+      "reachable": false,
+      "error_type": "ConnectTimeout"
+    }
+  ],
+  "live_confidential_request": "not run",
+  "gateway_correlation": "not run",
+  "audit": "not run",
+  "credential_values_read": false,
+  "reason": "Live dependencies must be reachable and configured before a real request and independently correlated gateway audit can be verified.",
+  "feature_freeze": false,
+  "demo_clips": "blocked pending feature freeze"
+}

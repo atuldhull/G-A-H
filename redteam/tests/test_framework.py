@@ -192,5 +192,5 @@ def test_review_corrections_are_applied_without_enabling_unsupported_groups(tmp_
     assert "RED" in CASES[2].expected
     assert "before prompting" in CASES[7].expected
     assert "without a marker" in CASES[12].expected
-    assert LIVE_GROUPS == {7, 8, 13}
-    assert "receipt" in CASES[2].blocked_reason(Path(__file__).resolve().parents[2])
+    assert LIVE_GROUPS == set(range(1, 16))
+    assert "BLOCKED" in CASES[2].blocked_reason(Path(__file__).resolve().parents[2])

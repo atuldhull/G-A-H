@@ -7,21 +7,8 @@ from pathlib import Path
 
 REVIEW = "reviewed-with-corrections-person-3"
 REVIEW_PACKET = "d67ae28df0b066e8a9ffbced0adcca65fe65e0b4"
-LIVE_GROUPS = frozenset({7, 8, 13})
-BLOCKERS = {
-    1: "Part 1 root quote CLI adapter with pre-setup spawn/transport guards not connected",
-    2: "Part 1 Agent baseline/refused test consent, approved edit and tests-not-run receipt adapter not connected",
-    3: "Part 1 Agent harmless baseline, post-edit refusal/ToolError-to-receipt adapter not connected; approval-only coverage is supplemental",
-    4: "Parts 2/3 real protected ledger/grants mutation, integrity abort and no-next-request adapter not connected",
-    5: "Parts 2/3 check_local_model plus root doctor FAIL and zero-transport adapter not connected",
-    6: "Parts 1/2 confidential forced-tool refusal and complete session-scoped egress/Tavily observer not connected",
-    9: "Part 3 pinned available cmd and bash ASK/escaped-preview observers not connected for both scripts",
-    10: "Part 3 separate real Git fsmonitor/filter fixtures, hardened argv and post-child integrity-abort observer not connected",
-    11: "Part 3 Git(session).run('show', rev=...) invalid-revision adapter with separate setup/operation traces not connected",
-    12: "Part 3 Windows real junction and actual 8.3 protected alias setup/denial adapter not connected; privileges/filesystem support required",
-    14: "Part 1 red oracle write refusal plus actual all-skipped TestReport/Receipt adapter not connected",
-    15: "Parts 1/3 root run CLI bounded missing-console backend/stdin-no-grant adapter not connected",
-}
+LIVE_GROUPS = frozenset(range(1, 16))
+BLOCKERS = {}
 
 
 @dataclass(frozen=True)

@@ -361,13 +361,15 @@ def doctor(
 
 
 @app.command()
-def redteam(inventory_only: bool = typer.Option(False, "--inventory")):
-    """Show Part 4's case inventory; unimplemented assertions return 2, never PASS."""
-    from redteam.inventory import inventory
-
-    report = inventory(Path(__file__).resolve().parents[1])
-    typer.echo(json.dumps(report, indent=2))
-    raise typer.Exit(0 if inventory_only else 2)
+def redteam(inventory_only: bool = typer.Option(False, "--inventory"),
+            report_path: Path = typer.Option(Path("redteam-report.json"), "--report")):
+    """Run trusted disposable security exercises; blocked cases return 2."""
+    if inventory_only:
+        from redteam.inventory import inventory
+        typer.echo(json.dumps(inventory(Path(__file__).resolve().parents[1]), indent=2))
+        raise typer.Exit(0)
+    from redteam.runner import run
+    raise typer.Exit(run(report_path))
 
 
 def main() -> None:  # pragma: no cover

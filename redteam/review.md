@@ -116,3 +116,31 @@ Review validation on native Windows Python 3.12.10: Phase 1 and Phase 3 tests,
 redteam framework tests, and the agent consent-reuse integration case produced
 **111 passed, 69 subtests passed, 15 skipped**. The skips are the disabled live
 security assertions. Ruff on the changed test and `git diff --check` passed.
+
+
+### Assembled adapter review, 2026-11-15
+
+This implementation supersedes the disabled-adapter status above. Person 3 now
+connects all 15 groups via `security_suite.py`, using Part 4's reviewed adapters
+for groups 7, 8 and 13 and the assembled CLI/security APIs for the others.
+The earlier corrections still apply: group 8 is a network hard denial before a
+prompt; the separate CLI source-attribution fixture uses a non-network command.
+Group 3 requires a red renewed-consent prompt; group 13 excludes `.env` search
+results rather than requiring a replacement marker in excluded content.
+
+Each case records commands, exit statuses, prompts, process observations and
+specific assertions. Git setup calls are distinct from the guarded operation.
+Group 10 plants real fsmonitor/filter configuration with harmless indicators;
+the approved mutation must cause an integrity abort before any later Git action.
+Group 12 requires a real Windows junction and an issued protected 8.3 alias;
+unsupported platforms/filesystems report blocked, never pass from literal GIT~1.
+Group 9 requires both pinned cmd and bash; missing interpreters are blockers.
+Group 6 uses an independent synthetic gateway response/log fixture. It is not a
+claim of live Bifrost/Ollama egress. Those live records and freeze-gated clips
+remain separate requirements. The report source digest normalizes CRLF to LF.
+
+The normal CLI fixtures exercise denied README execution, actual modified/created/
+deleted file undo, and an approved harmless child that changes a disposable ledger.
+The latter must abort immediately, journal the integrity event, and prevent the
+next model request and edit. Refused baseline tests must finish UNVERIFIED with
+zero test runs, never claim that unexecuted tests failed.

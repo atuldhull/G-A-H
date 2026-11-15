@@ -32,7 +32,7 @@ def agent(root, script=(), **kw):
     return Agent(root, "repair the fixture", flags=set(), **kw)
 
 
-def test_root_commands_delegate(root, tmp_path):
+def test_root_commands_delegate(root, tmp_path, monkeypatch):
     runner = CliRunner()
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0, result.output
@@ -41,7 +41,11 @@ def test_root_commands_delegate(root, tmp_path):
         help_result = runner.invoke(app, [command, "--help"])
         assert help_result.exit_code == 0, help_result.output
     assert runner.invoke(app, ["quote", "repair", "--repo", str(root), "--ascii"]).exit_code == 0
-    assert runner.invoke(app, ["redteam"]).exit_code == 2
+    from redteam import runner as security_runner
+    reports = []
+    monkeypatch.setattr(security_runner, "run", lambda path: reports.append(path) or 2)
+    assert runner.invoke(app, ["redteam", "--report", str(tmp_path / "report.json")]).exit_code == 2
+    assert reports == [tmp_path / "report.json"]
     assert runner.invoke(app, ["redteam", "--inventory"]).exit_code == 0
     audit = runner.invoke(
         app, ["audit", "--all", "--allow-model", "ollama/fixture", "--state-db", str(tmp_path / "absent.db")]
