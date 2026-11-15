@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import json
 import os
 import re
@@ -113,7 +114,20 @@ class Exercise:
             raise AssertionError("Unexpected network attempt in synthetic fixture")
 
         patch.setattr(socket, "create_connection", refuse_network)
-        patch.setattr(socket, "getaddrinfo", refuse_network)
+        native_addresses = socket.getaddrinfo
+
+        def numeric_addresses(host, port, family=0, type=0, proto=0, flags=0):
+            # The real gateway policy resolves its literal loopback address even
+            # with MockTransport. AI_NUMERICHOST prevents any DNS lookup.
+            try:
+                local = ipaddress.ip_address(str(host)).is_loopback
+            except ValueError:
+                local = False
+            if not local or not isinstance(port, int):
+                return refuse_network()
+            return native_addresses(host, port, family, type, proto, flags | socket.AI_NUMERICHOST)
+
+        patch.setattr(socket, "getaddrinfo", numeric_addresses)
         for operation in ("connect", "connect_ex", "sendto", "sendmsg"):
             if hasattr(socket.socket, operation):
                 patch.setattr(socket.socket, operation, refuse_network)
