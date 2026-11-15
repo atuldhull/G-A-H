@@ -1,19 +1,20 @@
 # Benchmark preparation, grading, planning, and offline reporting
 
-Current release: [Gemini 54 v2 protocol](gemini-54-v2.md) and immutable
-[v2 config](configs/gemini-benchmark-v2.json). The verified LF inputs produce
-54 tasks / 270 slots (70/70/65/65). `python -m bench.release --help` prepares
-validated plans, exact oracle subsets and key-free settings without execution.
-**Shard launch remains blocked pending Atul's unresolved mini grading exception.**
-V2 explicitly accepts hard-stop containment, mini output cap, cache parity and
+Current release: [Gemini 54 v3 protocol](gemini-54-v3.md) and immutable
+[v3 config](configs/gemini-benchmark-v3.json), pinned to integrated main's RT-2
+fix and the latest mini diagnostic runtime. The verified LF inputs produce
+54 tasks / 270 slots (70/70/65/65); `bench.release --include-smoke` also prepares
+the 3-task/15-slot smoke and original oracle subset without execution.
+**Shard launch remains blocked pending the evidence gates in the v3 protocol.**
+V3 retains Atul's acceptance of hard-stop containment, mini output cap, cache parity and
 sampling difference as limitations. Atul-machine gateway evidence is not local
-verification. Use an explicit `--config` for v2; historical defaults remain v1.
+verification. Use an explicit `--config` for v3; historical defaults remain v1.
 
 The [3a111322 diagnosis and safe failure-evidence fix](mini-3a111322-diagnosis.md)
 review the newly supplied artifacts. The exact original offending entry remains
-unknown. This diagnostic runtime update intentionally differs from frozen v2:
-strict validation rejects that drift; official execution needs a reviewed
-successor snapshot. V2 hashes and authorization flags have not been rewritten.
+unknown. V3 pins this diagnostic update; strict validation still rejects drift
+against historical v2. V2 hashes and authorization flags have not been rewritten.
+Historical protocols remain in [v2](gemini-54-v2.md) and [v1](team-run-protocol.md).
 
 The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
 and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and
@@ -21,7 +22,7 @@ validate against dry-run manifests with `python -m bench.canonical`. V1 remains
 blocked for paid execution and comparable pooling; static validation is not a
 live-readiness claim.
 
-[Current smoke readiness](smoke-readiness.md) lists the prioritized owner blockers,
+[Historical v1 smoke readiness](smoke-readiness.md) lists the earlier owner blockers,
 merged integrity changes, exact prompt-byte/attestation fixes and the prepared
 three-task/15-slot plan. Historical v1 is never edited to bless a newer runtime.
 

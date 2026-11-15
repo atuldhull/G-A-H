@@ -183,3 +183,23 @@ def test_v3_requires_diagnostic_runtime_pins_and_keeps_unsupported_evidence_bloc
     config["provenance"]["runtime_files_sha256_lf"].pop(name)
     with pytest.raises(ValueError, match="Missing v3 diagnostic/runtime pins"):
         canonical.validate_config(config)
+
+
+def test_published_v3_integrity_and_audit_do_not_authorize_live_work(capsys):
+    config = canonical._json(canonical.V3_CONFIG)
+    raw = canonical.V3_CONFIG.read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(raw).hexdigest() == "b3320171326ce1712add548bc8148d838762f219090765a9bf8946ed2a1326ba"
+    assert canonical.config_id(config) == "c0d48d86fe8169947e9997dd5fa33f642fa6d53afbc2f54756ce6ea1dd049ee1"
+    assert config["provenance"]["main_git_commit"] == "bdcce1fe3ae44a8c892dcd1d74ee8d3c82f41c94"
+    assert config["provenance"]["runtime_git_commit"] == "40b84833217bbe77490689daf41d743fc1c1eaa0"
+    result = canonical.validate_config(config, audit_current=True)
+    assert result["contract_valid"] and not result["paid_runs_authorized"] and not result["cross_shard_comparable"]
+    assert {item["id"] for item in result["unresolved"]} == {
+        "mini-attempt-3a111322", "native-policy-binding", "per-machine-execution-and-cost-evidence"}
+    assert canonical.main(["--config", str(canonical.V3_CONFIG), "--audit-current", "--require-comparable"]) == 1
+    assert not json.loads(capsys.readouterr().out)["cross_shard_comparable"]
+    mutated = deepcopy(config)
+    mutated["grading"]["restore_original_tests"] = False
+    assert canonical.config_id(mutated) != canonical.config_id(config)
+    with pytest.raises(ValueError, match="grading policy differs"):
+        canonical.validate_config(mutated)
