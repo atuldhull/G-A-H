@@ -9,6 +9,9 @@ from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..journal_contract import SESSION_STARTED, event_type, read_envelope, session_payload
+from ..shared_state import resolve_state_path
+
 
 class ClassificationError(RuntimeError):
     """Classification evidence is unavailable or inconsistent; refuse public use."""
@@ -45,12 +48,8 @@ class RepoIdentity:
 
 
 def default_state_path() -> Path:
-    base = (
-        Path(os.environ["APPDATA"])
-        if os.name == "nt"
-        else Path.home() / ".local" / "state"
-    )
-    return base / "crocodile" / "state.db"
+    """Compatibility name for the single shared state resolver."""
+    return resolve_state_path()
 
 
 def _event_ids(payload: dict) -> frozenset[str]:
@@ -93,7 +92,7 @@ class SecurityStore:
     """
 
     def __init__(self, path: Path | None = None, *, journals=(), integrity=None):
-        supplied = Path(path if path is not None else default_state_path()).absolute()
+        supplied = resolve_state_path(path)
         self.path = supplied.parent.resolve() / supplied.name
         self.journals = tuple(Path(p).resolve() for p in journals)
         self.integrity = integrity
@@ -180,7 +179,7 @@ class SecurityStore:
                         if table in tables:
                             session_column = ",session" if table == "events" else ""
                             for row in db.execute(
-                                f"SELECT ts,type,payload{session_column} FROM {table} WHERE type IN ('session_started','classification_changed','classification_detected')"
+                                f"SELECT ts,type,payload{session_column} FROM {table} WHERE type IN ('session_started','session_start','classification_changed','classification_detected')"
                             ):
                                 payload = json.loads(row["payload"])
                                 parsed = self._parse_event(
@@ -198,13 +197,14 @@ class SecurityStore:
                         event = json.loads(line)
                         if not isinstance(event, dict):
                             raise ClassificationError("malformed journal event")
-                        if event.get("type") in (
+                        kind, payload = read_envelope(event)
+                        if kind in (
                             "session_started",
                             "classification_changed",
                             "classification_detected",
                         ):
                             parsed = self._parse_event(
-                                event.get("ts"), event["type"], event.get("payload")
+                                event.get("ts"), kind, payload
                             )
                             parsed["session"] = event.get("session", parsed["session"])
                             result.append(parsed)
@@ -225,6 +225,9 @@ class SecurityStore:
 
     @staticmethod
     def _parse_event(ts, kind, payload):
+        kind = event_type(kind)
+        if kind == SESSION_STARTED:
+            payload = session_payload(payload)
         if not isinstance(payload, dict):
             raise ClassificationError("malformed classification journal payload")
         # Public session starts never downgrade earlier confidential history.
@@ -299,6 +302,7 @@ class SecurityStore:
         session=None,
         canary=None,
     ):
+        kind = event_type(kind)
         if mode not in ("public", "confidential") or (
             mode == "public" and kind == "classification_changed" and by != "console"
         ):

@@ -10,12 +10,14 @@ import re
 import tempfile
 from pathlib import Path
 
-from .security.classification import SecurityStore, default_state_path
+from .credentials import VK_LOCAL, CredentialStore
+from .security.classification import SecurityStore
 from .security.confidential import Detector
 from .security.integrity import IntegrityViolation, StateIntegrity
 from .security.outputs import prepare_tool_result
 from .security.provenance import ProvenanceIndex, Source
 from .security.session import ApprovalSession
+from .shared_state import resolve_state_path
 
 
 def clean(value):
@@ -31,7 +33,7 @@ def clean(value):
 
 
 def state_path():
-    return Path(os.environ.get("CROCODILE_STATE_DB", default_state_path())).absolute()
+    return resolve_state_path()
 
 
 def session_directory(session_id):
@@ -65,6 +67,7 @@ class SecurityContext:
             raise IntegrityViolation("security state must be outside the repository")
         self.p3 = security_session
         self._original_task = task
+        self._confidential_credential_checked = False
         self.check()
 
     @property
@@ -75,6 +78,9 @@ class SecurityContext:
         self.p3.verify_integrity()
         self.p3.refresh_confidentiality()
         self.p3.verify_integrity()
+        if self.p3.mode == "confidential" and not self._confidential_credential_checked:
+            CredentialStore().get(VK_LOCAL)
+            self._confidential_credential_checked = True
         if session is not None:
             session.mode = self.p3.mode
 
@@ -98,6 +104,7 @@ class SecurityContext:
         data = {
             "version": 1,
             "repo": str(self.p3.repo_root),
+            "state_db": str(self.p3.integrity.path.resolve()),
             "original_task": self.original_task,
             "mode": self.p3.mode,
             "pending": pending,
@@ -149,6 +156,8 @@ class SecurityContext:
             raise IntegrityViolation("resume checkpoint signature mismatch")
         if data["version"] != 1 or data["repo"] != str(Path(repo).resolve(strict=True)):
             raise IntegrityViolation("resume checkpoint belongs to another repository")
+        if data.get("state_db") is not None and data["state_db"] != str(state.path.resolve()):
+            raise IntegrityViolation("resume checkpoint belongs to another state database")
         if data["pending"] is not None:
             raise IntegrityViolation("operation outcome unknown; reconcile before resuming, never replay it")
         if security_session is not None and security_session.bench_auto:

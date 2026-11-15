@@ -31,6 +31,8 @@ from .agent_types import (
     ToolCallReq,
     Usage,
 )
+from .credentials import TAVILY, CredentialStore
+from .journal_contract import SESSION_STARTED, event_type, session_payload
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -97,14 +99,7 @@ class GatewayEgress:
 
     @staticmethod
     def _vk(alias: str) -> str:
-        """Virtual key from Windows Credential Manager (keyring), env only as a dev fallback."""
-        try:
-            import keyring
-
-            v = keyring.get_password("crocodile", f"vk-{alias}")
-        except Exception:  # keyring backend missing: fall through to env
-            v = None
-        return v or os.environ.get(f"CROCODILE_VK_{alias.upper()}", "")
+        return CredentialStore().gateway(alias)
 
     def chat(
         self,
@@ -128,7 +123,7 @@ class GatewayEgress:
         confidential = session.mode == "confidential"
         rung = "local" if confidential else tier
         chain = chain_for(rung)
-        alias = "local" if confidential else "public"
+        alias = "local" if confidential else "bench" if session.approve_mode == "auto" else "public"
         extra = {"temperature": temperature} if self._takes_temperature else {}
         try:
             r = self.client.chat(
@@ -173,9 +168,9 @@ class GatewayEgress:
         services.security(session)
         if session.mode != "public":
             raise PermissionError("web search is unavailable in confidential mode")
-        key = _stubs.tavily_key()
+        key = CredentialStore().get(TAVILY, required=False)
         if not key:
-            raise RuntimeError("no Tavily key (set TAVILY_API_KEY or keyring crocodile/tavily)")
+            raise RuntimeError("missing canonical Credential Manager credential: tavily_key")
         r = self.client.search_tavily(query, key, mode=session.mode)
         return {"results": r.results, "credits": r.credits_used}
 
@@ -192,13 +187,14 @@ class GatewayJournal:
     def append(self, session: Session, event: str, payload: dict) -> None:
         from .runtime_security import clean
 
-        payload = clean(payload)
+        event = event_type(event)
+        payload = clean(session_payload(payload) if event == SESSION_STARTED else payload)
         self.jsonl.append(session, event, payload)
         self.j.append(session.id, event, payload)
 
     def resume(self, session_id: str) -> list[dict]:
-        state = self.j.resume(session_id)
-        return list(getattr(state, "events", []))
+        self.j.resume(session_id)
+        return self.j.get_events(session_id)
 
 
 # ---------------------------------------------------------------- Part 3: security

@@ -199,7 +199,7 @@ def audit(
     """Audit recorded egress (0 PASS, 1 FAIL, 2 INCOMPLETE); no requests are sent."""
     from .security import audit as handler
 
-    args = ["--state-db", str(state_db or adapters_state_path())]
+    args = ["--state-db", str(state_db)] if state_db is not None else []
     for model in allow_model:
         args += ["--allow-model", model]
     if session:
@@ -248,6 +248,7 @@ def undo(
 def doctor(
     repo: Path = typer.Option(Path("."), "--repo"),
     config_dir: Path | None = typer.Option(None, "--config-dir"),
+    state_db: Path | None = typer.Option(None, "--state-db"),
 ):
     """User diagnostics with masked credentials (0 healthy, 1 failure)."""
     from .security import doctor as handler
@@ -255,6 +256,8 @@ def doctor(
     args = ["--repo", str(repo)]
     if config_dir is not None:
         args += ["--config-dir", str(config_dir)]
+    if state_db is not None:
+        args += ["--state-db", str(state_db)]
     raise typer.Exit(handler.main(args))
 
 

@@ -13,6 +13,8 @@ import time
 from pathlib import Path
 
 from .agent_types import Action, ChatResult, CmdResult, Decision, Mode, Session, Tier, ToolCallReq, Usage
+from .credentials import TAVILY, CredentialStore
+from .journal_contract import SESSION_STARTED, event_type, read_envelope, session_payload
 
 
 class StubEgress:
@@ -26,13 +28,13 @@ class StubEgress:
             "cheap": os.environ.get("CROCODILE_MODEL_CHEAP", "anthropic/claude-haiku-5-5"),
             "local": os.environ.get("CROCODILE_MODEL_LOCAL", "ollama/qwen2.5-coder:7b"),
         }
-        self.vk = os.environ.get("CROCODILE_VK", "")
-        # Dev only: name of an env var holding a provider key, sent as a Bearer token (never logged).
-        key_var = os.environ.get("CROCODILE_API_KEY_ENV", "")
-        self.bearer = os.environ.get(key_var, "") if key_var else ""
 
     def chat(self, messages: list[dict], tools: list[dict], *, session: Session, tier: Tier,
              max_tokens: int = 4096, temperature: float = 0.0) -> ChatResult:
+        if session.mode == "confidential":
+            raise PermissionError("confidential execution cannot use development egress stubs")
+        self.vk = CredentialStore().gateway("public")
+        self.bearer = ""
         import httpx
 
         model = self.models["local" if session.mode == "confidential" else tier]
@@ -80,13 +82,8 @@ class StubEgress:
 
 
 def tavily_key() -> str:
-    """Tavily key: Credential Manager (keyring 'crocodile'/'tavily') first, env TAVILY_API_KEY as fallback."""
-    try:
-        import keyring
-        k = keyring.get_password("crocodile", "tavily")
-    except Exception:   # no keyring backend
-        k = None
-    return k or os.environ.get("TAVILY_API_KEY", "")
+    """Public tool availability only; confidential callers must short-circuit first."""
+    return CredentialStore().get(TAVILY, required=False) or ""
 
 
 def stub_web_search(query: str, session: Session) -> dict:
@@ -97,7 +94,7 @@ def stub_web_search(query: str, session: Session) -> dict:
         raise PermissionError("web search is not available in confidential mode")
     key = tavily_key()
     if not key:
-        raise RuntimeError("no Tavily key (set TAVILY_API_KEY or keyring crocodile/tavily)")
+        raise RuntimeError("missing canonical Credential Manager credential: tavily_key")
     try:
         from crocodile.gateway.tavily import build_tavily_request, parse_tavily_response
         url, headers, payload = build_tavily_request(query=query, api_key=key)
@@ -121,12 +118,24 @@ class StubJournal:
     def append(self, session: Session, event: str, payload: dict) -> None:
         if session.state_dir is None:
             return
-        rec = {"ts": time.time(), "session": session.id, "event": event, **payload}
+        event = event_type(event)
+        payload = session_payload(payload) if event == SESSION_STARTED else payload
+        rec = {"ts": time.time(), "session": session.id, "type": event, "payload": payload}
         with open(session.state_dir / "journal.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, default=str) + "\n")
 
     def resume(self, session_id: str) -> list[dict]:
-        return []
+        from .runtime_security import session_directory
+        path = session_directory(session_id) / "journal.jsonl"
+        events = []
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    record = json.loads(line)
+                    if record.get("session") == session_id:
+                        kind, payload = read_envelope(record)
+                        events.append({"ts": record.get("ts"), "type": kind, "payload": payload})
+        return events
 
 
 class StubApprovals:

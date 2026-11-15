@@ -1,5 +1,10 @@
 # Part 3 Phase 7: verification and handoff
 
+Historical snapshot: the state-path, credential-name and session-event handoffs
+listed below were subsequently implemented on 15 November 2026. See the
+[shared-contract decision and verification](../../docs/SHARED-STATE-CREDENTIAL-JOURNAL.md).
+The original results below and JSON remain a record of the earlier verification.
+
 Verified on native Windows / Python 3.14 on 13 November 2026, starting from Part 3
 commit `2f3e2c4a0af10caea5fa8bd2205891a2aa057ccb`. Part 3 component verification
 passes. Integrated security release and demo readiness remain **BLOCKED** by the

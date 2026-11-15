@@ -43,7 +43,8 @@ class Confidential:
 
 
 def _setup(monkeypatch, script, *, ok=True, confidential=False):
-    monkeypatch.setenv("TAVILY_API_KEY", "tvly-test-not-real")
+    from crocodile.credentials import TAVILY, windows_backend
+    windows_backend().values[TAVILY] = "tvly-test-not-real"
     services.reset()
     eg, ap = WebEgress(script), Approver(ok)
     services.override("egress", eg)

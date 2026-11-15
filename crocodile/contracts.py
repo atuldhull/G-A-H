@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from .journal_contract import SESSION_STARTED, read_envelope
+
 # ---------------------------------------------------------------------------
 # Core Type Aliases
 # ---------------------------------------------------------------------------
@@ -143,11 +145,13 @@ class State:
     """Minimal resumable session state."""
 
     session_id: str
-    events: list[dict[str, Any]] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)  # canonical type/payload envelopes
     current_rung: LadderRung = "cheap"
     total_spent_usd: float = 0.0
     is_paused: bool = False
     pause_reason: str | None = None
+    mode: Mode | None = None
+    repo_root: str | None = None
 
 
 class EgressInterface(Protocol):
@@ -233,21 +237,28 @@ class StubJournal:
         self.log_path = log_path or Path(".crocodile_stub_journal.jsonl")
 
     def append(self, session: str, event: dict[str, Any]) -> int:
-        entry = {"session": session, "ts": time.time(), "event": event}
+        kind, payload = read_envelope(event)
+        entry = {"session": session, "ts": time.time(), "type": kind, "payload": payload}
         with open(self.log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
         return 1
 
     def resume(self, session: str) -> State:
         events: list[dict[str, Any]] = []
+        mode, root = None, None
         if self.log_path.exists():
-            with open(self.log_path, "r", encoding="utf-8") as f:
+            with open(self.log_path, encoding="utf-8") as f:
                 for line in f:
                     if line.strip():
                         data = json.loads(line)
                         if data.get("session") == session:
-                            events.append(data.get("event", {}))
-        return State(session_id=session, events=events)
+                            kind, payload = read_envelope(data)
+                            events.append({"type": kind, "payload": payload})
+                            if kind == SESSION_STARTED:
+                                if mode is None or payload.get("mode") == "confidential":
+                                    mode = payload.get("mode")
+                                root = payload.get("repo_root", root)
+        return State(session_id=session, events=events, mode=mode, repo_root=root)
 
 
 class StubApprovals:

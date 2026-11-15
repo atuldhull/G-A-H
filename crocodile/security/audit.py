@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from ..journal_contract import SESSION_STARTED
+from ..shared_state import StateLocationError, resolve_state_path
 from .classification import ClassificationError, SecurityStore
 
 
@@ -253,7 +255,7 @@ def audit_database(
         store = SecurityStore(path, journals=journals)
         selected = {row.get("session") for row in rows}
         for event in store.evidence():
-            if event["type"] == "session_started" and event["session"]:
+            if event["type"] == SESSION_STARTED and event["session"]:
                 if event["session"] not in selected:
                     continue
                 if event["mode"] == "public":
@@ -310,12 +312,11 @@ def main(argv=None):
     """Standalone owner handler until Part 1 registers crocodile audit."""
     import argparse
 
-    from .classification import default_state_path
 
     parser = argparse.ArgumentParser(
         description="Audit recorded agent egress; no requests are sent"
     )
-    parser.add_argument("--state-db", type=Path, default=default_state_path())
+    parser.add_argument("--state-db", type=Path)
     parser.add_argument("--allow-model", action="append", required=True)
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--all", action="store_true", dest="all_sessions")
@@ -323,6 +324,11 @@ def main(argv=None):
     parser.add_argument("--gateway-log", type=Path)
     parser.add_argument("--journal", type=Path, action="append", default=[])
     args = parser.parse_args(argv)
+    try:
+        args.state_db = resolve_state_path(args.state_db)
+    except StateLocationError as error:
+        print("RESULT: INCOMPLETE\nMISSING: " + str(error))
+        return 2
     logs = None
     if args.gateway_log is not None:
         try:

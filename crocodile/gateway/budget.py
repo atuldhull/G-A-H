@@ -19,6 +19,7 @@ from pathlib import Path
 
 from crocodile.contracts import LadderRung, Reservation
 from crocodile.gateway.prices import PriceTable
+from crocodile.shared_state import resolve_state_path
 
 # Default budget settings from docs/architecture/04-data-model.md §5
 DEFAULT_WARN_FRAC = 0.8
@@ -80,7 +81,7 @@ def get_utc_date_window() -> str:
 
 def init_database(db_path: str | Path) -> sqlite3.Connection:
     """Initialize state.db with SQLite WAL mode and busy_timeout=5000."""
-    db_path = Path(db_path)
+    db_path = resolve_state_path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), timeout=15.0)
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -179,7 +180,7 @@ class BudgetManager:
         integrity_verifier: Callable[[], None] | None = None,
         state_integrity=None,
     ) -> None:
-        self.db_path = Path(db_path)
+        self.db_path = resolve_state_path(db_path)
         self.price_table = price_table
         self.limits: dict[str, float] = limits or {}  # principal -> daily_usd
         self.integrity_verifier = integrity_verifier

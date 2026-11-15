@@ -6,6 +6,8 @@ import secrets
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..journal_contract import SESSION_STARTED
+from ..shared_state import resolve_state_path
 from .classification import ClassificationError, RepoIdentity, SecurityStore
 from .types import Mode
 
@@ -225,7 +227,7 @@ class Detector:
                     self.store.record(
                         identity,
                         "confidential",
-                        kind="session_started"
+                        kind=SESSION_STARTED
                         if session_id
                         else "classification_detected",
                         session=session_id,
@@ -249,7 +251,7 @@ class Detector:
                 self.store.record(identity, "confidential")
         if session_id:
             self.store.record(
-                primary_identity, "public", kind="session_started", session=session_id
+                primary_identity, "public", kind=SESSION_STARTED, session=session_id
             )
         return Detection("public", primary_root, primary_identity, denied)
 
@@ -443,20 +445,19 @@ def main(argv=None):
     import argparse
 
     from .approvals import ApprovalDenied, escape
-    from .classification import default_state_path
 
     parser = argparse.ArgumentParser(
         description="Inspect or interactively change repo classification"
     )
     parser.add_argument("command", choices=("mode", "init"))
     parser.add_argument("--repo", type=Path, required=True)
-    parser.add_argument("--state-db", type=Path, default=default_state_path())
+    parser.add_argument("--state-db", type=Path)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--confidential", action="store_true")
     mode.add_argument("--public", action="store_true")
     parser.add_argument("--canary-source")
     args = parser.parse_args(argv)
-    store = SecurityStore(args.state_db)
+    store = SecurityStore(resolve_state_path(args.state_db))
     try:
         if args.command == "init":
             if not args.confidential and not args.public:

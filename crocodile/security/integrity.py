@@ -4,11 +4,13 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import secrets
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
+
+from ..credentials import HMAC_KEY, SERVICE, windows_backend
+from ..shared_state import resolve_state_path
 
 REQUIRED = ("ledger", "confidential_repos", "grants")
 PROTECTED = (*REQUIRED, "canaries", "security_classification_events", "meta")
@@ -33,14 +35,8 @@ class HMACKeys:
 
     def _vault(self):
         if self._backend is None:
-            if os.name != "nt":
-                raise IntegrityViolation("Windows Credential Manager is unavailable")
             try:
-                from keyring.backends.Windows import WinVaultKeyring
-
-                self._backend = WinVaultKeyring()
-                if self._backend.priority <= 0:
-                    raise RuntimeError("unavailable backend")
+                self._backend = windows_backend()
             except Exception as error:
                 raise IntegrityViolation(
                     "Windows Credential Manager backend unavailable; install keyring and pywin32"
@@ -50,11 +46,11 @@ class HMACKeys:
     def load(self, *, create=False) -> bytes:
         try:
             backend = self._vault()
-            value = backend.get_password("crocodile", "hmac_key")
+            value = backend.get_password(SERVICE, HMAC_KEY)
             if value is None and create:
                 value = secrets.token_bytes(32).hex()
-                backend.set_password("crocodile", "hmac_key", value)
-                if backend.get_password("crocodile", "hmac_key") != value:
+                backend.set_password(SERVICE, HMAC_KEY, value)
+                if backend.get_password(SERVICE, HMAC_KEY) != value:
                     raise IntegrityViolation("HMAC key storage verification failed")
             if not isinstance(value, str) or len(value) != 64:
                 raise IntegrityViolation("HMAC key missing or malformed; run init")
@@ -88,8 +84,8 @@ class StateIntegrity:
     owned here. Part 2 creates its tables and owns every money/routing operation.
     """
 
-    def __init__(self, path: Path, *, keys: HMACKeys | None = None):
-        self.path = Path(path).absolute()
+    def __init__(self, path: Path | None = None, *, keys: HMACKeys | None = None):
+        self.path = resolve_state_path(path)
         self.keys = keys or HMACKeys()
 
     def _check_path(self):
@@ -252,7 +248,8 @@ class WatchSet:
         if self.state is not None:
             result["state:HMAC"] = self.state.verify_state()
         else:
-            pending.extend((base / "state.db", base / "state.db-wal"))
+            database = resolve_state_path()
+            pending.extend((database, Path(str(database) + "-wal")))
         total = 0
         while pending:
             path = pending.pop()

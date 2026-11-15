@@ -11,11 +11,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from crocodile.contracts import LadderRung, State
+from crocodile.journal_contract import SESSION_STARTED, session_payload
+from crocodile.journal_contract import event_type as canonical_event_type
+from crocodile.shared_state import resolve_state_path
 
 
 def init_journal_table(conn: sqlite3.Connection) -> None:
@@ -40,8 +42,8 @@ def init_journal_table(conn: sqlite3.Connection) -> None:
 class EventJournal:
     """Manages appending and replaying session events."""
 
-    def __init__(self, db_path: str | Path) -> None:
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: str | Path | None = None) -> None:
+        self.db_path = resolve_state_path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = self._get_connection()
         try:
@@ -57,6 +59,9 @@ class EventJournal:
 
     def append(self, session: str, event_type: str, payload: dict[str, Any]) -> int:
         """Appends a new event to the session stream and returns the seq number."""
+        event_type = canonical_event_type(event_type)
+        if event_type == SESSION_STARTED:
+            payload = session_payload(payload)
         now = time.time()
         conn = self._get_connection()
         try:
@@ -95,6 +100,9 @@ class EventJournal:
                     payload = json.loads(payload_str)
                 except Exception:
                     payload = {"raw": payload_str}
+                etype = canonical_event_type(etype)
+                if etype == SESSION_STARTED:
+                    payload = session_payload(payload)
                 events.append({"seq": seq, "ts": ts, "type": etype, "payload": payload})
             return events
         finally:
@@ -111,6 +119,8 @@ class EventJournal:
         total_spent = 0.0
         is_paused = False
         pause_reason = None
+        session_mode = None
+        repo_root = None
 
         started_tools: dict[str, dict[str, Any]] = {}
         completed_tools: set[str] = set()
@@ -119,7 +129,21 @@ class EventJournal:
             etype = ev["type"]
             p = ev["payload"]
 
-            if etype == "rung_changed":
+            if etype == SESSION_STARTED:
+                mode = p.get("mode")
+                if mode is not None and mode not in ("public", "confidential"):
+                    raise ValueError("invalid historical session mode")
+                if mode == "confidential" or session_mode is None:
+                    session_mode = mode
+                root = p.get("repo_root")
+                if (
+                    repo_root is not None
+                    and root is not None
+                    and Path(repo_root).resolve() != Path(root).resolve()
+                ):
+                    raise ValueError("conflicting historical session roots")
+                repo_root = root or repo_root
+            elif etype == "rung_changed":
                 current_rung = p.get("to", current_rung)
             elif etype == "model_response":
                 total_spent += float(p.get("cost", 0.0))
@@ -160,9 +184,11 @@ class EventJournal:
 
         return State(
             session_id=session,
-            events=[e["payload"] for e in events],
+            events=self.get_events(session),
             current_rung=current_rung,
             total_spent_usd=total_spent,
             is_paused=is_paused,
             pause_reason=pause_reason,
+            mode=session_mode,
+            repo_root=repo_root,
         )

@@ -10,6 +10,8 @@ Its budget, privacy and approval rules are enforced by deterministic code outsid
 
 ## Doc map (reading order)
 
+Current integration contract: [state location, canonical credentials and legacy journal replay](docs/SHARED-STATE-CREDENTIAL-JOURNAL.md).
+
 | # | Doc | What it is |
 |---|---|---|
 | 1 | [docs/00-team-brief.md](docs/00-team-brief.md) | 5-minute brief: problem, pitch, P0 slice, timeline, rules, risks |

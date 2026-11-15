@@ -260,7 +260,9 @@ class EgressClient:
         mode: Mode = "public",
     ) -> tuple[int, dict[str, Any], Mapping[str, str]]:
         """Sends an inference request to Bifrost, strictly requiring a held reservation."""
-        db_path = self.budget_manager.db_path if self.budget_manager else Path("state.db")
+        if self.budget_manager is None:
+            raise PermissionError("inference requires the protected budget manager")
+        db_path = self.budget_manager.db_path
         req_id = "req_" + uuid.uuid4().hex
 
         # 1. Structural rule: Check reservation is held
@@ -332,8 +334,6 @@ class EgressClient:
         }
 
         endpoint = f"{self.bifrost_base_url}/v1/chat/completions"
-        if self.budget_manager is None:
-            raise PermissionError("inference requires the protected budget manager")
         self.budget_manager.verify_hold(reservation_id)
         logged = False
         try:

@@ -24,6 +24,7 @@ from .engine.readcache import ReadCache
 from .engine.rewind import Rewinder
 from .engine.savings import Savings
 from .engine.thrash import Thrash, failure_sig
+from .journal_contract import SESSION_STARTED
 from .state import TaskState
 from .tools import SCHEMAS, TOOLS, RunCtx, dispatch
 from .tools.base import SKIP_DIRS
@@ -548,7 +549,7 @@ class Agent:
     def _run(self) -> None:
         self.security.check(self.s)
         self._event(
-            "session_resumed" if self._resumed else "session_started",
+            "session_resumed" if self._resumed else SESSION_STARTED,
             repo_root=str(self.s.repo),
             mode=self.s.mode,
             flags=sorted(self.s.flags),

@@ -19,6 +19,7 @@ def app_security(request, tmp_path, monkeypatch):
     from crocodile.security import approvals
 
     monkeypatch.setattr(keyring, "get_password", lambda *_: None)
+    request.getfixturevalue("credential_backend")
 
     path = tmp_path / "security-state" / "state.db"
     monkeypatch.setenv("CROCODILE_STATE_DB", str(path))
@@ -55,3 +56,26 @@ def app_security(request, tmp_path, monkeypatch):
     yield state
     reset()
     reader.close()
+
+
+@pytest.fixture
+def credential_backend(monkeypatch):
+    from crocodile import credentials
+
+    class Vault:
+        def __init__(self):
+            self.values = {name: "vk-SYNTHETIC-" + name for name in credentials.GATEWAY_KEYS.values()}
+            self.calls = []
+
+        def get_password(self, service, name):
+            assert service == credentials.SERVICE
+            self.calls.append(name)
+            return self.values.get(name)
+
+        def set_password(self, service, name, value):
+            assert service == credentials.SERVICE
+            self.values[name] = value
+
+    vault = Vault()
+    monkeypatch.setattr(credentials, "windows_backend", lambda: vault)
+    return vault

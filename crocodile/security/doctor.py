@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from ..credentials import VK_LOCAL, CredentialStore
+from ..shared_state import resolve_state_path
 from .approvals import escape
-from .classification import default_state_path
 from .executables import resolve_pinned
 from .integrity import StateIntegrity
 from .secrets import secret_scan
@@ -36,7 +37,7 @@ def _mask(value):
     # fixture/password assignments, which the shared scanner intentionally skips.
     value = secret_scan(value)
     value = re.sub(
-        r"(?i)(\b(?:password|token|secret|api_key|vk_local|vk_public|tavily_key|hmac_key)\b\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;]+)",
+        r"(?i)(\b(?:password|token|secret|api_key|vk_local|vk_public|vk_bench|tavily_key|hmac_key)\b\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;]+)",
         r"\1[REDACTED]",
         value,
     )
@@ -354,11 +355,13 @@ def main(argv=None) -> int:
         description="Crocodile user doctor; no admin credentials"
     )
     parser.add_argument("--repo", type=Path, default=Path.cwd())
-    parser.add_argument("--config-dir", type=Path, default=default_state_path().parent)
+    parser.add_argument("--config-dir", type=Path)
+    parser.add_argument("--state-db", type=Path)
     args = parser.parse_args(argv)
     try:
         root = args.repo.resolve(strict=True)
-        settings = args.config_dir.resolve(strict=True)
+        state_db = resolve_state_path(args.state_db)
+        settings = (args.config_dir or state_db.parent).resolve(strict=True)
         if settings.is_relative_to(root):
             raise ValueError("repository must not be a configuration source")
         import yaml
@@ -377,16 +380,11 @@ def main(argv=None) -> int:
                 raise TypeError("settings require mappings")
             documents.append(value)
         session = ApprovalSession(
-            root, integrity=StateIntegrity(settings / "state.db")
+            root, integrity=StateIntegrity(state_db)
         )
         from crocodile.gateway.diagnostics import collect_evidence
 
-        from .integrity import HMACKeys
-
-        try:
-            key = HMACKeys()._vault().get_password("crocodile", "vk-local")
-        except Exception:
-            key = None
+        key = CredentialStore().get(VK_LOCAL, required=False)
         evidence = collect_evidence(documents[0], local_key=key,
             gateway_log=os.environ.get("CROCODILE_GATEWAY_LOG"),
             limits_path=os.environ.get("CROCODILE_LIMITS", str(Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "crocodile/limits.yaml")), repo=root)

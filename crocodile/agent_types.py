@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from .journal_contract import SESSION_STARTED
+
 Mode = Literal["public", "confidential"]
 Tier = Literal["strong", "cheap", "local"]
 Level = Literal["green", "amber", "red"]
@@ -24,7 +26,8 @@ ActionKind = Literal["write", "shell", "git", "test_consent", "network"]
 
 # Journal event names (owner: Part 2). Payloads are plain JSON dicts.
 EVENTS = (
-    "session_start",
+    SESSION_STARTED,
+    "session_resumed",
     "model_call",
     "tool_started",
     "tool_done",
