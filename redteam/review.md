@@ -144,3 +144,11 @@ deleted file undo, and an approved harmless child that changes a disposable ledg
 The latter must abort immediately, journal the integrity event, and prevent the
 next model request and edit. Refused baseline tests must finish UNVERIFIED with
 zero test runs, never claim that unexecuted tests failed.
+
+
+Final group 4 coverage uses the actual `run_tests` tool and exact approved pytest
+argv to mutate the protected disposable ledger. It verifies the test indicator,
+HMAC rejection, journal event and absence of the next model request/edit. The
+original approved-command proof remains an additional CLI flow. All synthetic
+exercises now guard real socket and DNS boundaries; only numeric loopback policy
+resolution with AI_NUMERICHOST is permitted, with HTTP sends still mocked.

@@ -1,0 +1,49 @@
+{
+  "source_revision": "0aced71f17b8d26d67e05704aebc0d4619b40f41",
+  "workflow_run": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652",
+  "jobs": [
+    {
+      "id": 132752780237,
+      "name": "security (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/job/132752780237"
+    },
+    {
+      "id": 132752780437,
+      "name": "security (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/job/132752780437"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14153997873,
+      "name": "security-ubuntu-latest",
+      "sha256": "7d193c75a9625a16871ea201d4d6c0ada5eebdb2b08988cd441934432835d08c",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/artifacts/14153997873"
+    },
+    {
+      "id": 14153682475,
+      "name": "security-windows-latest",
+      "sha256": "991794b4172eca985172787c8f47ce3180956ace93c76cb618dc404fbf182d74",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/artifacts/14153682475"
+    }
+  ],
+  "regression": {
+    "windows": {
+      "passed": 331,
+      "skipped": 0,
+      "subtests_passed": 160
+    },
+    "ubuntu": {
+      "passed": 324,
+      "skipped": 7,
+      "subtests_passed": 160
+    }
+  },
+  "framework_passed_each": 48,
+  "live_confidential_egress": "blocked: both approved loopback endpoints timed out",
+  "demo_clips": "pending team feature freeze"
+}
