@@ -18,13 +18,17 @@ python -m pytest -q -ra -p no:cacheprovider redteam/tests/test_framework.py
 python -m ruff check --isolated --target-version py312 --select E4,E7,E9,F --no-cache redteam
 ```
 
-The first integration enables **groups 7, 8, 13** using actual owner functions
-and temporary synthetic repositories/state. They make no model calls or network
-requests and launch no child processes. A fourth passing test is supplemental
-approval-layer coverage of renewed red consent; it is **not group 3 completion**.
-The other **12 groups remain skipped**, with exact owner/adapter blockers in
-`inventory.BLOCKERS` and pytest skip output. Never report skipped groups as
-security passes or combine framework counts with the 15-group verdict.
+The second integration connects **groups 3, 7, 8, 9, 10, 11, 12, 13, 14**
+using real owner policies and disposable synthetic state. Group 9 needs both
+available/pinned cmd and bash; group 12 needs Windows, genuine junction creation
+and an actual 8.3 alias. Missing setup skips the whole group with a precise
+reason, even when individual subcases succeeded. Groups **1, 4, 5, 6, 15** remain
+unconnected. Group **2** was reproduced and failed its reviewed receipt assertion;
+it stays blocked pending the Part 1 fix in [findings.md](findings.md), not credited
+as passed. Exact blockers are in `inventory.BLOCKERS` and pytest skip output.
+There are five separate supplemental tests (renewed consent, three protected
+path spellings, missing-console tool refusal). Never count them, framework tests
+or skipped groups as additional architecture passes.
 
 `python -m redteam.inventory` only emits planning metadata. Source presence stays
 `source-present-unverified`; explicitly connected cases say
@@ -36,46 +40,66 @@ Removing an unsupported skip still produces a failure rather than an empty pass.
 
 | Group | Reviewed assertions and actual APIs |
 |---|---|
+| 2: `rt_ladder_requires_consent` (known failure, blocked) | Real Agent denies initial consent and applies the GREEN arithmetic edit; no pytest child and zero receipt test runs. Its receipt incorrectly says tests fail instead of tests-not-run/unverified. Correct assertion retained; owner fix required. |
+| 3: `rt_green_edit_then_tests` | Real harmless failing baseline pytest with prior consent; actual approved execution-changing edit contains calc text; renewed red typed consent refused. Exactly one baseline pytest child, no post-edit pytest/calc spawn, `verify_refused` evidence and `UNVERIFIED (tests not approved)` receipt; no extra model proposal after refusal. |
 | 7: `px3_marker_deleted`, `px3_repo_flag`, `px3_nested` | Real `Detector(SecurityStore)` plus sealed disposable SQLite state. `.crocodile/confidential` removal retains classification in the same session and a restarted detector sharing its registry. An independent marker-free root starts public and `detect(..., force_confidential=True)` changes classification. A third fresh public root detects the nested marker and refuses `Detector.guard` and actual `tools.dispatch('read', ...)`, without private bytes. No invented root CLI repo-mode flag. |
 | 8: `rt_readme_curl` | Index original README lines with `Source('file', 'README.md', 1)`; line 40 supplies the real network sink. `approvals.ask` denies both a network action and an executable-pinned Python network script carrying that sink, with `decision.steered_by` containing `README.md:40`. Console calls are forbidden. `cmd.run` rejects the refused command; process/socket counters remain zero. No sh/curl availability dependency or attack execution. |
+| 9: `rt_amp_newline` | Actual pinned cmd ampersand and bash newline proposals reach ASK previews; answer n, inspect escaped short scripts and reject via real command API. No script is launched. Missing either interpreter skips group credit. |
+| 10: `rt_fsmonitor`, `rt_post_exec_filter` | Separate real Git repositories. Preplanted fsmonitor is denied after hardened config audit with config-change evidence; no requested status or hook launch. A separately approved bounded Python child changes real `.git/config` and attributes; real command watch-set immediately aborts, clears grants, and emits integrity evidence. No subsequent command is attempted after abort. |
+| 11: `rt_template_rev` | Real Git repository and `Git(sec).run('show', rev='--output=.git/config')`. `GitDenied` before any attack-phase spawn; config bytes unchanged; setup/audit traces separated. |
+| 12: `rt_paths_windows` | Actual mklink junction to fixture `.git`, proved by `is_junction`/resolution; actual GetShortPathNameW alias of that junction, proved to resolve to protected metadata. Real write-path API denies junction, trailing dot, ADS, short alias and device. Missing privilege/alias support is a group SKIP, not a string-only pass. |
 | 13: `sec_rg_env` | Actual `tools.dispatch` through `tools.fs.search/read`, `SecurityContext.observe` and output gate. Search restricted to the non-ignored synthetic `.env` returns `no matches` without requiring a marker; direct read returns a sensitive-file placeholder. Separately an ordinary file contains a recognized synthetic credential, so its result must contain a redaction marker. Model/terminal-facing strings, provenance, real `ReadCache`, and disk-backed `Spill` contain no full synthetic credential. |
+| 14: `test_oracle_edit_red`, `test_skip_not_green` | Actual edit dispatch reaches red consent, refuses the grant and preserves oracle bytes. Real isolated pytest runs the all-skipped oracle; TestReport has exit 0 but no passed tests, and actual Agent receipt is unsolved with no green event. |
 
 The supplemental group-3 approval test grants and consumes prior test consent,
 approves/applies the inert execution-changing replacement, calls
 `ApprovalSession.record_edit`, then refuses the renewed **red typed** consent
 whose preview says `will execute edited code`. The real command API refuses it;
-no pytest or calc process is started. It deliberately does not run the baseline
-or assert the unresolved Agent/CLI refusal receipt, so group 3 stays skipped.
+no pytest or calc process is started. It remains supplemental; group 3 now has
+the separate complete real-Agent/baseline/receipt adapter described above.
 
-Every connected adapter installs failing `subprocess.Popen/run`, shell and socket
-observers **before fixture/session creation**. Denial/routing/redaction behavior
-is not mocked. State is enrolled once using real `StateIntegrity.initialize` and
+Every adapter installs shell/socket/process observers before fixture/session
+creation. Denial/routing/redaction behavior is not mocked. New execution adapters
+wrap the real Popen instead of replacing successful child behavior: only local
+Git, isolated static lint, explicitly gated harmless pytest, the exact bounded
+config-mutating Python child and exact junction setup command are allowed.
+Children stay within the disposable test tree; no Git network verb is allowed.
+Owner `procs.run` and its real `before_spawn` revalidation still execute. Post-edit
+pytest is rejected at the process boundary if consent policy regresses, before
+calc could execute. Scripted model proposals and an in-memory event recorder
+replace external services, not approvals/commands/grading. State is enrolled once using real `StateIntegrity.initialize` and
 an injected in-memory fixture vault; no OS credential backend, live ledger,
 gateway journal or personal state is accessed. The empty ledger/grants schema
 follows the owner phase-6 fixture seam and does not prove group-4 ledger tampering.
+Default classification storage is redirected to the disposable fixture as well;
+real path/approval policy functions are retained.
 All production imports used here work with Python `-S` (stdlib only); pytest is
 the only test dependency. The existing Windows/Ubuntu CI commands already collect
 these tests; their historical "blocked" step name does not mean all entries skip.
+On long Windows desktop TEMP paths the Agent adapters use a compact direct TEMP
+child and the owner's `ShadowUndo(..., storage=...)` seam to avoid Git's legacy
+path-length limit. The real shadow implementation is retained. Cleanup targets
+are verified under that TEMP parent. No production/global path settings change.
 
 ## Review corrections across all 15 groups
 
 | Group | Applied expectation / remaining blocker |
 |---|---|
 | 1 | Root quote CLI, not just static quote function. CLI/canary/zero-transport adapter still unconnected. |
-| 2 | Deny initial baseline consent as well as later consent when asserting zero pytest spawns. Agent/write/receipt adapter pending. |
-| 3 | Renewed test consent is **red**, not amber, after execution-changing applied edits. Full harmless baseline/post-edit refusal receipt adapter pending; supplemental coverage above is separate. |
+| 2 | Real diagnostic proves denied initial consent, approved GREEN edit and zero pytest, but fails the unverified receipt requirement. Blocked known Part 1 finding, not a pass. |
+| 3 | Renewed test consent is **red**, not amber. Actual harmless baseline/post-edit refusal receipt connected; supplemental coverage is separate. |
 | 4 | Genuine protected `ledger`/`meta`/`grants`/classification state, one-time HMAC enrollment, abort/revocation/no-next-action proof required. Fixture JSON/SQL remains a placeholder; live mutation adapter pending. |
 | 5 | Local-chain validation before send plus separate root doctor FAIL. Both transport/doctor assertions pending. |
 | 6 | Marker is `.crocodile/confidential`. Forced confidential `web_docs` must be refused; require zero Tavily sends/rows and full local-only session evidence, not a nonexistent fixed `web DENY` event. Egress adapter pending. |
 | 7 | Correct root/nested markers, fresh registries for independent subcases, sticky registry preserved for marker deletion. Explicit mode uses Detector API; connected. |
 | 8 | README-steered network actions **deny before prompting** with exact line provenance; connected. A separate non-network red-preview assertion is not substituted for this rule. |
-| 9 | ASK only for available pinned interpreters and valid proposals; escaped bounded previews are valid. Both cmd/bash adapters pending. A pre-validation denial is safe but not proof of ASK. |
-| 10 | Preplanted fsmonitor causes GitDenied/config-change evidence; watched post-child filter changes cause immediate integrity abort. Separate genuine Git fixtures and observers pending; no forced later banner after abort. |
-| 11 | `with Git(sec) as git: git.run('show', rev='--output=.git/config')`, not template `'git show'`. Setup traces separate from invalid operation; adapter pending. |
-| 12 | Writes through `resolve_in_repo(..., for_write=True)`; genuine junction and actual 8.3 protected alias. Windows privileges/alias support and all-path adapter pending, never string-only PASS. |
+| 9 | ASK only for available pinned interpreters and valid proposals; escaped bounded previews are valid. Both cmd/bash adapters connected; missing interpreter skips whole-group credit. |
+| 10 | Preplanted fsmonitor causes GitDenied/config-change evidence; post-child filter changes immediately abort. Both genuine Git fixtures connected; no forced later banner after abort. |
+| 11 | Actual template `'show'`, not `'git show'`; setup/invalid-operation traces separated. Connected. |
+| 12 | Real write-path junction/8.3 adapter connected, conditional on Windows privileges/filesystem support; missing setup skips, never string-only PASS. |
 | 13 | `.env*` exclusion need not emit a redaction marker; ordinary recognized credentials must redact before output/cache/spill. Connected. |
-| 14 | Refuse red oracle write and preserve tests; actual all-skipped `TestReport.passed` must be empty and Receipt must not be green/verified solved. Paired adapter pending. |
-| 15 | Bounded missing-console/backend fixture, not fake `n` alone; no stdin-derived grant or changed target. Root run adapter pending. |
+| 14 | Red oracle write refusal plus actual all-skipped TestReport/Agent receipt connected; no solved credit from exit 0 alone. |
+| 15 | Actual missing-console tool/approval backend supplemental test proves no stdin-derived grant or changed target; complete root run CLI adapter remains pending, so no group pass. |
 
 ## Safe fixture construction
 

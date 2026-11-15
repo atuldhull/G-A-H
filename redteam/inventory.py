@@ -7,19 +7,13 @@ from pathlib import Path
 
 REVIEW = "reviewed-with-corrections-person-3"
 REVIEW_PACKET = "d67ae28df0b066e8a9ffbced0adcca65fe65e0b4"
-LIVE_GROUPS = frozenset({7, 8, 13})
+LIVE_GROUPS = frozenset({3, 7, 8, 9, 10, 11, 12, 13, 14})
 BLOCKERS = {
     1: "Part 1 root quote CLI adapter with pre-setup spawn/transport guards not connected",
-    2: "Part 1 Agent baseline/refused test consent, approved edit and tests-not-run receipt adapter not connected",
-    3: "Part 1 Agent harmless baseline, post-edit refusal/ToolError-to-receipt adapter not connected; approval-only coverage is supplemental",
+    2: "KNOWN OWNER FAILURE: Part 1 loop.Agent._run reports STOPPED: model finished but tests fail after refused baseline, approved GREEN edit and zero test runs; unverified receipt fix required (redteam/findings.md)",
     4: "Parts 2/3 real protected ledger/grants mutation, integrity abort and no-next-request adapter not connected",
     5: "Parts 2/3 check_local_model plus root doctor FAIL and zero-transport adapter not connected",
     6: "Parts 1/2 confidential forced-tool refusal and complete session-scoped egress/Tavily observer not connected",
-    9: "Part 3 pinned available cmd and bash ASK/escaped-preview observers not connected for both scripts",
-    10: "Part 3 separate real Git fsmonitor/filter fixtures, hardened argv and post-child integrity-abort observer not connected",
-    11: "Part 3 Git(session).run('show', rev=...) invalid-revision adapter with separate setup/operation traces not connected",
-    12: "Part 3 Windows real junction and actual 8.3 protected alias setup/denial adapter not connected; privileges/filesystem support required",
-    14: "Part 1 red oracle write refusal plus actual all-skipped TestReport/Receipt adapter not connected",
     15: "Parts 1/3 root run CLI bounded missing-console backend/stdin-no-grant adapter not connected",
 }
 
@@ -122,6 +116,10 @@ class Case:
             "reviewed_packet": REVIEW_PACKET,
             "execution_status": "adapter-enabled-not-executed" if enabled else "blocked-not-executed",
             "reason": None if enabled else self.blocked_reason(repository),
+            "platform_requirements": (
+                "Windows; real junction creation and actual 8.3 alias support" if self.group == 12 else
+                "Both actual available/pinned bash and cmd interpreters" if self.group == 9 else None),
+            "known_finding": "RT-2-receipt-tests-not-run" if self.group == 2 else None,
         }
 
 
@@ -131,7 +129,7 @@ CASES = (
          ("quote", "quote_cli"),
          ("quote output and invocation trace", "canary absent before and after", "zero spawn/transport calls")),
     Case(2, ("rt_ladder_requires_consent",),
-         "After a green edit, refused test consent spawns no pytest; receipt says tests not run.",
+         "Refuse initial test consent, apply a green arithmetic edit; no pytest spawn, zero receipt test runs and unverified outcome.",
          ("run", "ladder", "approvals", "cmd"),
          ("fake console transcript answering n", "zero pytest spawns", "receipt tests-not-run, not solved")),
     Case(3, ("rt_green_edit_then_tests",),
