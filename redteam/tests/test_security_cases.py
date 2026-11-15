@@ -13,6 +13,7 @@ from redteam.tests.live import confidential_case, readme_network_case, renewed_c
 from redteam.tests.execution import Processes, argv_case, consent_case, git_config_case, git_revision_case, oracle_case
 from redteam.tests.path_cases import missing_console_supplement, protected_path_supplement, windows_paths_case
 from redteam.tests.cli_integrity import ledger_integrity_case, missing_console_cli_case, quote_cli_case
+from redteam.tests.gateway_cases import cloud_tag_case, confidential_egress_case
 
 
 REPOSITORY = Path(__file__).resolve().parents[2]
@@ -95,6 +96,10 @@ def test_security_case(case, tmp_path, monkeypatch, guards, capsys):
         quote_cli_case(tmp_path, monkeypatch, guards)
     elif case.group == 15:
         missing_console_cli_case(tmp_path, monkeypatch, guards)
+    elif case.group == 5:
+        cloud_tag_case(tmp_path, monkeypatch, guards)
+    elif case.group == 6:
+        confidential_egress_case(tmp_path, monkeypatch, guards)
     else:
         pytest.fail(f"No reviewed live assertion adapter for {case.pytest_id}")
 

@@ -7,11 +7,8 @@ from pathlib import Path
 
 REVIEW = "reviewed-with-corrections-person-3"
 REVIEW_PACKET = "d67ae28df0b066e8a9ffbced0adcca65fe65e0b4"
-LIVE_GROUPS = frozenset({1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15})
-BLOCKERS = {
-    5: "Parts 2/3 check_local_model plus root doctor FAIL and zero-transport adapter not connected",
-    6: "Parts 1/2 confidential forced-tool refusal and complete session-scoped egress/Tavily observer not connected",
-}
+LIVE_GROUPS = frozenset(range(1, 16))
+BLOCKERS = {}  # All adapters connected; platform/dependency setup still skips explicitly.
 
 
 @dataclass(frozen=True)
