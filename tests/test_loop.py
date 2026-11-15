@@ -245,3 +245,31 @@ def test_refused_test_consent_ends_cleanly(repo):
     r = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask").run()
     assert not r.solved and r.status == "UNVERIFIED (tests not approved)"
     assert len(fake.calls) == 1                                 # no wasted model turns after the refusal
+
+
+def test_baseline_consent_refused_receipt_says_not_run(repo):
+    """RT-2: refused test consent + an applied edit + finish -> 'tests not approved', never 'tests fail'."""
+    from crocodile.adapters import SecurityBridge
+    from crocodile.agent_types import Decision
+
+    class RefuseTests(SecurityBridge):
+        def ask(self, action, session):
+            if action.kind == "test_consent":
+                return Decision(False, "user refused")
+            return super().ask(action, session)
+    services.reset()
+    fake = FakeEgress([[("edit", {"path": "calc.py", "edits": [
+        {"search": "return a - b", "replace": "return a + b"}]})], [("finish", {"summary": "x"})],
+        [("finish", {"summary": "x"})]])
+    services.override("egress", fake)
+    bridge = RefuseTests()
+    services.override("approvals", bridge)
+    services.override("cmd", bridge)
+    a = Agent(repo, "Fix add().", oracle=["calc_test.py"], approve_mode="ask")
+    r = a.run()
+    assert r.test_runs == 0 and not r.solved
+    assert r.status == "UNVERIFIED (tests not approved)"
+    from crocodile import ui_bridge
+    from crocodile.ui import render_receipt
+    assert render_receipt(ui_bridge.receipt(a)).startswith("TESTS NOT RUN (no consent)")
+    assert "a + b" in (repo / "calc.py").read_text()          # the approved edit was applied
