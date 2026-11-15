@@ -1,0 +1,6 @@
+# Minimal declared owner dependencies exercised by root CLI and real ledger tests.
+# Versions match the locally validated Python 3.12 environment; no gateway/keyring SDK.
+typer==0.29.1
+rich==15.0.0
+PyYAML==6.0.3
+pydantic==2.14.3

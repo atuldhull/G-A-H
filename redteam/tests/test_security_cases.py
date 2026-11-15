@@ -12,6 +12,7 @@ from redteam.inventory import CASES, LIVE_GROUPS
 from redteam.tests.live import confidential_case, readme_network_case, renewed_consent, secret_search_case
 from redteam.tests.execution import Processes, argv_case, consent_case, git_config_case, git_revision_case, oracle_case
 from redteam.tests.path_cases import missing_console_supplement, protected_path_supplement, windows_paths_case
+from redteam.tests.cli_integrity import ledger_integrity_case, missing_console_cli_case, quote_cli_case
 
 
 REPOSITORY = Path(__file__).resolve().parents[2]
@@ -68,10 +69,12 @@ def test_security_case(case, tmp_path, monkeypatch, guards, capsys):
             processes = Processes(local, monkeypatch)
             consent_case(local, monkeypatch, processes, renewed=case.group == 3)
         return
-    if case.group in {2, 3, 10, 11, 12, 14}:
+    if case.group in {2, 3, 4, 10, 11, 12, 14}:
         processes = Processes(tmp_path, monkeypatch)
         if case.group in {2, 3}:
             consent_case(tmp_path, monkeypatch, processes, renewed=case.group == 3)
+        elif case.group == 4:
+            ledger_integrity_case(tmp_path, monkeypatch, processes)
         elif case.group == 10:
             git_config_case(tmp_path, monkeypatch, processes)
         elif case.group == 11:
@@ -88,6 +91,10 @@ def test_security_case(case, tmp_path, monkeypatch, guards, capsys):
         ADAPTERS[8](tmp_path, monkeypatch, guards)
     elif case.group == 13:
         ADAPTERS[13](tmp_path, guards, capsys)
+    elif case.group == 1:
+        quote_cli_case(tmp_path, monkeypatch, guards)
+    elif case.group == 15:
+        missing_console_cli_case(tmp_path, monkeypatch, guards)
     else:
         pytest.fail(f"No reviewed live assertion adapter for {case.pytest_id}")
 

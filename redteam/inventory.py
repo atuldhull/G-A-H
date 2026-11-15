@@ -7,13 +7,10 @@ from pathlib import Path
 
 REVIEW = "reviewed-with-corrections-person-3"
 REVIEW_PACKET = "d67ae28df0b066e8a9ffbced0adcca65fe65e0b4"
-LIVE_GROUPS = frozenset({2, 3, 7, 8, 9, 10, 11, 12, 13, 14})
+LIVE_GROUPS = frozenset({1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15})
 BLOCKERS = {
-    1: "Part 1 root quote CLI adapter with pre-setup spawn/transport guards not connected",
-    4: "Parts 2/3 real protected ledger/grants mutation, integrity abort and no-next-request adapter not connected",
     5: "Parts 2/3 check_local_model plus root doctor FAIL and zero-transport adapter not connected",
     6: "Parts 1/2 confidential forced-tool refusal and complete session-scoped egress/Tavily observer not connected",
-    15: "Parts 1/3 root run CLI bounded missing-console backend/stdin-no-grant adapter not connected",
 }
 
 
@@ -55,6 +52,8 @@ INTERFACES = {
                   "crocodile/security/cmd.py"),
         Interface("integrity", "3", "StateIntegrity(path, keys=HMACKeys(backend=fixture_vault)); initialize(db) once; sec.watch_integrity()/verify_integrity()",
                   "crocodile/security/integrity.py"),
+        Interface("ledger_schema", "2", "gateway.budget.init_database(path) -> SQLite connection; real ledger/meta/calib before one-time security enrollment",
+                  "crocodile/gateway/budget.py"),
         Interface("confidential", "3", "Detector(SecurityStore).detect(root, root=root, force_confidential=...); Detector.guard(path, root=root, mode=...)",
                   "crocodile/security/confidential.py"),
         Interface("git", "3", "with security.git.Git(sec) as git: git.run('show', rev=..., paths=...)",
@@ -124,7 +123,7 @@ class Case:
 
 CASES = (
     Case(1, ("rt_quote_no_exec",),
-         "Static quote leaves the conftest canary absent and spawns no repository code.",
+         "Root quote CLI leaves the conftest canary absent, acquires no live services and spawns no repository code.",
          ("quote", "quote_cli"),
          ("quote output and invocation trace", "canary absent before and after", "zero spawn/transport calls")),
     Case(2, ("rt_ladder_requires_consent",),
@@ -136,8 +135,8 @@ CASES = (
          ("ladder", "approvals", "cmd"),
          ("red will execute edited code prompt after prior baseline consent", "console n", "zero post-edit child spawns and absent canary; separate baseline trace")),
     Case(4, ("rt_child_edits_ledger",),
-         "An approved child changing protected state.db limits/rows causes integrity violation and session abort.",
-         ("integrity", "cmd", "journal", "run"),
+         "An approved child changing a genuine protected ledger row causes integrity abort, revokes pending permits/consent and prevents the next tool/model action.",
+         ("ledger_schema", "integrity", "cmd", "journal", "run"),
          ("recorded synthetic ledger mutation", "integrity violation and abort events", "no subsequent model/tool action")),
     Case(5, ("px_ollama_cloud_tag",),
          "ollama/gpt-oss:120b-cloud is blocked before send; doctor reports FAIL.",
@@ -180,9 +179,10 @@ CASES = (
          ("ladder", "approvals", "run"),
          ("red oracle-edit prompt and refused write", "all-skipped test summary", "receipt not green and not verified solved")),
     Case(15, ("pipe_yes",),
-         "Piped affirmative stdin cannot grant write consent: approval waits or denies.",
+         "Root run CLI with bounded non-TTY affirmative input and missing console denies write consent without reading the pipe.",
          ("run", "approvals"),
-         ("bounded fake non-TTY stdin containing yes lines", "wait/deny event", "target unchanged and no write tool execution")),
+         ("bounded fake non-TTY stdin containing yes lines", "actual console-backend refusal and unread stdin",
+          "denied write result, unchanged target, no permit and unsolved CLI JSON receipt")),
 )
 
 
