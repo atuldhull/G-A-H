@@ -30,6 +30,7 @@ jobs:
       - name: Existing application regression tests
         run: python -m pytest -q -ra -p no:cacheprovider tests
       - name: Execute cases (2 means explicitly blocked, never all-passed)
+        if: ${{ !cancelled() }}
         run: python -c "from redteam.runner import run; code=run('security-report.json'); raise SystemExit(0 if code in (0,2) else code)"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

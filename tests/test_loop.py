@@ -231,8 +231,8 @@ def test_refused_test_consent_ends_cleanly(repo):
             self.runs = 0
 
         def run(self, argv, cwd, *, timeout=120, session=None, **kw):
-            self.runs += 1
-            if self.runs > 1:                                  # baseline ran; post-edit run refused
+            self.runs += "pytest" in argv
+            if "pytest" in argv and self.runs > 1:                                  # baseline ran; post-edit run refused
                 return CmdResult(list(argv), 126, "", "test consent no longer valid: will execute edited code")
             return super().run(argv, cwd, timeout=timeout, session=session, **kw)
     services.reset()

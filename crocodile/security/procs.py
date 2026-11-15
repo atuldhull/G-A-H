@@ -31,6 +31,8 @@ def child_environment(root: Path, cwd: Path, scratch: Path) -> dict[str, str]:
             "PATHEXT": ".COM;.EXE;.BAT;.CMD",
             "PYTHONUTF8": "1",
             "PYTHONNOUSERSITE": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": str(scratch / "pycache"),
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
             "NoDefaultCurrentDirectoryInExePath": "1",
         }

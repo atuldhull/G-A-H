@@ -15,6 +15,7 @@ def exercise(tmp_path, monkeypatch):
         yield env
     finally:
         services.reset()
+        assert not env.network_attempts, "synthetic exercise attempted network I/O"
 
 
 @pytest.mark.parametrize("case", INVENTORY, ids=lambda case: case.pytest_id)

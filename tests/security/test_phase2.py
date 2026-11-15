@@ -3,6 +3,7 @@
 import ctypes
 import json
 import os
+import py_compile
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,20 @@ def confirm(prompt):
 
 
 class Phase2Tests(unittest.TestCase):
+    @unittest.skipIf(sys.flags.ignore_environment, "embedded/isolated Python ignores child environment settings")
+    def test_child_ignores_stale_repository_bytecode(self):
+        module = self.root / "cached_fixture.py"
+        module.write_text("VALUE = 'old'\n", encoding="utf-8")
+        before = module.stat()
+        py_compile.compile(str(module), doraise=True)
+        module.write_text("VALUE = 'new'\n", encoding="utf-8")
+        os.utime(module, ns=(before.st_atime_ns, before.st_mtime_ns))
+        script = f"import sys; sys.path.insert(0, {str(self.root)!r}); import cached_fixture; print(cached_fixture.VALUE)"
+        with patch.object(approvals, "_console_answer", side_effect=confirm):
+            result = cmd.run([sys.executable, "-c", script], self.root, timeout=10, session=self.session)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "new")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.cleanup_fixture)

@@ -1,6 +1,7 @@
 """Upgrade/replay fixtures for the shared state, credential and journal contracts."""
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -27,6 +28,9 @@ def locations(tmp_path, monkeypatch):
     monkeypatch.setenv("APPDATA", str(roaming))
     monkeypatch.setenv("LOCALAPPDATA", str(local))
     monkeypatch.delenv("CROCODILE_STATE_DB", raising=False)
+    if os.name != "nt":
+        monkeypatch.setenv("XDG_STATE_HOME", str(roaming))
+        return roaming / "crocodile/state.db", roaming / "crocodile/state.db"
     return roaming / "crocodile/state.db", local / "crocodile/state.db"
 
 
@@ -44,7 +48,7 @@ def test_fresh_default_does_not_initialize_empty_state(tmp_path, monkeypatch):
     assert not canonical.exists()
 
 
-@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("legacy", [False, pytest.param(True, marks=pytest.mark.skipif(os.name != "nt", reason="Windows APPDATA/LOCALAPPDATA upgrade"))])
 def test_existing_installation_all_callers_and_resume_share_database(
     tmp_path, monkeypatch, app_security, legacy
 ):
@@ -81,6 +85,7 @@ def test_existing_installation_all_callers_and_resume_share_database(
         assert not canonical.exists()
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows dual historical state locations")
 def test_ambiguous_paths_and_missing_override_refuse_new_state(tmp_path, monkeypatch, app_security):
     canonical, legacy = locations(tmp_path, monkeypatch)
     backup(app_security.path, legacy)
