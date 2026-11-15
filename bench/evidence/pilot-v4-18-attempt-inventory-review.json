@@ -1,0 +1,1457 @@
+{
+  "attempts": [
+    {
+      "actual_session_cost": null,
+      "attempt_id": "9a11f1b89a3046ada380f2c74c71c2f5",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 1,
+      "request_ids": [
+        "370dbe5f-e465-4f64-a97f-0d3cd28b6929"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "370dbe5f-e465-4f64-a97f-0d3cd28b6929",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/affine-cipher/crocodile/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 403,
+        "prompt_tokens": 3687
+      },
+      "session_id": "20261115-191047-53789f",
+      "snapshot_age_seconds": 10078,
+      "success_request_count": 1,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 403,
+        "prompt_tokens": 3687
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "40221985af4243c3a217fea47c689851",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 1,
+      "request_ids": [
+        "76d7ec04-1916-4679-91b2-f517ac5ab4c8"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "76d7ec04-1916-4679-91b2-f517ac5ab4c8",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/affine-cipher/crocodile/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 861,
+        "prompt_tokens": 3687
+      },
+      "session_id": "20261115-191059-d93fb8",
+      "snapshot_age_seconds": 10067,
+      "success_request_count": 1,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 861,
+        "prompt_tokens": 3687
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "d61b22467aab4ac7a3f5c6c53138fb21",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 9,
+      "request_ids": [
+        "faf62b95-d207-4cf5-8ec3-d48d99d5b1b9",
+        "2b6bd284-d85f-426a-a1d3-4099a9d9b828",
+        "1169c8c7-432b-4431-81a8-b35c64c9d994",
+        "e42e4c4b-993d-4d24-9ef4-b36f12d11928",
+        "5669b94e-18da-4ca4-b05f-dd2690d0f61f",
+        "37409d92-2685-487e-8345-20311ba7561f",
+        "172baa9f-68cb-4295-b08b-a6da63b83c63",
+        "440064c6-59e1-4441-80dd-60b48dc6d4c0",
+        "aeff1d94-5401-4f1f-bf4e-94b9f9aae899"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "faf62b95-d207-4cf5-8ec3-d48d99d5b1b9",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "2b6bd284-d85f-426a-a1d3-4099a9d9b828",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "1169c8c7-432b-4431-81a8-b35c64c9d994",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "e42e4c4b-993d-4d24-9ef4-b36f12d11928",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "5669b94e-18da-4ca4-b05f-dd2690d0f61f",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "37409d92-2685-487e-8345-20311ba7561f",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "172baa9f-68cb-4295-b08b-a6da63b83c63",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "440064c6-59e1-4441-80dd-60b48dc6d4c0",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "aeff1d94-5401-4f1f-bf4e-94b9f9aae899",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/affine-cipher/mini-swe-agent/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 22215,
+        "completion_tokens": 590,
+        "prompt_tokens": 49169
+      },
+      "session_id": "mini-13ae8c408a8e4f0297e800464e74a9c2",
+      "snapshot_age_seconds": 10025,
+      "success_request_count": 9,
+      "success_token_sums": {
+        "cached_read_tokens": 22215,
+        "completion_tokens": 590,
+        "prompt_tokens": 49169
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "2e2a047d40b44da2866758ed4b3e5c36",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 8,
+      "request_ids": [
+        "4b7dac8b-d8e2-45a6-8acb-43c9ee6ff6b2",
+        "3710b67c-1c27-4c4f-a835-0645217919b4",
+        "b5c57acb-adf9-4d60-a513-93401a6be18a",
+        "f94c7673-0b88-457c-a809-ac5b94b39a54",
+        "1b5e9662-6fe8-4121-b7ae-44cde1c1cfbb",
+        "c63b9214-bb82-495d-87ef-a3e598178eaa",
+        "d5e5a449-59f1-4f58-b2c3-7a6b2e9e04f6",
+        "9e0c36c6-e6f2-4689-b613-46854f9421aa"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "4b7dac8b-d8e2-45a6-8acb-43c9ee6ff6b2",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "3710b67c-1c27-4c4f-a835-0645217919b4",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "b5c57acb-adf9-4d60-a513-93401a6be18a",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "f94c7673-0b88-457c-a809-ac5b94b39a54",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "1b5e9662-6fe8-4121-b7ae-44cde1c1cfbb",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "c63b9214-bb82-495d-87ef-a3e598178eaa",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "d5e5a449-59f1-4f58-b2c3-7a6b2e9e04f6",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "9e0c36c6-e6f2-4689-b613-46854f9421aa",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/affine-cipher/mini-swe-agent/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 16152,
+        "completion_tokens": 593,
+        "prompt_tokens": 40086
+      },
+      "session_id": "mini-a0b875e05d84454094e9e213328eefd3",
+      "snapshot_age_seconds": 9997,
+      "success_request_count": 8,
+      "success_token_sums": {
+        "cached_read_tokens": 16152,
+        "completion_tokens": 593,
+        "prompt_tokens": 40086
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "434a15850d1f4579810a9df05495d3e3",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 6,
+      "request_ids": [
+        "c498b8b2-9476-48ad-aa04-e309b0ed0d89",
+        "81327300-9056-4cb0-9094-cc3d6a18147d",
+        "86c845d3-176a-491c-b21e-6f3a8e5e3d3b",
+        "338c7631-4c03-41e5-8996-1a4e8465633f",
+        "1ff412ab-7104-47bd-a066-9eecb39dbcb1",
+        "ef9499d7-fc1c-41c6-a253-2cbdb6043d90"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "c498b8b2-9476-48ad-aa04-e309b0ed0d89",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "81327300-9056-4cb0-9094-cc3d6a18147d",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "86c845d3-176a-491c-b21e-6f3a8e5e3d3b",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "338c7631-4c03-41e5-8996-1a4e8465633f",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "1ff412ab-7104-47bd-a066-9eecb39dbcb1",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "ef9499d7-fc1c-41c6-a253-2cbdb6043d90",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/affine-cipher/all-off-twin/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 561,
+        "prompt_tokens": 17701
+      },
+      "session_id": "20261115-191215-3bc3ca",
+      "snapshot_age_seconds": 9977,
+      "success_request_count": 6,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 561,
+        "prompt_tokens": 17701
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "db13ca470ab14f808fc68be4b7b00d02",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 2,
+      "request_ids": [
+        "c0090d67-d6c4-4961-b2e4-066cd7ad65cd",
+        "e199b86e-ecd4-418b-9ac9-22f23e3110b0"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "c0090d67-d6c4-4961-b2e4-066cd7ad65cd",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "e199b86e-ecd4-418b-9ac9-22f23e3110b0",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/beer-song/crocodile/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 329,
+        "prompt_tokens": 13173
+      },
+      "session_id": "20261115-191233-e616eb",
+      "snapshot_age_seconds": 9970,
+      "success_request_count": 2,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 329,
+        "prompt_tokens": 13173
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "331a11c07c8642e1a12dae0debcd1eac",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 1,
+      "historical_graded_solved": false,
+      "historical_runner_status": "incomplete",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 3,
+      "request_ids": [
+        "223dc6ba-00ff-4f7f-952e-e392d4907d6f",
+        "3e1cbbe6-1a88-4f99-86df-070ae269cac1",
+        "0e4741d1-f4fc-4e64-a243-63d82900d346"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "223dc6ba-00ff-4f7f-952e-e392d4907d6f",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "3e1cbbe6-1a88-4f99-86df-070ae269cac1",
+          "status": "success"
+        },
+        {
+          "http_status": 429,
+          "not_assumed_free": true,
+          "request_id": "0e4741d1-f4fc-4e64-a243-63d82900d346",
+          "status": "error",
+          "total_cost": null
+        }
+      ],
+      "run_id": "polyglot/beer-song/crocodile/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 56,
+        "prompt_tokens": 10937
+      },
+      "session_id": "20261115-191248-a04247",
+      "snapshot_age_seconds": 9954,
+      "success_request_count": 2,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 56,
+        "prompt_tokens": 10937
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "1dde1b95567649c6aafb8d0181724521",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 9,
+      "request_ids": [
+        "c2ae0414-3b32-4baf-989a-c8b1a1442cb2",
+        "84e59633-2a0b-4827-a50c-d49a4f9a85ee",
+        "37fac48c-8afe-4a8e-86c1-3605dc0a1739",
+        "a6805d3a-7b80-48ec-9dee-6ca6d1bf88ce",
+        "23cb23af-ef25-45ff-a69f-b947e887925e",
+        "0cac4721-5747-4dcb-98f3-b3b437eaf5e0",
+        "d1044d47-f092-4d77-b24a-ccc1d0ae4726",
+        "e3a53105-2a4b-4ebb-aad9-cbfa3ba197cf",
+        "0c5e6359-bfa6-40c3-bd8a-b804af69fcc9"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "c2ae0414-3b32-4baf-989a-c8b1a1442cb2",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "84e59633-2a0b-4827-a50c-d49a4f9a85ee",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "37fac48c-8afe-4a8e-86c1-3605dc0a1739",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "a6805d3a-7b80-48ec-9dee-6ca6d1bf88ce",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "23cb23af-ef25-45ff-a69f-b947e887925e",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0cac4721-5747-4dcb-98f3-b3b437eaf5e0",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "d1044d47-f092-4d77-b24a-ccc1d0ae4726",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "e3a53105-2a4b-4ebb-aad9-cbfa3ba197cf",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0c5e6359-bfa6-40c3-bd8a-b804af69fcc9",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/beer-song/mini-swe-agent/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 42582,
+        "completion_tokens": 1141,
+        "prompt_tokens": 73303
+      },
+      "session_id": "mini-22af5a5f2b3f4316aa7b78caf02bb765",
+      "snapshot_age_seconds": 9921,
+      "success_request_count": 9,
+      "success_token_sums": {
+        "cached_read_tokens": 42582,
+        "completion_tokens": 1141,
+        "prompt_tokens": 73303
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "7e840a94ccb7492b98115655b9d185b9",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 1,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 10,
+      "request_ids": [
+        "74e45e1f-3a50-4cf7-9b0d-75b31a170ce0",
+        "97d703cc-8622-49d3-a6ea-eb899427ca48",
+        "d559a920-1bc7-42e7-8bb5-fc9bd9f593cc",
+        "6f8533bb-701b-415d-91ab-115e06e967cd",
+        "313cbc42-5fc1-4524-81ce-df33836bdee7",
+        "93cfcfd4-47ef-4b0d-8352-7b99f665c3d5",
+        "858a5bac-5371-42cc-96cb-85362f4e3822",
+        "369c07ee-0829-43f3-9f5e-17af5a335fdf",
+        "c6355193-7a22-400f-a5e6-954dcf93bd77",
+        "8fe8a234-8772-4ea0-814d-92869681bf4d"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "74e45e1f-3a50-4cf7-9b0d-75b31a170ce0",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "97d703cc-8622-49d3-a6ea-eb899427ca48",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "d559a920-1bc7-42e7-8bb5-fc9bd9f593cc",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "6f8533bb-701b-415d-91ab-115e06e967cd",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "313cbc42-5fc1-4524-81ce-df33836bdee7",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "93cfcfd4-47ef-4b0d-8352-7b99f665c3d5",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "858a5bac-5371-42cc-96cb-85362f4e3822",
+          "status": "success"
+        },
+        {
+          "http_status": 429,
+          "not_assumed_free": true,
+          "request_id": "369c07ee-0829-43f3-9f5e-17af5a335fdf",
+          "status": "error",
+          "total_cost": null
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "c6355193-7a22-400f-a5e6-954dcf93bd77",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "8fe8a234-8772-4ea0-814d-92869681bf4d",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/beer-song/mini-swe-agent/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 46647,
+        "completion_tokens": 913,
+        "prompt_tokens": 74391
+      },
+      "session_id": "mini-1f4a22077fbb4d8397148714c826751e",
+      "snapshot_age_seconds": 9894,
+      "success_request_count": 9,
+      "success_token_sums": {
+        "cached_read_tokens": 46647,
+        "completion_tokens": 913,
+        "prompt_tokens": 74391
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "9d0a96e277374d3dbb35f6201ffc1744",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 1,
+      "historical_graded_solved": false,
+      "historical_runner_status": "incomplete",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 2,
+      "request_ids": [
+        "1a794946-ee60-40fa-806c-d6d5569b8c32",
+        "031e7197-a540-4d4b-bd9e-e4ba2486f0f7"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "1a794946-ee60-40fa-806c-d6d5569b8c32",
+          "status": "success"
+        },
+        {
+          "http_status": 429,
+          "not_assumed_free": true,
+          "request_id": "031e7197-a540-4d4b-bd9e-e4ba2486f0f7",
+          "status": "error",
+          "total_cost": null
+        }
+      ],
+      "run_id": "polyglot/beer-song/all-off-twin/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 14,
+        "prompt_tokens": 4606
+      },
+      "session_id": "20261115-191358-d20749",
+      "snapshot_age_seconds": 9887,
+      "success_request_count": 1,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 14,
+        "prompt_tokens": 4606
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "02564dc768464515bd330635569d88b4",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 1,
+      "request_ids": [
+        "942019ba-37de-49a5-9411-7f295dd66804"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "942019ba-37de-49a5-9411-7f295dd66804",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/book-store/crocodile/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 567,
+        "prompt_tokens": 3995
+      },
+      "session_id": "20261115-191403-d1c15e",
+      "snapshot_age_seconds": 9883,
+      "success_request_count": 1,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 567,
+        "prompt_tokens": 3995
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "f0fe549b5ba04d72aead65c688472381",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 1,
+      "request_ids": [
+        "0a1212b3-bd3a-4ebe-a108-407d8a83f1b1"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0a1212b3-bd3a-4ebe-a108-407d8a83f1b1",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/book-store/crocodile/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 751,
+        "prompt_tokens": 3995
+      },
+      "session_id": "20261115-191415-f77310",
+      "snapshot_age_seconds": 9870,
+      "success_request_count": 1,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 751,
+        "prompt_tokens": 3995
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "f3979ea0f2bb4671abcfd25cb102c4cb",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 11,
+      "request_ids": [
+        "8d574e97-8328-400b-890b-affece1702ae",
+        "dd08ae41-31ad-44e0-984d-445bbb8153b6",
+        "5dfa7c13-f9e9-47ec-b803-e6b671c7b556",
+        "0e988de1-0b62-45a3-8903-d054f1178d14",
+        "992de21d-accb-4356-bb9a-2eab12964a04",
+        "33a821bc-7c8c-4442-9dc4-196db7ee9fc8",
+        "0a52d17f-db2b-4bad-a9a6-9443e4d3108c",
+        "79a145da-23c2-47e0-9511-01ccf67a9c63",
+        "cab20c4c-cd6f-4f08-802e-b9eafbd1d69f",
+        "da186179-da65-4cf6-83d7-c46706171dbf",
+        "97a21165-0879-4edb-9a37-02f8f55a47d7"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "8d574e97-8328-400b-890b-affece1702ae",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "dd08ae41-31ad-44e0-984d-445bbb8153b6",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "5dfa7c13-f9e9-47ec-b803-e6b671c7b556",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0e988de1-0b62-45a3-8903-d054f1178d14",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "992de21d-accb-4356-bb9a-2eab12964a04",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "33a821bc-7c8c-4442-9dc4-196db7ee9fc8",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0a52d17f-db2b-4bad-a9a6-9443e4d3108c",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "79a145da-23c2-47e0-9511-01ccf67a9c63",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "cab20c4c-cd6f-4f08-802e-b9eafbd1d69f",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "da186179-da65-4cf6-83d7-c46706171dbf",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "97a21165-0879-4edb-9a37-02f8f55a47d7",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/book-store/mini-swe-agent/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 40591,
+        "completion_tokens": 1113,
+        "prompt_tokens": 72072
+      },
+      "session_id": "mini-db21369a9cc341a5a201bc4e6a3b111f",
+      "snapshot_age_seconds": 9820,
+      "success_request_count": 11,
+      "success_token_sums": {
+        "cached_read_tokens": 60885,
+        "completion_tokens": 1211,
+        "prompt_tokens": 99602
+      },
+      "success_tokens_match_runner": false
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "3b2194ad6cbe438f90539cd3d1a10061",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "unavailable",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 10,
+      "request_ids": [
+        "8353fa3c-3320-41be-a705-bbe29cc43cee",
+        "0555a16c-c065-4b10-bebc-101065958027",
+        "06afa5a9-cade-405f-ab86-4354b2ecbbb3",
+        "4fa31da2-8850-4490-b72c-31e6bad460d0",
+        "2a4405c2-b01e-494a-a361-ae1b91652efd",
+        "ca6f81b7-2f9c-4b85-9a22-785282776d95",
+        "494ab318-74bf-4985-9359-1423de9a2764",
+        "ef5aef16-a0c9-4e6f-a293-d1e401b7aace",
+        "da87fc2d-d55c-4fdd-beb2-6050b495bad4",
+        "d9bbef94-82a0-4006-a888-3831a0bfc668"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "8353fa3c-3320-41be-a705-bbe29cc43cee",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "0555a16c-c065-4b10-bebc-101065958027",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "06afa5a9-cade-405f-ab86-4354b2ecbbb3",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "4fa31da2-8850-4490-b72c-31e6bad460d0",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "2a4405c2-b01e-494a-a361-ae1b91652efd",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "ca6f81b7-2f9c-4b85-9a22-785282776d95",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "494ab318-74bf-4985-9359-1423de9a2764",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "ef5aef16-a0c9-4e6f-a293-d1e401b7aace",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "da87fc2d-d55c-4fdd-beb2-6050b495bad4",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "d9bbef94-82a0-4006-a888-3831a0bfc668",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/book-store/mini-swe-agent/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 28369,
+        "completion_tokens": 3091,
+        "prompt_tokens": 62579
+      },
+      "session_id": "mini-96e5e0a47f6c45e599ce7649ce0a8bf4",
+      "snapshot_age_seconds": 9786,
+      "success_request_count": 10,
+      "success_token_sums": {
+        "cached_read_tokens": 28369,
+        "completion_tokens": 3091,
+        "prompt_tokens": 62579
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "7be014121fdb4c58aa6a26db3334c4b2",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 1,
+      "historical_graded_solved": false,
+      "historical_runner_status": "incomplete",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [],
+      "provided_rows_after_finish": 0,
+      "request_count": 3,
+      "request_ids": [
+        "dab6815d-c241-481d-822d-fabe148eb2ba",
+        "017d68e9-0185-4fa9-8ea3-1ebe645bd735",
+        "43c84b33-68f0-4f58-ba3b-96c3e2bd4b8b"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "dab6815d-c241-481d-822d-fabe148eb2ba",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "017d68e9-0185-4fa9-8ea3-1ebe645bd735",
+          "status": "success"
+        },
+        {
+          "http_status": 429,
+          "not_assumed_free": true,
+          "request_id": "43c84b33-68f0-4f58-ba3b-96c3e2bd4b8b",
+          "status": "error",
+          "total_cost": null
+        }
+      ],
+      "run_id": "polyglot/book-store/all-off-twin/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 68,
+        "prompt_tokens": 3362
+      },
+      "session_id": "20261115-191545-529364",
+      "snapshot_age_seconds": 9775,
+      "success_request_count": 2,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 68,
+        "prompt_tokens": 3362
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "f51c945d80eb4fc0b0effeefd64d251c",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [
+        "331a11c07c8642e1a12dae0debcd1eac"
+      ],
+      "provided_rows_after_finish": 0,
+      "request_count": 3,
+      "request_ids": [
+        "22e04020-89c0-4d24-a477-5822291ce3b6",
+        "b2b9c08e-0081-42cf-a393-d1b4694a3f55",
+        "60105d39-82ae-4167-b7a0-88f428c6266a"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "22e04020-89c0-4d24-a477-5822291ce3b6",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "b2b9c08e-0081-42cf-a393-d1b4694a3f55",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "60105d39-82ae-4167-b7a0-88f428c6266a",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/beer-song/crocodile/run-2",
+      "runner_token_usage": {
+        "cached_tokens": 2011,
+        "completion_tokens": 364,
+        "prompt_tokens": 16758
+      },
+      "session_id": "20261115-194037-c4d146",
+      "snapshot_age_seconds": 8284,
+      "success_request_count": 3,
+      "success_token_sums": {
+        "cached_read_tokens": 2011,
+        "completion_tokens": 364,
+        "prompt_tokens": 16758
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "efb209335b3243fa9fb0518c41b3ebae",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [
+        "9d0a96e277374d3dbb35f6201ffc1744"
+      ],
+      "provided_rows_after_finish": 0,
+      "request_count": 6,
+      "request_ids": [
+        "fed86d90-72d5-4398-a6f1-70f6ffb6c247",
+        "06f1735f-3193-4c3d-9345-4c46a4e315d9",
+        "775fc0f4-b7ae-47cc-bb89-68a7bd2787c7",
+        "5ce343e5-d75b-482e-a94a-e326f5aa3d75",
+        "126b326b-8633-49b4-9f76-fc3fda776b6b",
+        "56fb705f-f15a-4c44-ace8-8b52ba07ddd1"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "fed86d90-72d5-4398-a6f1-70f6ffb6c247",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "06f1735f-3193-4c3d-9345-4c46a4e315d9",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "775fc0f4-b7ae-47cc-bb89-68a7bd2787c7",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "5ce343e5-d75b-482e-a94a-e326f5aa3d75",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "126b326b-8633-49b4-9f76-fc3fda776b6b",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "56fb705f-f15a-4c44-ace8-8b52ba07ddd1",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/beer-song/all-off-twin/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 12048,
+        "completion_tokens": 471,
+        "prompt_tokens": 34068
+      },
+      "session_id": "20261115-194055-07e11d",
+      "snapshot_age_seconds": 8254,
+      "success_request_count": 6,
+      "success_token_sums": {
+        "cached_read_tokens": 12048,
+        "completion_tokens": 471,
+        "prompt_tokens": 34068
+      },
+      "success_tokens_match_runner": true
+    },
+    {
+      "actual_session_cost": null,
+      "attempt_id": "b80a735437544158953aeedbd7a5ea31",
+      "complete_session_cost": false,
+      "conditional_receipt_vs_provided_success_charges": "within_one_percent",
+      "error_request_count": 0,
+      "historical_graded_solved": true,
+      "historical_runner_status": "completed",
+      "pilot_report_eligible": false,
+      "prior_attempt_ids": [
+        "7be014121fdb4c58aa6a26db3334c4b2"
+      ],
+      "provided_rows_after_finish": 0,
+      "request_count": 6,
+      "request_ids": [
+        "6a9698d3-6185-4641-9ebd-478edfb32954",
+        "a96fb1ac-b751-4ad2-9e02-3d0746e61865",
+        "2d3b2bf1-dc68-4a2f-96c0-b6d9385fd06c",
+        "a3d31221-8034-4258-ab1d-bcd04d280290",
+        "663991f5-70b3-4630-851c-667e0395b892",
+        "fa5e94f0-76f0-472a-8b2d-256bc2e0b0bb"
+      ],
+      "request_joins_accepted": true,
+      "requests": [
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "6a9698d3-6185-4641-9ebd-478edfb32954",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "a96fb1ac-b751-4ad2-9e02-3d0746e61865",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "2d3b2bf1-dc68-4a2f-96c0-b6d9385fd06c",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "a3d31221-8034-4258-ab1d-bcd04d280290",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "663991f5-70b3-4630-851c-667e0395b892",
+          "status": "success"
+        },
+        {
+          "component_consistent": true,
+          "conditional_price_within_one_percent": true,
+          "request_id": "fa5e94f0-76f0-472a-8b2d-256bc2e0b0bb",
+          "status": "success"
+        }
+      ],
+      "run_id": "polyglot/book-store/all-off-twin/run-1",
+      "runner_token_usage": {
+        "cached_tokens": 0,
+        "completion_tokens": 607,
+        "prompt_tokens": 16836
+      },
+      "session_id": "20261115-194117-eb5808",
+      "snapshot_age_seconds": 8234,
+      "success_request_count": 6,
+      "success_token_sums": {
+        "cached_read_tokens": 0,
+        "completion_tokens": 607,
+        "prompt_tokens": 16836
+      },
+      "success_tokens_match_runner": true
+    }
+  ],
+  "audit_date": "2026-11-15",
+  "baseline_git_commit": "d906adf9d123bf9bd61269db7b42543e8fea1280",
+  "canonical_config_id": "93c2acc67e2dfe9229b05c142296361b95de36d042876a4991100f2fd9a78c83",
+  "claims": [
+    {
+      "basis": "Exact equality with all retained ZIP rows and attempt/session IDs; 92 distinct request IDs, no cross-attempt reuse in this packet.",
+      "claim": "18 attempt/run/session joins and three prior-attempt retries",
+      "decision": "accepted"
+    },
+    {
+      "basis": "Per-request error objects match terminal closure errors on the three archived RuntimeError attempts; incomplete, not task losses.",
+      "claim": "Three terminal HTTP 429 RESOURCE_EXHAUSTED errors",
+      "decision": "accepted"
+    },
+    {
+      "basis": "Fourth HTTP 429 belongs to completed beer-song mini run-2; nine success rows plus one nonterminal error. Bifrost retry counters zero do not exclude client retries.",
+      "claim": "Only three HTTP errors in the pilot",
+      "decision": "rejected"
+    },
+    {
+      "basis": "Latest per-run rows and original grading artifacts agree; all original outer pilot rows remain incomplete/nonreportable.",
+      "claim": "15 final independently graded outcomes",
+      "decision": "accepted"
+    },
+    {
+      "basis": "17/18 match successful-row sums; book-store mini run-1 undercounts prompt/cache/output by 27530/20294/98. One unique two-row subset equals the gap; causal reason is not established.",
+      "claim": "Every receipt/runner token total reconciles",
+      "decision": "rejected"
+    },
+    {
+      "basis": "All 88 input/output/total checks within 1%, and all bounded component checks pass under pinned no-write scalar convention; not complete usage/model/billing proof. One success row also has null service_tier; no blanket Standard-tier provenance is inferred.",
+      "claim": "Successful-row scalar charge arithmetic",
+      "decision": "accepted-with-limited-scope"
+    },
+    {
+      "basis": "All 92 rows omit token_usage, total_tokens, explicit cache-write counts and per-request response routing; four error total costs are null, never zero by inference.",
+      "claim": "Complete usage and costs including failed requests",
+      "decision": "rejected"
+    },
+    {
+      "basis": "All 92 rows name Gemini Flash-Lite/bench and have required null alias/canonical/fallback/rule fields plus zero gateway retry/fallback counters. Not proof of actual served route or stable VK ID.",
+      "claim": "Requested/log model, VK name and null/zero route metadata",
+      "decision": "accepted-with-limited-scope"
+    },
+    {
+      "basis": "No virtual_key_id or per-request routing_info/resolved response proof in this inventory; old four-call proofs cover different request IDs.",
+      "claim": "All actual billed-model/VK joins meet v5 exporter requirements",
+      "decision": "rejected"
+    },
+    {
+      "basis": "Provided request timestamps are within archived run windows, no late provided rows, and snapshot ages exceed reported approximate 5-second flush. Exact full query/retention/quiescent snapshot/origin verification absent.",
+      "claim": "Closed/flushed whole-session inventory",
+      "decision": "accepted-with-limited-scope"
+    },
+    {
+      "basis": "Current fingerprint and operator narrative only; no comparable pre-rotation value evidence. 88 successes match the current key-record label; four errors have empty key references. Six non-pilot 401s then two successes corroborate recovery, not key-value change or exact process-start/config continuity.",
+      "claim": "Provider-key value rotation and exact restart/config continuity proved",
+      "decision": "rejected"
+    },
+    {
+      "basis": "None in the supplied inventory; immutable v5 keeps paid_runs_authorized and cross_shard_comparable false.",
+      "claim": "Explicit v5 execution authorization supplied",
+      "decision": "rejected"
+    }
+  ],
+  "closure_review": {
+    "minimum_snapshot_age_seconds": 8234,
+    "physical_snapshot_retention_query_completeness_independently_verified": false,
+    "provided_late_rows": 0,
+    "reported_flush_policy": "approximately 5 seconds; operator statement"
+  },
+  "comparability_gate": {
+    "cross_shard_comparable": false,
+    "dataset_validated": true,
+    "exact_exit_code": 1,
+    "paid_runs_authorized": false,
+    "runtime_drift": [],
+    "static_valid": true,
+    "unresolved": [
+      {
+        "id": "post-restart-per-machine-cost-inventory",
+        "owner": "Atul / Vivek / shard operators / benchmark reviewer",
+        "reason": "Reviewed post-restart closed Bifrost inventory for all 18 pilot attempts, including actual 429 rows, both provider-key identities and per-machine VK/session/model/usage joins. Preserve all attempts and unknown costs; then supply reviewed per-machine authorization through a supported successor, never flip immutable v5 flags."
+      }
+    ]
+  },
+  "complete_cost_export": false,
+  "conditional_receipt_comparison_counts": {
+    "unavailable": 6,
+    "within_one_percent": 12
+  },
+  "counts": {
+    "attempts": 18,
+    "attempts_with_matching_success_token_totals": 17,
+    "error_requests": 4,
+    "final_graded_solves": 15,
+    "final_slots": 15,
+    "non_pilot_requests_kept_separate": 8,
+    "nonterminal_429_requests": 1,
+    "pilot_requests": 92,
+    "provided_late_rows": 0,
+    "success_requests": 88,
+    "terminal_429_attempts": 3,
+    "unique_request_ids": 92
+  },
+  "dollar_totals_published": false,
+  "inventory_file": "pilot-v4-18-attempt-bifrost-inventory.json",
+  "inventory_sha256": "02b59d2eeff208a13f0405e21d01f16973e7c17c29cbe74d5ecadace66c92c67",
+  "kind": "post-restart-pilot-inventory-audit-not-reporter-input",
+  "logged_service_tier": {
+    "error_null": 4,
+    "success_default": 87,
+    "success_null": 1
+  },
+  "matching_pinned_per_request_routing_proofs": 0,
+  "missing_field_counts": {
+    "cache_write_tokens": 92,
+    "parent_request_id": 92,
+    "routing_info": 92,
+    "token_usage": 92,
+    "total_tokens": 92,
+    "virtual_key_id": 92
+  },
+  "nonterminal_429s": [
+    {
+      "attempt_id": "7e840a94ccb7492b98115655b9d185b9",
+      "http_status": 429,
+      "key_reference_available": false,
+      "provider_error_type": "RESOURCE_EXHAUSTED",
+      "request_id": "369c07ee-0829-43f3-9f5e-17af5a335fdf",
+      "run_id": "polyglot/beer-song/mini-swe-agent/run-2",
+      "total_cost": null
+    }
+  ],
+  "price_snapshot_sha256": "8469236260572f0b68d405514d435db06183196269faaf5c429593ceaf18f21e",
+  "raw_evidence_rewritten": false,
+  "report_eligible": false,
+  "rotation_review": {
+    "current_fingerprint_supplied": true,
+    "error_key_references_empty": 4,
+    "exact_restart_process_config_continuity_verified": false,
+    "first_recovery_utc": "2026-11-15T14:09:44.130094+00:00",
+    "key_value_change_independently_verified": false,
+    "key_values_and_fingerprints_copied_or_displayed": false,
+    "latest_401_utc": "2026-11-15T14:08:26.679826+00:00",
+    "non_pilot_401_rows": 6,
+    "non_pilot_recovery_rows": 2,
+    "operator_timeline_entries": 6,
+    "pre_rotation_comparable_value_evidence_supplied": false,
+    "successful_key_record_references_consistent": 88
+  },
+  "schema_version": 1,
+  "source_archive_sha256": "32caad72ba81d63ec7b4afe568e6c124a9e1a8bfeaf99a699a58cb7c4b02ae6e",
+  "successful_row_conditional_price_checks": {
+    "component_consistent": 88,
+    "conditional_price_within_one_percent": 88,
+    "success_rows": 88
+  },
+  "tasks_executed": false,
+  "terminal_429s": [
+    {
+      "attempt_id": "331a11c07c8642e1a12dae0debcd1eac",
+      "http_status": 429,
+      "key_reference_available": false,
+      "provider_error_type": "RESOURCE_EXHAUSTED",
+      "request_id": "0e4741d1-f4fc-4e64-a243-63d82900d346",
+      "run_id": "polyglot/beer-song/crocodile/run-2",
+      "total_cost": null
+    },
+    {
+      "attempt_id": "9d0a96e277374d3dbb35f6201ffc1744",
+      "http_status": 429,
+      "key_reference_available": false,
+      "provider_error_type": "RESOURCE_EXHAUSTED",
+      "request_id": "031e7197-a540-4d4b-bd9e-e4ba2486f0f7",
+      "run_id": "polyglot/beer-song/all-off-twin/run-1",
+      "total_cost": null
+    },
+    {
+      "attempt_id": "7be014121fdb4c58aa6a26db3334c4b2",
+      "http_status": 429,
+      "key_reference_available": false,
+      "provider_error_type": "RESOURCE_EXHAUSTED",
+      "request_id": "43c84b33-68f0-4f58-ba3b-96c3e2bd4b8b",
+      "run_id": "polyglot/book-store/all-off-twin/run-1",
+      "total_cost": null
+    }
+  ],
+  "token_discrepancies": [
+    {
+      "attempt_id": "f3979ea0f2bb4671abcfd25cb102c4cb",
+      "log_minus_runner_tokens": {
+        "cached_read_tokens": 20294,
+        "completion_tokens": 98,
+        "prompt_tokens": 27530
+      },
+      "matching_request_ids": [
+        "cab20c4c-cd6f-4f08-802e-b9eafbd1d69f",
+        "da186179-da65-4cf6-83d7-c46706171dbf"
+      ],
+      "run_id": "polyglot/book-store/mini-swe-agent/run-1",
+      "unique_two_request_gap_match": true
+    }
+  ],
+  "v5_mutated": false
+}
