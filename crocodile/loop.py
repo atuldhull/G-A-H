@@ -739,6 +739,10 @@ class Agent:
                             rw.commit(len(self.history), v.passed)  # progress: new checkpoint
                             self._event("checkpoint", passed=v.passed)
                 if finishing:
+                    if "_no_test_consent" in self.s.flags:
+                        # Tests were refused, so nothing was run: never report them as failing (RT-2).
+                        self.r.status = "UNVERIFIED (tests not approved)"
+                        return
                     if v is None or (v.ok and not self.ctx.tests.oracle_ids):
                         self.r.status = "UNVERIFIED (no tests)" if v is None or not v.green else "SOLVED"
                         return
