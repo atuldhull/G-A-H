@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from bench.grade import grade_exercise
+from bench.failure_evidence import before_cleanup, capture, safe_error
 from bench.prepare import prepare_workspace
 from bench.run import _append, _decode, _save, _utc, run_plan
 
@@ -48,6 +49,17 @@ class Settings:
 
 class SetupFailure(RuntimeError):
     pass
+
+
+def _failure_type(error):
+    if isinstance(error, SetupFailure):
+        allowed = {"WSLUnavailable", "WSLPathMappingFailed", "WSLInterpreterUnavailable", "MiniProbeFailed",
+                   "WSL2Required", "MiniNotInstalled", "MiniVersionMismatch", "MissingBenchCredential",
+                   "SeparateMiniEnvironmentRequired", "WSLTimeoutCleanupUnconfirmed", "MiniSupervisorFailed",
+                   "MiniPlanConfigMismatch"}
+        reason = error.args[0] if error.args else None
+        return reason if isinstance(reason, str) and reason in allowed else "MiniSetupFailure"
+    return type(error).__name__
 
 
 class WslBackend:
@@ -140,6 +152,8 @@ class MiniAdapter:
             raise ValueError("Mini adapter cannot execute another variant")
         started = clock()
         fatal = None
+        state = {"stage": "plan-config"}
+        roots = {"source": Path(run["source_path"]), "artifacts": artifacts}
         row.update(mini_version=VERSION, config_version=self.config["upstream_commit"],
                    config_sha256=hashlib.sha256(CONFIG_PATH.read_bytes()).hexdigest(),
                    attribution={"method": "unverified-time-window", "window_start": None, "window_end": None,
@@ -159,13 +173,20 @@ class MiniAdapter:
                     or self.config["agent"] != {"step_limit": run["step_cap"],
                                                "wall_time_limit_seconds": run["wall_clock_cap_seconds"], "cost_limit": 0}):
                 raise SetupFailure("MiniPlanConfigMismatch")
+            state["stage"] = "probe"
             self.backend.probe(artifacts)
-            with tempfile.TemporaryDirectory(prefix="mini-bench-") as temporary:
+            with tempfile.TemporaryDirectory(prefix="mini-bench-") as temporary, before_cleanup(
+                row, artifacts, Path(temporary) / "exercise", state, roots
+            ):
                 workspace = Path(temporary) / "exercise"
+                roots["workspace"] = workspace
+                state["stage"] = "prepare-original"
                 original = prepare_workspace(run["source_path"], artifacts / "original")
+                state["stage"] = "prepare-workspace"
                 prepare_workspace(original, workspace)
                 row["workspace_path"] = str(workspace)
                 row["evidence"]["original"] = str(original)
+                state["stage"] = "launch-evidence"
                 task_path = artifacts / "task.txt"
                 task_path.write_bytes(run["task_text"].encode("utf-8"))
                 config = artifacts / "config.json"
@@ -181,6 +202,7 @@ class MiniAdapter:
                 agent_started = clock()
                 _append(events_path, {"event": "mini_process_started", **row})
                 process_error = None
+                state["stage"] = "process"
                 try:
                     outcome = self.backend.launch(spec, artifacts)
                 except BaseException as error:
@@ -194,6 +216,7 @@ class MiniAdapter:
                 if (artifacts / "command.json").exists():
                     row["evidence"]["command"] = str(artifacts / "command.json")
                 row["agent_duration_seconds"] = max(0, clock() - agent_started)
+                state["stage"] = "receipt"
                 receipt_path = artifacts / "mini-receipt.json"
                 receipt = _decode(receipt_path.read_text(encoding="utf-8")) if receipt_path.exists() else {}
                 row["evidence"]["receipt"] = str(receipt_path) if receipt_path.exists() else None
@@ -208,7 +231,7 @@ class MiniAdapter:
                 if status == "Interrupted" or outcome.get("returncode") in {130, -2, -15}:
                     fatal = KeyboardInterrupt()
                 if process_error is not None:
-                    reason = str(process_error) if isinstance(process_error, SetupFailure) else type(process_error).__name__
+                    reason = _failure_type(process_error)
                     row["error"] = {"type": reason, "phase": "mini-process"}
                     if reason == "WSLTimeoutCleanupUnconfirmed":
                         row["timed_out"] = True
@@ -227,9 +250,11 @@ class MiniAdapter:
                     row["error"] = {"type": reasons.get(status, "MiniExecutionIncomplete"), "phase": "mini-process"}
                 elif type(row["steps"]) is not int or not 0 <= row["steps"] <= 30:
                     row["error"] = {"type": "MiniStepCapViolation", "phase": "mini-process"}
+                state["stage"] = "final-copy"
                 final = prepare_workspace(workspace, artifacts / "final")
                 row["evidence"]["final"] = str(final)
                 if fatal is None:
+                    state["stage"] = "grading"
                     grade = grade_exercise(original, final, artifacts / "grading", task_id=run["task_id"],
                                            test_paths=run["test_paths"])
                     row["grading"] = grade
@@ -239,8 +264,12 @@ class MiniAdapter:
                         row["timed_out"] = row["timed_out"] or grade["timed_out"]
                         row["error"] = row["error"] or {"type": "MiniGradingIncomplete", "phase": "grading"}
         except BaseException as error:
-            row["error"] = row["error"] or {"type": str(error) if isinstance(error, SetupFailure) else type(error).__name__,
-                                            "phase": "mini-setup-or-grading"}
+            if "diagnostic_error" not in row:
+                capture(row, artifacts, None, state, error, roots)
+            detail = row.get("diagnostic_error") or safe_error(error, state["stage"], roots)
+            row["error"] = row["error"] or {**detail,
+                "type": _failure_type(error),
+                "phase": "mini-setup-or-grading"}
             if not isinstance(error, Exception):
                 fatal = error
         row["status"] = "interrupted" if fatal else "incomplete" if row["error"] else "completed"

@@ -130,11 +130,14 @@ def test_require_comparable_remains_blocked_for_valid_v2(bundle, capsys):
     assert json.loads(capsys.readouterr().out)["unresolved"][0]["id"] == "mini-attempt-3a111322"
 
 
-def test_published_v2_is_immutable_matches_runtime_and_does_not_claim_launch_readiness():
+def test_published_v2_is_immutable_and_diagnostic_fix_requires_a_new_runtime_snapshot():
     config = canonical._json(canonical.V2_CONFIG)
     assert canonical.config_id(config) == "700089ad8472546868ea39edee3f8e43b5b9ff87204cfaabf9268a0d616a0494"
-    result = canonical.validate_config(config)
-    assert result["static_valid"] and result["runtime_matches_snapshot"]
+    with pytest.raises(ValueError, match="source snapshot differs"):
+        canonical.validate_config(config)
+    result = canonical.validate_config(config, audit_current=True)
+    assert not result["static_valid"] and not result["runtime_matches_snapshot"]
+    assert {"bench/mini.py", "bench/prepare.py"} <= {item["path"] for item in result["runtime_drift"]}
     assert result["runtime_git_commit"] == "67fa99fc8b4a112221e3606c87a5d16413675158"
     assert not result["paid_runs_authorized"] and not result["cross_shard_comparable"]
     assert config["datasets"]["tasks_sha256"] == "3181a82f9c34fcc732761a2ba27157b7a80bb6ea51fc6c73be34bc83a01dcf18"

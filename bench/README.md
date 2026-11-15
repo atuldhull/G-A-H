@@ -9,6 +9,12 @@ V2 explicitly accepts hard-stop containment, mini output cap, cache parity and
 sampling difference as limitations. Atul-machine gateway evidence is not local
 verification. Use an explicit `--config` for v2; historical defaults remain v1.
 
+The [3a111322 diagnosis and safe failure-evidence fix](mini-3a111322-diagnosis.md)
+review the newly supplied artifacts. The exact original offending entry remains
+unknown. This diagnostic runtime update intentionally differs from frozen v2:
+strict validation rejects that drift; official execution needs a reviewed
+successor snapshot. V2 hashes and authorization flags have not been rewritten.
+
 The versioned [canonical Gemini configuration](configs/gemini-benchmark-v1.json)
 and [four-shard team protocol](team-run-protocol.md) freeze inputs/code/policy and
 validate against dry-run manifests with `python -m bench.canonical`. V1 remains

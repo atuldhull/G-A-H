@@ -8,16 +8,30 @@ import shutil
 import stat
 
 
+class WorkspaceEntryError(ValueError):
+    """Controlled reason plus offending path; callers need not log raw errors."""
+
+    MESSAGES = {
+        "link-or-junction": "Links and junctions are not allowed",
+        "special-file": "Only ordinary files and directories are allowed",
+        "entry-changed": "Source entry changed during preparation",
+    }
+
+    def __init__(self, reason: str, path: Path):
+        self.reason, self.path = reason, Path(path)
+        super().__init__(self.MESSAGES[reason])
+
+
 def _is_directory(path: Path) -> bool:
     """Inspect an entry without following symlinks or Windows junctions."""
     metadata = path.lstat()
     if stat.S_ISLNK(metadata.st_mode) or path.is_junction():
-        raise ValueError(f"Links and junctions are not allowed: {path}")
+        raise WorkspaceEntryError("link-or-junction", path)
     if stat.S_ISDIR(metadata.st_mode):
         return True
     if stat.S_ISREG(metadata.st_mode):
         return False
-    raise ValueError(f"Only ordinary files and directories are allowed: {path}")
+    raise WorkspaceEntryError("special-file", path)
 
 
 def _inventory(
@@ -73,7 +87,7 @@ def prepare_workspace(
             original = source_path / relative
             copied = destination_path / relative
             if _is_directory(original) != is_directory:
-                raise ValueError(f"Source entry changed during preparation: {original}")
+                raise WorkspaceEntryError("entry-changed", original)
             if is_directory:
                 copied.mkdir()
             else:

@@ -110,6 +110,14 @@ measured task failures. `Submitted`, step `LimitsExceeded`, and
 `RepeatedFormatError` are recognized operational exits; grading decides solved.
 Timeout/interruption remains incomplete even if the final tree grades green.
 
+Setup/grading exceptions now retain controlled diagnostic messages, known failing
+relative paths and bounded metadata inventories before temporary cleanup. Link,
+junction and special-file rejection remains strict. See
+[the supplied-attempt diagnosis](mini-3a111322-diagnosis.md) for the evidence schema,
+privacy rules and remaining uncertainty. Unknown raw exception text, source
+contents, link targets, prompts and gateway payloads are not added to diagnostic
+evidence. A failed final copy remains incomplete and is never graded as a loss.
+
 Records use the existing attempt JSONL plan/full-plan/task/shard/run/repeat IDs,
 timestamps, command/config/receipt/final/grading paths, versions, steps, usage and
 outcome. `command.json` records actual key-free argv. Custom planned pytest flags
