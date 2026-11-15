@@ -31,7 +31,16 @@ The completion regression tests exercise CLI classification and clearing, canary
 registration, valid HMAC after writes, rejection of unsigned/tampered state,
 shared action execution and changed-input denial, and fresh/legacy gateway config.
 Bench fixtures verify registered commands, denial boundaries and integrity aborts.
-Updated CI results and source revisions will be recorded after the matrix finishes.
+Verified source: `3cd9613206e23168bfe1b77747ac011cc00f674e`.
+[CI run](https://github.com/atuldhull/G-A-H/actions/runs/43700482290) passed on
+Windows and Ubuntu with Python 3.12. Windows: 342 application tests and 160
+subtests passed; 15/15 architecture groups and all 3 CLI flows passed. Ubuntu:
+335 application tests and 160 subtests passed, with 7 platform skips; 13 security
+groups and all 3 flows passed, with 2 platform-specific groups explicitly blocked.
+Framework tests: 48 passed on each platform. Full Part 3 Ruff passed on both.
+The tested artifacts are preserved in redteam/evidence with source/hash checks.
+A local child test timed out during the Docker update; the complete CI matrix
+passed that test. No production timeout or policy was weakened to bypass it.
 
 ## Live acceptance
 

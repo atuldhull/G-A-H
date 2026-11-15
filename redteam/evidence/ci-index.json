@@ -1,49 +1,50 @@
 {
-  "source_revision": "0aced71f17b8d26d67e05704aebc0d4619b40f41",
-  "workflow_run": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652",
+  "source_revision": "3cd9613206e23168bfe1b77747ac011cc00f674e",
+  "workflow_run": "https://github.com/atuldhull/G-A-H/actions/runs/43700482290",
   "jobs": [
     {
-      "id": 132752780237,
+      "id": 132770308436,
       "name": "security (windows-latest)",
       "status": "completed",
       "conclusion": "success",
-      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/job/132752780237"
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43700482290/job/132770308436"
     },
     {
-      "id": 132752780437,
+      "id": 132770308696,
       "name": "security (ubuntu-latest)",
       "status": "completed",
       "conclusion": "success",
-      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/job/132752780437"
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43700482290/job/132770308696"
     }
   ],
   "artifacts": [
     {
-      "id": 14153997873,
-      "name": "security-ubuntu-latest",
-      "sha256": "7d193c75a9625a16871ea201d4d6c0ada5eebdb2b08988cd441934432835d08c",
-      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/artifacts/14153997873"
+      "id": 14156800292,
+      "name": "security-windows-latest",
+      "sha256": "57e3334f73db222e613ec89e8ab09c06f9630dd56360cb725737f39578558a87",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43700482290/artifacts/14156800292"
     },
     {
-      "id": 14153682475,
-      "name": "security-windows-latest",
-      "sha256": "991794b4172eca985172787c8f47ce3180956ace93c76cb618dc404fbf182d74",
-      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43694768652/artifacts/14153682475"
+      "id": 14156088203,
+      "name": "security-ubuntu-latest",
+      "sha256": "0b3c9e82114e318bbccc02f77df5170e2b71dc18c74175c38ca09ae3f671dd89",
+      "url": "https://github.com/atuldhull/G-A-H/actions/runs/43700482290/artifacts/14156088203"
     }
   ],
   "regression": {
     "windows": {
-      "passed": 331,
+      "passed": 342,
       "skipped": 0,
       "subtests_passed": 160
     },
     "ubuntu": {
-      "passed": 324,
+      "passed": 335,
       "skipped": 7,
       "subtests_passed": 160
     }
   },
   "framework_passed_each": 48,
-  "live_confidential_egress": "blocked: both approved loopback endpoints timed out",
-  "demo_clips": "pending team feature freeze"
+  "live_confidential_egress": "pending Docker update and real local service readiness",
+  "demo_clips": "pending team feature freeze",
+  "full_part3_lint": "passed on Windows and Ubuntu"
 }

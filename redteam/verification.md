@@ -1,7 +1,7 @@
 # Parts 3/4 assembled security verification
 
-Verified source: `0aced71f17b8d26d67e05704aebc0d4619b40f41` (Python 3.12).
-[Windows and Ubuntu CI run](https://github.com/atuldhull/G-A-H/actions/runs/43694768652).
+Verified source: `3cd9613206e23168bfe1b77747ac011cc00f674e` (Python 3.12).
+[Windows and Ubuntu CI run](https://github.com/atuldhull/G-A-H/actions/runs/43700482290).
 The later evidence-only commit preserves the tested Python source digest.
 Only `person-3` was pushed; this report does not claim a merge into main.
 
@@ -53,6 +53,14 @@ The fixtures enter the normal CLI with scripted services; these are not manual
 interactive recordings. The complete fixture commands and status receipts are
 in the JSON evidence, including the deliberate nonzero exits above.
 
+## Completion audit fixes
+
+The follow-up [Part 3 audit record](../docs/PART3-COMPLETION.md) closes the bench
+approval boundary, normal classification/canary CLI and HMAC wiring, generated
+settings/doctor mismatch, shared contract compatibility and full-package lint gaps.
+These have dedicated regression tests in the application suite. The tested source
+and the mirrored evidence above include those fixes.
+
 ## Regression fixes and validation
 
 The verification fixed misleading receipt wording after refused baseline test
@@ -67,14 +75,15 @@ Commands run in both CI environments:
 
 ```text
 python -m ruff check --isolated --target-version py312 --select E4,E7,E9,F --no-cache redteam
+python -m ruff check crocodile/security tests/security crocodile/gateway_settings.py tests/test_part3_completion.py
 python -m pytest -q -ra -p no:cacheprovider redteam/tests/test_framework.py
 python -m pytest -q -ra -p no:cacheprovider tests
 python -c "from redteam.runner import run; code=run('security-report.json'); raise SystemExit(0 if code in (0,2) else code)"
 ```
 
 Framework: 48 passed in each environment. Ubuntu application regression:
-324 passed, 7 platform skips, 160 subtests passed. Windows application regression:
-331 passed, 160 subtests passed. Ruff and git diff --check passed on changed Python files.
+335 passed, 7 platform skips, 160 subtests passed. Windows application regression:
+342 passed, 160 subtests passed. Ruff and git diff --check passed on changed Python files.
 
 The first local Windows architecture run found two harness assertion failures;
 both were corrected before the final CI run. Its other 13 groups and both CLI
