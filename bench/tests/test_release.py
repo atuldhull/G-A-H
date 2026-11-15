@@ -128,3 +128,15 @@ def test_require_comparable_remains_blocked_for_valid_v2(bundle, capsys):
     _, path, data, _, _, _ = bundle
     assert canonical.main(["--config", str(path), "--data-root", str(data), "--require-comparable"]) == 1
     assert json.loads(capsys.readouterr().out)["unresolved"][0]["id"] == "mini-attempt-3a111322"
+
+
+def test_published_v2_is_immutable_matches_runtime_and_does_not_claim_launch_readiness():
+    config = canonical._json(canonical.V2_CONFIG)
+    assert canonical.config_id(config) == "700089ad8472546868ea39edee3f8e43b5b9ff87204cfaabf9268a0d616a0494"
+    result = canonical.validate_config(config)
+    assert result["static_valid"] and result["runtime_matches_snapshot"]
+    assert result["runtime_git_commit"] == "67fa99fc8b4a112221e3606c87a5d16413675158"
+    assert not result["paid_runs_authorized"] and not result["cross_shard_comparable"]
+    assert config["datasets"]["tasks_sha256"] == "3181a82f9c34fcc732761a2ba27157b7a80bb6ea51fc6c73be34bc83a01dcf18"
+    assert config["datasets"]["oracles_sha256"] == "38cb911edfdbb09f5fd33df793f9bb89e7922524494c5e791b05a27edc9cc537"
+    assert config["gateway"]["live_evidence"]["independently_verified_here"] is False

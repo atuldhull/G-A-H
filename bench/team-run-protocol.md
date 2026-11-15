@@ -1,5 +1,10 @@
 # Canonical Gemini team protocol — v1 is blocked
 
+Historical v1 protocol. The current release is [gemini-54-v2.md](gemini-54-v2.md),
+with verified LF inputs and explicitly accepted limitations. Its shard launch is
+still blocked pending the unresolved mini attempt. Do not apply the historical
+API/readiness statements below to the current merged runtime.
+
 The single shared experiment definition is
 [configs/gemini-benchmark-v1.json](configs/gemini-benchmark-v1.json), revision
 `gemini-54-v1`. It freezes the 54 IDs in order, prompt/source hashes, dataset
