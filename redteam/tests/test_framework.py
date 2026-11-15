@@ -10,7 +10,7 @@ import subprocess
 import pytest
 
 from redteam.fixtures import CANARY, SYNTHETIC_SECRET, build_fixture
-from redteam.inventory import CASES, INTERFACES, inventory, main
+from redteam.inventory import CASES, INTERFACES, LIVE_GROUPS, REVIEW, inventory, main
 
 
 EXPECTED_IDS = {
@@ -31,7 +31,7 @@ def test_inventory_covers_exact_architecture_groups_and_ids():
     for case in CASES:
         assert case.expected and case.dependencies and case.evidence
         assert all(key in INTERFACES for key in case.dependencies)
-        assert "Person 3" in case.blocked_reason(Path("missing-repository"))
+        assert "BLOCKED:" in case.blocked_reason(Path("missing-repository"))
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case.pytest_id)
@@ -152,10 +152,11 @@ def test_env_is_only_a_synthetic_non_ignored_canary(tmp_path):
     assert ".env" not in (fixture.root / ".gitignore").read_text(encoding="utf-8")
 
 
-def test_availability_is_source_presence_only_and_never_enables_security(tmp_path):
+def test_availability_is_source_presence_only_and_never_claims_security_pass(tmp_path):
     first = inventory(tmp_path)
     assert first["group_count"] == 15
-    assert first["security_verdict"] == "not-executed"
+    assert first["security_verdict"] == "incomplete-not-a-test-result"
+    assert all(case["execution_status"] == "blocked-not-executed" for case in first["cases"])
     assert all(dep["availability"] == "missing" for case in first["cases"] for dep in case["dependencies"])
     for interface in INTERFACES.values():
         source = tmp_path / interface.source
@@ -164,15 +165,32 @@ def test_availability_is_source_presence_only_and_never_enables_security(tmp_pat
     second = inventory(tmp_path)
     for case in second["cases"]:
         assert all(dep["availability"] == "source-present-unverified" for dep in case["dependencies"])
-        assert case["execution_status"] == "blocked-not-executed"
-        assert case["review"] == "pending-person-3"
-        assert "live assertion adapter not implemented" in case["reason"]
+        assert case["review"] == REVIEW
+        if case["group"] in LIVE_GROUPS:
+            assert case["execution_status"] == "adapter-enabled-not-executed"
+            assert case["reason"] is None
+        else:
+            assert case["execution_status"] == "blocked-not-executed"
+            assert "not connected" in case["reason"]
 
 
 def test_cli_inventory_is_json_planning_data_not_results(capsys):
     main()
     data = json.loads(capsys.readouterr().out)
     assert data["group_count"] == len(data["cases"]) == 15
-    assert data["security_verdict"] == "not-executed"
+    assert data["security_verdict"] == "incomplete-not-a-test-result"
     assert "pass_count" not in data
-    assert all(case["execution_status"] == "blocked-not-executed" for case in data["cases"])
+    assert [case["group"] for case in data["cases"]
+            if case["execution_status"] == "adapter-enabled-not-executed"] == sorted(LIVE_GROUPS)
+
+
+def test_review_corrections_are_applied_without_enabling_unsupported_groups(tmp_path):
+    fixture = build_fixture("px3_marker_deleted", tmp_path / "confidential")
+    assert (fixture.root / ".crocodile/confidential").is_file()
+    assert (fixture.root / "nested/private/.crocodile/confidential").is_file()
+    assert not (fixture.root / ".confidential").exists()
+    assert "RED" in CASES[2].expected
+    assert "before prompting" in CASES[7].expected
+    assert "without a marker" in CASES[12].expected
+    assert LIVE_GROUPS == {7, 8, 13}
+    assert "receipt" in CASES[2].blocked_reason(Path(__file__).resolve().parents[2])
