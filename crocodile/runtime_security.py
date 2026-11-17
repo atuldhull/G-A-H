@@ -34,6 +34,96 @@ def state_path():
     return Path(os.environ.get("CROCODILE_STATE_DB", default_state_path())).absolute()
 
 
+SESSION_WAIT_S = 900.0
+_held: dict[str, list] = {}  # lock path -> [file handle, refcount]; re-entrant within one process
+
+
+class StateSessionLock:
+    """One Crocodile process at a time per state DB.
+
+    Every legitimate write re-seals the state HMAC, and Part 3's watch-set treats a seal change during a
+    watched action as tampering. Two processes on one state DB therefore abort each other with false
+    INTEGRITY VIOLATIONs (seen 15 Nov: two shards run in parallel on one machine). Instead of weakening
+    that check, a second process waits here. It is an OS lock, so it is released automatically if the
+    holder crashes; use CROCODILE_STATE_DB for truly parallel sessions (each with its own `init`).
+    """
+
+    def __init__(self, db_path):
+        self.path = Path(str(db_path) + ".session.lock")
+        self._key = str(self.path).lower()
+        self._acquired = False
+
+    @staticmethod
+    def _try_lock(handle) -> bool:
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except OSError:
+            return False
+
+    def acquire(self, wait_s: float = SESSION_WAIT_S, on_wait=None) -> None:
+        import time
+
+        if self._acquired:
+            return
+        held = _held.get(self._key)
+        if held is not None:  # same process: share it (never deadlock against ourselves)
+            held[1] += 1
+            self._acquired = True
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(self.path, "a+b")
+        deadline = time.monotonic() + wait_s
+        told = False
+        while not self._try_lock(handle):
+            if time.monotonic() >= deadline:
+                handle.close()
+                raise TimeoutError(
+                    f"another Crocodile session kept {self.path.name} locked for {wait_s:.0f}s; "
+                    "finish it, or give this session its own CROCODILE_STATE_DB"
+                )
+            if not told and on_wait is not None:
+                on_wait()
+                told = True
+            time.sleep(0.5)
+        _held[self._key] = [handle, 1]
+        self._acquired = True
+
+    def release(self) -> None:
+        if not self._acquired:
+            return
+        self._acquired = False
+        held = _held.get(self._key)
+        if held is None:
+            return
+        held[1] -= 1
+        if held[1] > 0:
+            return
+        handle = _held.pop(self._key)[0]
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        finally:
+            handle.close()
+
+
 def session_directory(session_id):
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", session_id):
         raise ValueError("invalid session id")

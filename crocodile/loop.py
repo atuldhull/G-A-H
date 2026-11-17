@@ -197,7 +197,22 @@ class Agent:
     ):
         """security_session: a Part 3 ApprovalSession made by a trusted harness (e.g. for_bench)."""
         repo = repo.resolve()
-        from .runtime_security import SecurityContext, session_directory
+        from .runtime_security import SecurityContext, StateSessionLock, session_directory, state_path
+
+        # One process per state DB: a concurrent writer would re-seal the state mid-watch and abort this
+        # session with a false integrity violation. Held until run() ends (or this object is dropped).
+        self._state_lock = StateSessionLock(state_path())
+
+        def _waiting() -> None:
+            msg = "waiting: another Crocodile session is using this state database"
+            if on_event is not None:
+                on_event("waiting_for_session", {"message": msg})
+            else:
+                import sys
+
+                print(msg, file=sys.stderr)
+
+        self._state_lock.acquire(on_wait=_waiting)
 
         factory = services._cache.get("security_factory", SecurityContext)
         saved = None
@@ -360,6 +375,55 @@ class Agent:
         size = est_tokens(json.dumps(msgs)) + est_tokens(json.dumps(self.schemas))
         return msgs if size + MAX_OUT <= 0.95 * window else None
 
+    def _precision_hint(self, v) -> str:
+        """When nearly everything passes, steer to a surgical edit.
+
+        16 Nov replays (paasio): runs reached 24/25 and 22/25 passing, then full-file `write`s dropped
+        them to 16-22 three times in a row (each correctly rewound, then repeated) until the step cap."""
+        if v.stage != "oracle" or v.passed < 0:
+            return ""
+        total = v.passed + len(v.sig_ids)
+        best = max(v.passed, self.rw.cp.score if self.rw is not None else -1)
+        left = total - best
+        if total <= 0 or left < 1 or left > 3 or best < 3 * left:
+            return ""
+        return (
+            f"\n[close: {best} of {total} tests passed at best. Change ONLY what the remaining failing "
+            "test(s) need: use `edit` with a small SEARCH/REPLACE on the exact lines, not `write` of the "
+            "whole file (full rewrites have been breaking tests that already passed).]"
+        )
+
+    SWITCH_FILE_BYTES = 6000
+    SWITCH_MAX_FILES = 2
+
+    def _switch_note(self, reason: str) -> str:
+        """Strategy-switch message that re-attaches the current state.
+
+        16 Nov replay (paasio): after a rewind + masking the model had lost its own code from context and
+        spent 11 turns searching without editing; the old note ("re-read the failing test") sent it back
+        to reading. An idle trigger now says "edit now" and shows the files being changed and the failing
+        tests, so nothing has to be searched for again."""
+        idle = "without an edit" in reason
+        head = (
+            f"[strategy switch: {reason}. Stop searching: everything you need is below. "
+            "Make your best edit NOW, then the tests will run.]"
+            if idle
+            else f"[strategy switch: {reason}. Try a genuinely different approach to the failing tests below.]"
+        )
+        parts = [head]
+        failing = list(self.state.failing or [])
+        if failing:
+            more = f" (+{len(failing) - 5} more)" if len(failing) > 5 else ""
+            parts.append("Failing tests: " + ", ".join(failing[:5]) + more)
+        for rel in sorted(self.ctx.touched)[: self.SWITCH_MAX_FILES]:
+            p = self.s.repo / rel
+            try:
+                if p.is_file() and p.stat().st_size <= self.SWITCH_FILE_BYTES:
+                    parts.append(f"--- {rel} (current content) ---\n{p.read_text(encoding='utf-8')}")
+            except OSError:
+                continue
+        return "\n".join(parts)
+
     def _rewind(self, v, step: int) -> None:
         """Undo a failed attempt: files back to the checkpoint, attempt cut from history, note left."""
         rw = self.rw
@@ -395,6 +459,7 @@ class Agent:
                     f"content shown earlier in this conversation.\nWhat that attempt changed:\n{diff}\n"
                     f"Why it failed:\n{v.shown[:1500]}\n{current}\n"
                     "Edit the CURRENT content above (not the undone attempt). Try a different approach."
+                    f"{self._precision_hint(v)}"
                 ),
             }
         )
@@ -443,7 +508,13 @@ class Agent:
             )
             if not self.security.p3._aborted:
                 self._save_context(pending=self._pending)
+            self._state_lock.release()
         return self.r
+
+    def __del__(self):  # an Agent that is built but never run must not keep other processes waiting
+        lock = getattr(self, "_state_lock", None)
+        if lock is not None:
+            lock.release()
 
     def _evidence_files(self) -> list[Path]:
         """Source files the evidence points at: paths named in the task text, modules the oracle tests
@@ -719,6 +790,8 @@ class Agent:
                     self.sav.once("stop_green", self._last_prompt + 150, step)  # no "double-check" turn
                     self._event("green", stage=v.stage)
                     return
+                if v is not None and "thrash" in self.s.flags:
+                    self.ctx.thrash.record_progress(v.passed)
                 if v is not None and not v.ok:
                     self.state.failing = v.sig_ids or self.state.failing
                     self.state.phase = "fix"
@@ -727,14 +800,16 @@ class Agent:
                         rw is not None
                         and v.stage in ("syntax", "lint", "oracle")
                         and not finishing
-                        and not rw.improved(v.passed)
+                        and rw.regressed(v.passed)
                         and rw.can_rewind()
                     ):
                         self._rewind(v, step)
                     else:
                         if "thrash" in self.s.flags:
                             self.ctx.thrash.record_failure(failure_sig(v.sig_ids, v.first_error))
-                        self._add({"role": "user", "content": f"[auto-check: {v.stage} failed]\n{v.shown}"})
+                        self._add(
+                            {"role": "user", "content": f"[auto-check: {v.stage} failed]\n{v.shown}{self._precision_hint(v)}"}
+                        )
                         if rw is not None and rw.cp.hist_len is not None and rw.improved(v.passed):
                             rw.commit(len(self.history), v.passed)  # progress: new checkpoint
                             self._event("checkpoint", passed=v.passed)
@@ -758,13 +833,7 @@ class Agent:
                     # change of strategy. The second trigger stops.
                     self._escalate(self.ctx.thrash.reason)
                     self.state.switches = max(self.state.switches, 1)
-                    self._add(
-                        {
-                            "role": "user",
-                            "content": f"[strategy switch: {self.ctx.thrash.reason}. "
-                            "Step back, re-read the failing test and try a different approach.]",
-                        }
-                    )
+                    self._add({"role": "user", "content": self._switch_note(self.ctx.thrash.reason)})
                 elif verdict is not None:
                     self.r.status = f"STOPPED: thrash ({self.ctx.thrash.reason})"
                     self._event("stop_report", reason=self.ctx.thrash.reason, failing=self.state.failing)

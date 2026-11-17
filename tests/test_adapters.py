@@ -119,6 +119,45 @@ def test_gateway_egress_passes_temperature(tmp_path, monkeypatch):
     assert seen.get("temperature") == 0.7
 
 
+def _scripted_gateway(tmp_path, monkeypatch, replies):
+    from crocodile.adapters import GatewayEgress
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
+    monkeypatch.setattr(GatewayEgress, "RETRY_DELAYS", (0.0, 0.0, 0.0))
+    eg = GatewayEgress()
+    calls = []
+
+    def post(**kw):
+        calls.append(kw["body"]["model"])
+        return replies[min(len(calls), len(replies)) - 1]
+
+    monkeypatch.setattr(eg.client, "post_bifrost", post)
+    return eg, calls
+
+
+OK = (200, {"model": "gemini/gemini-3.5-flash-lite", "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 1}}, {})
+
+
+def test_gateway_retries_rate_limit_then_succeeds(tmp_path, monkeypatch):
+    pytest.importorskip("crocodile.gateway.egress")
+    limited = (429, {"error": {"message": "RESOURCE_EXHAUSTED: rate limit"}}, {})
+    eg, calls = _scripted_gateway(tmp_path, monkeypatch, [limited, limited, OK])
+    r = eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap")
+    assert r.text == "ok" and len(calls) == 3 and eg.retries == 2
+
+
+def test_gateway_never_retries_auth_errors(tmp_path, monkeypatch):
+    pytest.importorskip("crocodile.gateway.egress")
+    denied = (401, {"error": {"message": "unauthorized"}}, {})
+    eg, calls = _scripted_gateway(tmp_path, monkeypatch, [denied, OK])
+    try:
+        eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap")
+    except RuntimeError:
+        pass
+    assert len(calls) == 1 and eg.retries == 0
+
+
 def test_official_bench_session_flows_through_part3(tmp_path, monkeypatch, app_security):
     approvals_mod = pytest.importorskip("crocodile.security.approvals")
     if not hasattr(approvals_mod.ApprovalSession, "for_bench"):
@@ -205,3 +244,35 @@ def test_init_enrolls_once_and_refuses_untrusted(tmp_path, monkeypatch):
     assert r.exit_code == 0 and "Enrolled and sealed" in r.output
     assert any(p.name.startswith("state.db.unsealed-") for p in tmp_path.iterdir())
     assert "Already enrolled" in runner.invoke(app, ["init"]).output
+
+
+def test_gateway_fails_fast_on_daily_quota(tmp_path, monkeypatch):
+    pytest.importorskip("crocodile.gateway.egress")
+    daily = (429, {"error": {"message": "You exceeded your current quota... Generate content requests per day "
+                                        "limit exceeded on Free Tier.\nPlease retry in 12h1m24.8s."}}, {})
+    eg, calls = _scripted_gateway(tmp_path, monkeypatch, [daily, OK])
+    with pytest.raises(RuntimeError, match="quota exhausted"):
+        eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap")
+    assert len(calls) == 1 and eg.retries == 0                      # no useless retries
+
+
+def test_gateway_honours_short_provider_wait(tmp_path, monkeypatch):
+    pytest.importorskip("crocodile.gateway.egress")
+    import crocodile.adapters as ad
+
+    waits = []
+    monkeypatch.setattr(ad.time, "sleep", lambda s: waits.append(s))
+    short = (429, {"error": {"message": "Resource exhausted. Please retry in 7.5s."}}, {})
+    eg, calls = _scripted_gateway(tmp_path, monkeypatch, [short, OK])
+    assert eg.chat([{"role": "user", "content": "hi"}], [], session=_session(tmp_path), tier="cheap").text == "ok"
+    assert waits == [7.5] and len(calls) == 2
+
+
+def test_run_tests_ids_string_is_not_split_into_characters():
+    from crocodile.tools.tests import _normalize_ids
+
+    assert _normalize_ids("a_test.py::t1") == ["a_test.py::t1"]
+    assert _normalize_ids("a_test.py b_test.py") == ["a_test.py", "b_test.py"]
+    assert _normalize_ids('["a_test.py::t1", "b_test.py"]') == ["a_test.py::t1", "b_test.py"]
+    assert _normalize_ids("['a_test.py']") == ["a_test.py"]
+    assert _normalize_ids(None) == [] and _normalize_ids(["x"]) == ["x"]

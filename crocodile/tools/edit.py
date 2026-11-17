@@ -7,6 +7,7 @@ Stages: exact -> whitespace-normalised (same indent offset) -> drop leading blan
 from __future__ import annotations
 
 import difflib
+import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -159,15 +160,47 @@ def apply_edit(content: str, search: str, replace: str) -> tuple[str, Match]:
 # ---------- the tool ----------
 
 
+def _normalize_edits(raw):
+    """Accept the shapes small models actually send.
+
+    16 Nov replay (bowling, 29 tests passing): 5 edits were lost because `edits` arrived as a string,
+    often in Python literal syntax ("[{'search': ...}]"), and the run stopped for "4 turns without an
+    edit" one fix from done. Parsing is data-only: json.loads, then ast.literal_eval (literals only, no
+    code execution)."""
+    if isinstance(raw, str):
+        text = raw.strip()
+        if len(text) > 200_000:
+            return raw
+        parsed = None
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            try:
+                import ast
+
+                parsed = ast.literal_eval(text)
+            except (ValueError, SyntaxError, MemoryError, RecursionError):
+                return raw
+        raw = parsed
+    if isinstance(raw, dict):  # a single {search, replace} object
+        raw = [raw]
+    if isinstance(raw, tuple):
+        raw = list(raw)
+    return raw if raw is not None else []
+
+
 def edit_tool(args: dict, ctx) -> Result:
     from .. import services
     from ..agent_types import Action
     from .base import Result, ToolError, rel, secure_path
 
     path = str(args.get("path", ""))
-    edits = args.get("edits") or []
-    if not isinstance(edits, list) or not edits:
-        raise ToolError("edits must be a non-empty list of {search, replace}")
+    edits = _normalize_edits(args.get("edits"))
+    if not isinstance(edits, list) or not edits or not all(isinstance(e, dict) for e in edits):
+        raise ToolError(
+            "edits must be a JSON array of objects like [{\"search\": \"old\", \"replace\": \"new\"}] "
+            f"(got {type(args.get('edits')).__name__}); nothing was changed"
+        )
     p = secure_path(path, ctx, for_write=True)
     r = rel(p, ctx.root) if p.exists() else p.relative_to(ctx.root.resolve()).as_posix()
     exists = p.is_file()

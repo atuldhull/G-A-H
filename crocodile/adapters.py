@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -101,7 +102,34 @@ def _state_db() -> Path:
 
 
 class GatewayEgress:
+    # Retried only when nothing came back: rate limits and transient upstream errors. Auth, quota,
+    # caller faults and budget denials never retry. At most ~23 s extra per call.
+    RETRYABLE = frozenset({"rate-limit", "transient", "timeout"})
+    RETRY_DELAYS = (2.0, 6.0, 15.0)
+    MAX_HINTED_WAIT = 30.0  # a provider asking for a longer pause (daily quota) is not retried
+
+    @staticmethod
+    def _provider_wait(r) -> float | None:
+        """Seconds the provider asks us to wait, from its own error text ("Please retry in 12h1m24.8s",
+        "retry in 7.5s"); None when it gives no hint. A "per day" quota
+        is reported as a 24 h wait. 16 Nov: a daily free-tier limit cost ~23 s of useless retries per call."""
+        import re
+
+        body = getattr(r, "raw_response", None) or {}
+        err = body.get("error") if isinstance(body, dict) else None
+        msg = str(err.get("message", "")) if isinstance(err, dict) else str(err or "")
+        if "per day" in msg.lower():
+            return 86400.0
+        m = re.search(r"retry in\s+((?:\d+(?:\.\d+)?[hms]\s*)+)", msg, re.IGNORECASE)
+        if m:
+            unit = {"h": 3600.0, "m": 60.0, "s": 1.0}
+            return sum(float(n) * unit[u] for n, u in re.findall(r"(\d+(?:\.\d+)?)([hms])", m.group(1).lower()))
+        # Bifrost's extra_fields.retry_after_ms is NOT used: it reported a flat 300000 ms on a daily-quota
+        # error, so it is not a real per-error hint and would wrongly disable short per-minute retries.
+        return None
+
     def __init__(self) -> None:
+        self.retries = 0
         from crocodile.gateway.budget import BudgetManager
         from crocodile.gateway.egress import EgressClient
         from crocodile.gateway.journal import EventJournal
@@ -154,29 +182,42 @@ class GatewayEgress:
         chain = chain_for(rung)
         alias = "local" if confidential else "public"
         extra = {"temperature": temperature} if self._takes_temperature else {}
-        try:
-            r = self.client.chat(
-                messages,
-                tools or None,
-                session=session.id,
-                principal=session.user,
-                chain=chain,
-                fallbacks=[] if confidential else chain[1:],
-                vk=self._vk(alias),
-                vk_alias=alias,
-                mode=session.mode,
-                tier=rung,
-                max_tokens=max_tokens,
-                **extra,
-            )
-        except Denied as e:
-            raise BudgetStop(
-                f"{e.reason}: needs ${e.needed:.4f}, ${e.remaining:.4f} left", remaining_usd=e.remaining
-            ) from e
-        finally:
-            context.check(session)
+        for attempt in range(len(self.RETRY_DELAYS) + 1):
+            try:
+                r = self.client.chat(
+                    messages,
+                    tools or None,
+                    session=session.id,
+                    principal=session.user,
+                    chain=chain,
+                    fallbacks=[] if confidential else chain[1:],
+                    vk=self._vk(alias),
+                    vk_alias=alias,
+                    mode=session.mode,
+                    tier=rung,
+                    max_tokens=max_tokens,
+                    **extra,
+                )
+            except Denied as e:
+                raise BudgetStop(
+                    f"{e.reason}: needs ${e.needed:.4f}, ${e.remaining:.4f} left", remaining_usd=e.remaining
+                ) from e
+            finally:
+                context.check(session)
+            answered = bool(r.text) or bool(r.tool_calls)
+            if answered or r.error_class not in self.RETRYABLE or attempt == len(self.RETRY_DELAYS):
+                break
+            hint = self._provider_wait(r)
+            if hint is not None and hint > self.MAX_HINTED_WAIT:
+                break  # e.g. a daily quota ("retry in 12h"): waiting cannot help, fail fast and say why
+            # A momentary 429/5xx with no fallback model left (single-model chain, confidential mode)
+            # used to end the whole run. Each retry is a fresh, separately reserved and reconciled call.
+            self.retries += 1
+            time.sleep(self.RETRY_DELAYS[attempt] if hint is None else max(hint, self.RETRY_DELAYS[0]))
         if r.text is None and not r.tool_calls and not r.model_used:
-            raise RuntimeError(f"gateway returned no answer (error class: {r.error_class})")
+            wait = self._provider_wait(r)
+            why = f"; provider says retry in {wait / 3600:.1f} h (quota exhausted)" if wait and wait > 3600 else ""
+            raise RuntimeError(f"gateway returned no answer (error class: {r.error_class}{why})")
         u = r.usage
         return ChatResult(
             text=r.text or "",

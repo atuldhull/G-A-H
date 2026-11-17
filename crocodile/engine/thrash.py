@@ -14,14 +14,28 @@ def failure_sig(failing_ids: list[str], first_error: str) -> str:
     return hashlib.sha1(("|".join(sorted(failing_ids)) + "||" + core).encode()).hexdigest()[:12]
 
 
+MAX_STRIKES = 3  # thrash triggers WITHOUT test progress before the run stops (was effectively 2)
+
+
 class Thrash:
-    def __init__(self) -> None:
+    """Strike counting is progress-aware: a trigger that follows an increase in passing tests is a
+    strategy switch, not a strike. Benchmark evidence (15 Nov): stopping on the 2nd trigger lost 3 of 56
+    runs that the levers-off twin solved by simply continuing."""
+
+    def __init__(self, max_strikes: int = MAX_STRIKES) -> None:
         self.sigs: list[str] = []
         self.edit_hashes: list[str] = []
         self.calls: list[str] = []
         self.idle = 0          # turns without an applied edit, counted after the first edit
-        self.switches = 0
+        self.switches = 0      # strikes: triggers that came without test progress
+        self.max_strikes = max_strikes
+        self.best = -1         # most passing tests seen so far (-1 = unknown / broken code)
+        self._mark = -1        # `best` at the previous trigger
         self.reason = ""
+
+    def record_progress(self, passed: int) -> None:
+        """Number of passing tests after a verification (-1 for broken code)."""
+        self.best = max(self.best, passed)
 
     def record_failure(self, sig: str) -> None:
         self.sigs.append(sig)
@@ -56,5 +70,10 @@ class Thrash:
         self.edit_hashes.clear()
         self.calls.clear()
         self.idle = 0
+        progressed = self.best > self._mark
+        self._mark = self.best
+        if progressed and self.switches > 0:
+            self.reason += " (tests improved since the last switch: not counted as a strike)"
+            return "escalate"
         self.switches += 1
-        return "escalate" if self.switches == 1 else "stop_report"
+        return "escalate" if self.switches < self.max_strikes else "stop_report"

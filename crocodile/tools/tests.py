@@ -184,10 +184,35 @@ class TestRunner:
         )
 
 
+def _normalize_ids(raw) -> list[str]:
+    """A string used to be iterated character by character ("a_test.py" -> "a", "_", ...): small
+    models send strings for list arguments (16 Nov bowling replay showed the same for `edit`).
+    Accept a JSON/Python list string, a whitespace/comma separated string, or a list."""
+    if raw is None or raw == "":
+        return []
+    if isinstance(raw, str):
+        text = raw.strip()
+        if text.startswith("["):
+            import ast
+            import json
+
+            for parse in (json.loads, ast.literal_eval):  # data only, never executed
+                try:
+                    parsed = parse(text)
+                    if isinstance(parsed, (list, tuple)):
+                        return [str(x) for x in parsed if str(x).strip()]
+                except (ValueError, SyntaxError):
+                    continue
+        return [p for p in text.replace(",", " ").split() if p]
+    if isinstance(raw, (list, tuple)):
+        return [str(x) for x in raw if str(x).strip()]
+    return [str(raw)]
+
+
 def run_tests(args: dict, ctx: RunCtx) -> Result:
     if ctx.tests is None:
         raise ToolError("tests unavailable")
-    ids = [str(x) for x in (args.get("ids") or [])]
+    ids = _normalize_ids(args.get("ids"))
     for i in ids:
         if i.startswith("-"):
             raise ToolError("pass test ids or files only, not pytest options")

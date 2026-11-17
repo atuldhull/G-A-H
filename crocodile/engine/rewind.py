@@ -2,8 +2,10 @@
 
 After each failed verification:
 - more oracle tests pass than at the checkpoint -> COMMIT: the attempt becomes the new checkpoint;
-- otherwise -> REWIND: restore the files, cut the failed attempt out of the conversation (the cached
-  prefix up to the checkpoint stays valid) and leave a compact note (diff <= 40 lines + why it failed).
+- fewer pass (or the code no longer runs) -> REWIND: restore the files, cut the failed attempt out of the
+  conversation (the cached prefix up to the checkpoint stays valid) and leave a compact note
+  (diff <= 40 lines + why it failed);
+- the same number pass -> KEEP the attempt in context (sideways moves are often the way forward).
 
 Failed attempts therefore stop costing tokens on every later turn, partial progress is never thrown
 away, and the model is not anchored on its own wrong trajectory.
@@ -45,6 +47,13 @@ class Rewinder:
 
     def improved(self, score: int) -> bool:
         return score > self.cp.score
+
+    def regressed(self, score: int) -> bool:
+        """Only a real step back (fewer passing tests, or broken code) is undone. Equal-score attempts are
+        kept: on 15-16 Nov replays every rewind after the first checkpoint was at an equal score (10=10,
+        11=11), discarding sideways progress and costing extra turns; stagnation is the thrash
+        detector's job, not rewind's."""
+        return score < self.cp.score
 
     def commit(self, hist_len: int, score: int) -> None:
         self.cp = Checkpoint(hist_len, score)

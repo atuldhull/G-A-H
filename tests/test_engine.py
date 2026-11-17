@@ -91,15 +91,47 @@ def test_masking_batches():
     assert saved > 6000 and "masked" in hist[0]["content"] and "masked" not in hist[-1]["content"]
 
 
+def _turns(t, n=3):
+    for _ in range(n):
+        t.record_turn(True, True)           # turns with an applied edit: idle stays 0
+
+
 def test_thrash_escalate_then_stop():
     t = Thrash()
     sig = failure_sig(["t::a"], "AssertionError: 1 != 2 at line 40")
     t.record_failure(sig)
     t.record_failure(failure_sig(["t::a"], "AssertionError: 1 != 2 at line 41"))
-    assert t.check() == "escalate"
+    assert t.check() == "escalate"          # strike 1
+    _turns(t)
     t.record_failure(sig)
     t.record_failure(sig)
-    assert t.check() == "stop_report"
+    assert t.check() == "escalate"          # strike 2: one more strategy switch, no progress yet
+    _turns(t)
+    t.record_failure(sig)
+    t.record_failure(sig)
+    assert t.check() == "stop_report"       # strike 3 without any test progress: stop
+
+
+def test_thrash_progress_is_not_a_strike():
+    t = Thrash()
+    sig = failure_sig(["t::a"], "AssertionError")
+    t.record_progress(1)
+    t.record_failure(sig)
+    t.record_failure(sig)
+    assert t.check() == "escalate" and t.switches == 1
+    for passed in (2, 3):                   # tests keep improving between triggers
+        _turns(t)
+        t.record_progress(passed)
+        t.record_failure(sig)
+        t.record_failure(sig)
+        assert t.check() == "escalate" and "improved" in t.reason
+    assert t.switches == 1
+    for _ in range(2):                      # progress stalls: strikes resume, stop on the 3rd
+        _turns(t)
+        t.record_failure(sig)
+        t.record_failure(sig)
+        verdict = t.check()
+    assert verdict == "stop_report" and t.switches == 3
 
 
 def test_thrash_repeated_identical_call():
