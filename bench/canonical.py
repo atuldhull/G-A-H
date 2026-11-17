@@ -20,6 +20,7 @@ V2_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v2.json"
 V3_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v3.json"
 V4_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v4.json"
 V5_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v5.json"
+V6_CONFIG = Path(__file__).parent / "configs" / "gemini-benchmark-v6.json"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 ACCEPTED_LIMITATIONS = {"hard-stop-containment", "mini-output-cap", "cache-parity", "sampling-difference"}
 TOP_FIELDS = {
@@ -92,7 +93,7 @@ def validate_config(config, *, repo_root=REPO_ROOT, data_root=None, manifests=()
         _need(isinstance(config, dict), "Invalid canonical config fields")
         revision = config.get("revision")
         versions = {"gemini-54-v1": 1, "gemini-54-v2": 2, "gemini-54-v3": 3, "gemini-54-v4": 4,
-                    "gemini-54-v5": 5}
+                    "gemini-54-v5": 5, "gemini-54-v6": 6}
         modern = revision in versions and versions[revision] >= 2
         change_field = f"changes_from_v{versions[revision] - 1}" if modern else "changes_from_v1"
         fields = TOP_FIELDS | {change_field, "known_limitations"} if modern else TOP_FIELDS
