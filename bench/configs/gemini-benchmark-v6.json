@@ -3,7 +3,7 @@
   "kind": "canonical-gemini-benchmark",
   "revision": "gemini-54-v6",
   "provenance": {
-    "runtime_git_commit": "45b3974459b919f2c0c8de75055dfd8f7e911ef3",
+    "runtime_git_commit": "5e43fa85891710a093c8cdaecbb3a1a4c5b1d990",
     "main_git_commit": "a3663292e32ad762f5b85b6b87f31d8538392ce6",
     "config_identity": "sha256 of compact sorted ASCII JSON; raw file hash also retained per machine",
     "publication_commit": "Record the exact config-containing Git commit in each shard attestation; not a self-referential field.",
@@ -40,7 +40,7 @@
       "crocodile/__init__.py": "fbe4e0eeaa955d35312d62fe3ba1f76565f99423295a38ff2b53799e21647717",
       "crocodile/__main__.py": "738f43bad262c91091fb08503ef2024105375dfa3eee53baf456d98af214ac9a",
       "crocodile/_stubs.py": "911bef44cb53f295ecd7639374e56793d8d958c43cb04825b31087a8f47f9dd7",
-      "crocodile/adapters.py": "e3d10017fa782f1253ce10639f4003c5a28811ef1d666123e7e9805007144d10",
+      "crocodile/adapters.py": "844e44ed9da2b2fb69dd4ffc919710c116c646502e61974af9d6f6437e6295b9",
       "crocodile/agent_types.py": "94a6e57df12e4518b42e2647de0625239949568df4dd113ccdc083a9d268baa3",
       "crocodile/cli.py": "dc1a196167ba77e31a9204ecace3df2ab407a06f506b0d46a354d80994699f59",
       "crocodile/contracts.py": "f1aee8f1eef2a822b4452faed49f4984dfc833e228d56c2869b1a08115afd198",
@@ -121,7 +121,7 @@
       }
     ],
     "main_integration_commit": "9605ac526779b015f8ceb5a11a3eb771be5bac90",
-    "release_date": "2026-11-17",
+    "release_date": "2026-11-19",
     "previous_config_id": "93c2acc67e2dfe9229b05c142296361b95de36d042876a4991100f2fd9a78c83",
     "previous_config_sha256_lf": "0d338d3913ac855993aecf85f6127c2be36302789500dd13f77a0d0fcd808b4c",
     "inspected_person1_fixes": [
@@ -134,6 +134,11 @@
         "commit": "a3663292e32ad762f5b85b6b87f31d8538392ce6",
         "on_main": true,
         "observation": "Agent hardening after the 15 Nov shard runs: per-state-DB session lock (concurrent shards wait instead of tripping false integrity violations), progress-aware thrash strikes (3), regression-only rewind, bounded gateway retry with daily-quota fail-fast, edit/run_tests argument normalization. Core 304 + bench/red-team 474 tests pass."
+      },
+      {
+        "commit": "5e43fa85891710a093c8cdaecbb3a1a4c5b1d990",
+        "on_main": false,
+        "observation": "Gateway retry budget raised from about 23 s to about 2 min (2/6/15/30/60 s). 19 Nov live replay: Gemini 503 'high demand' bursts lasting 1-2 minutes left 4 of 8 tasks with no model answer. Daily quota still fails fast; auth errors never retried. Affects only infrastructure errors, not solve behaviour."
       }
     ],
     "corrected_price_commit": "af6974a3efb4977364f3a572509c41a9752e8ba4",
@@ -794,11 +799,15 @@
   "changes_from_v5": [
     {
       "area": "runtime",
-      "detail": "Pin clean runtime checkpoint 45b3974 (main a366329 plus v6 validator registration). Changed runtime pins vs v5: bench/canonical.py, crocodile/adapters.py, crocodile/engine/rewind.py, crocodile/engine/thrash.py, crocodile/loop.py, crocodile/runtime_security.py, crocodile/tools/edit.py, crocodile/tools/tests.py."
+      "detail": "Pin clean runtime checkpoint 5e43fa8 (main a366329, v6 validator registration 45b3974, gateway retry budget 5e43fa8). Changed runtime pins vs v5: bench/canonical.py, crocodile/adapters.py, crocodile/engine/rewind.py, crocodile/engine/thrash.py, crocodile/loop.py, crocodile/runtime_security.py, crocodile/tools/edit.py, crocodile/tools/tests.py."
+    },
+    {
+      "area": "re-pin before use",
+      "detail": "First v6 draft 74f0474 pinned 45b3974; it was re-pinned to this checkpoint on 2026-11-19 before any run used it. No results exist for the 74f0474 draft."
     },
     {
       "area": "native agent behaviour",
-      "detail": "Crocodile and the all-off twin now run the a366329 loop; native results from v5 or earlier runtimes must not be pooled with v6 native results. Mini runtime pins are unchanged."
+      "detail": "Crocodile and the all-off twin now run the a366329 loop with the longer retry budget; native results from v5 or earlier runtimes must not be pooled with v6 native results. Mini runtime pins are unchanged."
     },
     {
       "area": "release gate",

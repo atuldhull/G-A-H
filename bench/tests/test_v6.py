@@ -1,4 +1,4 @@
-"""Published v6: pins the a366329 agent runtime, keeps v5/v4 immutable and stays blocked."""
+"""Published v6: pins the a366329 agent runtime plus the 5e43fa8 retry budget, keeps v5/v4 immutable and stays blocked."""
 
 import hashlib
 
@@ -6,8 +6,8 @@ import pytest
 
 from bench import canonical
 
-V6_ID = "098247dad4c155113ad574621d088918de212bd7019d8a48816ae3c4716caf1b"
-V6_LF_SHA = "ba95d195946049c9ce200ae029f13d1bbf8d242ecff972d50e84ebc40bd6b396"
+V6_ID = "710079567c1807405a75f51d7bf4c69f2cd38fe8d40e6cecc1c7f744ff966273"
+V6_LF_SHA = "4719f746840d1dca9b505636e683997e5b02cef67fc59db1d0393d8b24b0e646"
 
 
 def _lf_sha(path):

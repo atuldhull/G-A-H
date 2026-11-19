@@ -1,20 +1,21 @@
 # Gemini 54 v6: current agent runtime
 
-Published 2026-11-17. The [v6 config](configs/gemini-benchmark-v6.json) pins the
-agent runtime from main `a366329` (plus the validator change that registers v6,
-`45b3974`). Everything else is the same as [v5](gemini-54-v5.md): same LF inputs,
+Published 2026-11-17, re-pinned 2026-11-19 before any run used it. The [v6 config](configs/gemini-benchmark-v6.json) pins the
+agent runtime from main `a366329`, the validator change that registers v6
+(`45b3974`) and the gateway retry budget (`5e43fa8`). Everything else is the same as [v5](gemini-54-v5.md): same LF inputs,
 dataset commits, prices, 54 tasks / 270 runs, four shards, 2+2+1 run order,
 30-step / 600-second policy, independent grading and the four accepted limitations.
 
 ```text
-v6 config ID   098247dad4c155113ad574621d088918de212bd7019d8a48816ae3c4716caf1b
-v6 raw LF SHA  ba95d195946049c9ce200ae029f13d1bbf8d242ecff972d50e84ebc40bd6b396
+v6 config ID   710079567c1807405a75f51d7bf4c69f2cd38fe8d40e6cecc1c7f744ff966273
+v6 raw LF SHA  4719f746840d1dca9b505636e683997e5b02cef67fc59db1d0393d8b24b0e646
 v5 config ID   93c2acc67e2dfe9229b05c142296361b95de36d042876a4991100f2fd9a78c83 (unchanged)
 ```
 
 ## What changed in the runtime
 
-Seven agent files changed after the 15 Nov shard runs (`a366329`):
+Seven agent files changed after the 15 Nov shard runs (`a366329`), plus one later
+gateway fix:
 
 - **Session lock** on the state database: two runs on one machine wait for each
   other instead of tripping false integrity violations.
@@ -25,6 +26,9 @@ Seven agent files changed after the 15 Nov shard runs (`a366329`):
   provider waits and fails fast when the daily quota is used up.
 - **`edit` and `run_tests`** accept string arguments instead of failing or splitting
   test IDs into characters.
+- **Retry budget** (`5e43fa8`, 19 Nov): about 2 minutes instead of 23 seconds, because
+  Gemini 503 "high demand" bursts last 1-2 minutes. It affects only infrastructure
+  errors, not how tasks are solved.
 
 Mini runtime pins are unchanged. Native (Crocodile and twin) results from v5 or
 earlier must not be pooled with v6 native results.
