@@ -105,7 +105,9 @@ class GatewayEgress:
     # Retried only when nothing came back: rate limits and transient upstream errors. Auth, quota,
     # caller faults and budget denials never retry. At most ~23 s extra per call.
     RETRYABLE = frozenset({"rate-limit", "transient", "timeout"})
-    RETRY_DELAYS = (2.0, 6.0, 15.0)
+    # ~2 min in total: Gemini 503 "high demand" bursts last 1-2 minutes (19 Nov live replay lost
+    # 4 of 8 tasks to bursts with the old 23 s budget). Daily quota still fails fast (MAX_HINTED_WAIT).
+    RETRY_DELAYS = (2.0, 6.0, 15.0, 30.0, 60.0)
     MAX_HINTED_WAIT = 30.0  # a provider asking for a longer pause (daily quota) is not retried
 
     @staticmethod

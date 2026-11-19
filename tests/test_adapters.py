@@ -147,6 +147,13 @@ def test_gateway_retries_rate_limit_then_succeeds(tmp_path, monkeypatch):
     assert r.text == "ok" and len(calls) == 3 and eg.retries == 2
 
 
+def test_gateway_retry_budget_outlasts_overload_bursts():
+    from crocodile.adapters import GatewayEgress
+
+    # 19 Nov: Gemini 503 'high demand' bursts lasted 1-2 minutes; a 23 s budget dropped whole tasks.
+    assert sum(GatewayEgress.RETRY_DELAYS) >= 90 and GatewayEgress.MAX_HINTED_WAIT <= 60
+
+
 def test_gateway_never_retries_auth_errors(tmp_path, monkeypatch):
     pytest.importorskip("crocodile.gateway.egress")
     denied = (401, {"error": {"message": "unauthorized"}}, {})
