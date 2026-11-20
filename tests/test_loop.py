@@ -228,12 +228,13 @@ def test_refused_test_consent_ends_cleanly(repo):
     class VoidAfterEdit(SecurityBridge):
         def __init__(self):
             super().__init__()
-            self.runs = 0
+            self.test_runs = 0
 
         def run(self, argv, cwd, *, timeout=120, session=None, **kw):
-            self.runs += 1
-            if self.runs > 1:                                  # baseline ran; post-edit run refused
-                return CmdResult(list(argv), 126, "", "test consent no longer valid: will execute edited code")
+            if any("pytest" in str(a) for a in argv):
+                self.test_runs += 1
+                if self.test_runs > 1:                                  # baseline ran; post-edit run refused
+                    return CmdResult(list(argv), 126, "", "test consent no longer valid: will execute edited code")
             return super().run(argv, cwd, timeout=timeout, session=session, **kw)
     services.reset()
     fake = FakeEgress([[("edit", {"path": "calc.py", "edits": [
