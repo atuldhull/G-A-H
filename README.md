@@ -7,6 +7,8 @@ cloud or overspends without a visible decision.
 It runs every model call through the **Bifrost** gateway (virtual keys, routing, failover, budgets, per-request
 cost logs) and uses **Tavily** for documentation search.
 
+**Demo video (2 min):** https://www.youtube.com/watch?v=TlRELesKAsM
+
 ## Results: 54-task run (limited)
 
 54 tasks (34 Aider Polyglot + 20 QuixBugs), 20–21 Nov 2026. Every agent used the same model (Gemini 3.5
