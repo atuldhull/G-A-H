@@ -105,12 +105,14 @@ environment references.
 
 ## Architecture
 
-| Part | Area | Code |
-|---|---|---|
-| 1 | Agent loop, tools, token levers, receipts | [crocodile/](crocodile/) (`loop.py`, `engine/`, `tools/`) |
-| 2 | Gateway: Bifrost egress, failover, budgets, local routing, Tavily | [crocodile/gateway/](crocodile/gateway/) |
-| 3 | Security: approvals, confidential detection, sealed state | [crocodile/security/](crocodile/security/) |
-| 4 | Benchmark harness, red-team suite, terminal UI | [bench/](bench/), [redteam/](redteam/), [crocodile/ui/](crocodile/ui/) |
+| Part | Owner | Area | Code |
+|---|---|---|---|
+| 1 | Atul | Agent loop, tools, token levers, receipts | [crocodile/](crocodile/) (`loop.py`, `engine/`, `tools/`) |
+| 2 | Vivek | Gateway: Bifrost egress, failover, budgets, local routing, Tavily | [crocodile/gateway/](crocodile/gateway/) |
+| 3 | Ritika | Security: approvals, confidential detection, sealed state | [crocodile/security/](crocodile/security/) |
+| 4 | Tharun | Benchmark harness, red-team suite, terminal UI | [bench/](bench/), [redteam/](redteam/), [crocodile/ui/](crocodile/ui/) |
+
+Built by **Team Crocodile** for Global AI Hackathon 2026, problem statement PS-01.
 
 ## Evidence and reproducibility
 

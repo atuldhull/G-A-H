@@ -1,5 +1,10 @@
 # Benchmark report: incomplete
 
+> **Status, 21 Nov 2026:** the 54-task v6 run has completed and is reported as a **limited run** in the
+> [project README](../README.md) and [benchmark-status.md](../docs/submission/benchmark-status.md). This formal
+> statistical report (paired intervals, cost per solved task) stays unpublished until the comparability gate
+> closes; the text below describes the report tool and its empty state.
+
 No verified benchmark run results, Bifrost session export, or `prices.yaml`
 snapshot have been supplied. No benchmark calculations have been published.
 The companion `report.json` records unavailable measurements as null, not zero.
