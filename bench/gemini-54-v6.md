@@ -37,14 +37,27 @@ earlier must not be pooled with v6 native results.
 
 The validator still cannot authorize paid runs or cross-shard comparability, and
 the single post-restart per-machine cost-inventory gate is kept. The 18-attempt
-inventory has been supplied, and approval relayed from Tharun through Atul on
-17 Nov is recorded in the change record only. **v6 results are reported as a limited
-run.**
+inventory has been supplied (Tharun's audit:
+[pilot-v4-post-restart-review.md](pilot-v4-post-restart-review.md)). The config's change record notes an
+approval relayed through Atul on 17 Nov; Tharun then reviewed this release himself and merged it into
+`main` as PR #1 on 21 Nov 2026 (fast-forward, commit IDs unchanged). Neither step authorizes
+comparability: **v6 results are reported as a limited run.**
 
 ## Running on v6
 
+The v6 publication commit is `75b8a7e`. Use PowerShell 7 (`pwsh`): under Windows PowerShell 5.1 the
+runner's `.pyc` check ignores `-Include` and fails even when no `.pyc` files exist.
+
 ```powershell
-git fetch origin; git checkout --detach <v6 publication commit>
-powershell -ExecutionPolicy Bypass -File run-shard.ps1 -Shards <yours> -Agents native `
-  -Repo D:\gah-run -Data D:\bench-data2 -ExpectCommit <v6 publication commit> -OutRoot D:\bench-results-v6
+git fetch origin; git checkout --detach 75b8a7e
+pwsh -ExecutionPolicy Bypass -File run-shard.ps1 -Shards <yours> -Agents native `
+  -Repo D:\gah-run -Data D:\bench-data2 -ExpectCommit 75b8a7e -OutRoot D:\bench-results-v6
 ```
+
+## Runs on v6 (20–21 Nov 2026)
+
+Crocodile and twin, all 54 tasks on `75b8a7e` (shards 1–2 Vivek, 3–4 Ritika; both confirmed the commit):
+Crocodile 104 of 108 runs solved, 16.6K average tokens per run; twin 54 of 54, 42.8K. No v5 or earlier
+native runs are pooled with these. mini-swe-agent ran on `d906adf` (its code is unchanged): 108 of 108,
+76.4K average tokens per run from its own receipts. Shards 1–2 of the mini runs used three free-tier
+Gemini keys from three separate Google projects, switched at each daily limit.
